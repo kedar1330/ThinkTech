@@ -38,6 +38,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm format:check
+      # Style knowledge base: linter (FR-STY-03) and coverage report in the job summary (FR-STY-11).
+      - run: pnpm --filter @styleme/api style-rules lint
+      - run: pnpm --silent --filter @styleme/api style-rules coverage >> "$GITHUB_STEP_SUMMARY"
       - run: pnpm test
       - run: pnpm build
 

@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "admin": "tsx --env-file=.env scripts/admin.ts",
-    "reconcile": "tsx --env-file=.env scripts/reconcile-tombstones.ts"
+    "reconcile": "tsx --env-file=.env scripts/reconcile-tombstones.ts",
+    "style-rules": "tsx scripts/style-rules.ts"
   },
   "dependencies": {
     "@styleme/contracts": "workspace:*",
