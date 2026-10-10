@@ -126,6 +126,8 @@ No name, plain email, IP address, reason text or other personal data. The store 
 | `weatherPreferences` | Stage 2: `{ enabled: false, city: { cityId, name } \| null }`; never coordinates |
 | `createdAt`, `updatedAt` | timestamps |
 
+**Allowed values (D-09).** Every enumerated field here and in `appearanceProfiles` (department, colour IDs, contrast, silhouettes, coverage, comfort, fabrics, styles, occasions, fit, undertone, Monk range, proportion descriptors) uses the shared vocabulary in `packages/contracts/src/style-vocabulary.ts`, which the style knowledge base uses too. Values are stored as strings, so adding a value needs no migration; IDs are never renamed or removed.
+
 Age range and height are **not collected** in Stage 1: no Stage 1 rule or feature uses them (FR-PROF-04). They are added only when a released rule or feature defines a purpose for them.
 
 ### 3.3 `appearanceProfiles` (one per user, D-72)
@@ -133,7 +135,7 @@ Age range and height are **not collected** in Stage 1: no Stage 1 rule or featur
 | Field | Type / rule |
 |---|---|
 | `userId` | reference → `users`, unique |
-| `skinTone` | attribute object (§5); `value` is `{ monkRange: "4–5" }` |
+| `skinTone` | attribute object (§5); `value` is `{ monkRange: "4-5" }` (tones `a-b`, 1 ≤ a ≤ b ≤ 10, span ≤ 2) |
 | `undertone` | attribute object (§5); `value` is `warm` \| `cool` \| `neutral` \| `olive` \| `not_sure` |
 | `bodyProportions` | attribute object (§5); `value` is a self-described proportion or silhouette descriptor (D-09) |
 | `useInRecommendations` | boolean; when `false`, all appearance signals are ignored |
