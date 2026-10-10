@@ -77,12 +77,36 @@ const appearanceProfileSchema = new Schema(
   { timestamps: true },
 );
 
+// Style profile (DATABASE.md §3.2), one per user. Nested values are validated by the Zod contract
+// (`updateProfileRequestSchema`) before they reach the database. No age range, height or measurements
+// in Stage 1 (FR-PROF-04, FR-SIZE-06).
+const profileSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true, unique: true },
+    department: { type: String, enum: ['women', 'men', 'any'], required: true },
+    sizes: { type: Schema.Types.Mixed, default: () => ({}) },
+    fitPreferences: { type: Schema.Types.Mixed, default: () => ({}) },
+    likedColors: { type: [String], default: [] },
+    dislikedColors: { type: [String], default: [] },
+    contrastPreference: { type: String, default: null },
+    silhouettePreferences: { type: [String], default: [] },
+    coveragePreferences: { type: Schema.Types.Mixed, default: () => ({}) },
+    comfortPreferences: { type: [String], default: [] },
+    fabricPreferences: { type: Schema.Types.Mixed, default: () => ({ liked: [], avoided: [] }) },
+    preferredStyles: { type: [String], default: [] },
+    preferredOccasions: { type: [String], default: [] },
+    budgetPreference: { type: Number, default: null },
+  },
+  { timestamps: true, minimize: false },
+);
+
 export type UserDoc = InferSchemaType<typeof userSchema>;
 export type BetaInviteDoc = InferSchemaType<typeof betaInviteSchema>;
 export type PasswordResetTokenDoc = InferSchemaType<typeof passwordResetTokenSchema>;
 export type SessionDoc = InferSchemaType<typeof sessionSchema>;
 export type TombstoneDoc = InferSchemaType<typeof tombstoneSchema>;
 export type AppearanceProfileDoc = InferSchemaType<typeof appearanceProfileSchema>;
+export type ProfileDoc = InferSchemaType<typeof profileSchema>;
 
 export interface Models {
   User: Model<UserDoc>;
@@ -91,6 +115,7 @@ export interface Models {
   Session: Model<SessionDoc>;
   Tombstone: Model<TombstoneDoc>;
   AppearanceProfile: Model<AppearanceProfileDoc>;
+  Profile: Model<ProfileDoc>;
 }
 
 export function registerModels(main: Connection, tombstones: Connection): Models {
@@ -101,6 +126,7 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     Session: main.model('Session', sessionSchema, 'sessions'),
     Tombstone: tombstones.model('DeletionTombstone', tombstoneSchema, 'deletionTombstones'),
     AppearanceProfile: main.model('AppearanceProfile', appearanceProfileSchema, 'appearanceProfiles'),
+    Profile: main.model('Profile', profileSchema, 'profiles'),
   };
 }
 

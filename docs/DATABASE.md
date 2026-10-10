@@ -112,16 +112,16 @@ No name, plain email, IP address, reason text or other personal data. The store 
 |---|---|
 | `userId` | reference → `users`, unique |
 | `department` | `women` \| `men` \| `any` (required) |
-| `sizes` | per category group: `tops`, `bottoms`, `ethnicTops`, `ethnicSets`, `shoes` (and `dresses` when that category is added); each optional ([FRD.md](FRD.md) §4.8) |
-| `fitPreferences` | per category group: `slim` \| `regular` \| `relaxed` |
+| `sizes` | per category group, each optional ([FRD.md](FRD.md) §4.8): `tops` `{ letter: XS…3XL, collarIn? 13–20 in 0.5 steps }`; `bottoms` `{ waistIn: 24–50, lengthIn?: 26–36 }`; `ethnicTops` `{ letter?, numeric?: 28–54 }` (at least one); `ethnicSets` `{ letter?, waistIn? }` (at least one); `shoes` `{ uk: 1–14 }`. Letter sizes: `XS`, `S`, `M`, `L`, `XL`, `2XL`, `3XL`. `dresses` is added with that category in Stage 2. Ranges are defaults (D-54) and can be widened without migration |
+| `fitPreferences` | per category group (`tops`, `bottoms`, `ethnicTops`, `ethnicSets`): `slim` \| `regular` \| `relaxed` |
 | `likedColors[]`, `dislikedColors[]` | colour IDs from the knowledge base |
 | `contrastPreference` | `low` \| `medium` \| `high` \| `no_preference` |
 | `silhouettePreferences[]` | enum values (D-09) |
-| `coveragePreferences` | e.g. minimum sleeve length, neckline, hem length |
-| `comfortPreferences` | e.g. stretch, loose fit, lightweight |
+| `coveragePreferences` | the least coverage the user accepts (a hard constraint, FR-LOOK-08): `{ minSleeveLength?, minNecklineCoverage?, minGarmentLength? }`, each from the vocabulary lists ordered least → most coverage |
+| `comfortPreferences[]` | comfort options from the vocabulary (e.g. stretch, loose fit, breathable) |
 | `fabricPreferences` | `{ liked[], avoided[] }` |
 | `preferredStyles[]`, `preferredOccasions[]` | enum values (D-09) |
-| `budgetPreference` | optional per-look budget in ₹ (> 0). Stage 1: compared only with totals of user-entered prices; never filters generation |
+| `budgetPreference` | optional per-look budget in whole ₹ (1 – 10,00,000). Stage 1: compared only with totals of user-entered prices; never filters generation |
 | `measurements` | optional, self-measured; collected only when product size charts exist (product layer). `{ chestCm, waistCm, hipCm, footLengthCm, updatedAt }` |
 | `weatherPreferences` | Stage 2: `{ enabled: false, city: { cityId, name } \| null }`; never coordinates |
 | `createdAt`, `updatedAt` | timestamps |
