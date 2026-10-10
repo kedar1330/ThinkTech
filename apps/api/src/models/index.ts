@@ -49,11 +49,40 @@ const tombstoneSchema = new Schema({
   expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } },
 });
 
+// Appearance signals (DATABASE.md §3.3 and §5). Each attribute keeps the value used for
+// recommendations apart from any model estimate. Stage 1 stores only self-reported values: no
+// confidence, `estimate: null`. `null` means the attribute isn't set.
+const appearanceAttributeSchema = new Schema(
+  {
+    value: { type: Schema.Types.Mixed, required: true },
+    source: { type: String, enum: ['self_reported', 'photo_estimate', 'user_corrected'], required: true },
+    userConfirmed: { type: Boolean, required: true },
+    confirmedAt: { type: Date, default: null },
+    estimate: { type: Schema.Types.Mixed, default: null },
+  },
+  { _id: false },
+);
+
+const appearanceProfileSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true, unique: true },
+    skinTone: { type: appearanceAttributeSchema, default: null },
+    undertone: { type: appearanceAttributeSchema, default: null },
+    bodyProportions: { type: appearanceAttributeSchema, default: null },
+    // Signals are used only while this is on (FR-SIG-03).
+    useInRecommendations: { type: Boolean, default: true, required: true },
+    // Photo-analysis estimates only (deferred, D-76).
+    analysisVersion: { type: String, default: null },
+  },
+  { timestamps: true },
+);
+
 export type UserDoc = InferSchemaType<typeof userSchema>;
 export type BetaInviteDoc = InferSchemaType<typeof betaInviteSchema>;
 export type PasswordResetTokenDoc = InferSchemaType<typeof passwordResetTokenSchema>;
 export type SessionDoc = InferSchemaType<typeof sessionSchema>;
 export type TombstoneDoc = InferSchemaType<typeof tombstoneSchema>;
+export type AppearanceProfileDoc = InferSchemaType<typeof appearanceProfileSchema>;
 
 export interface Models {
   User: Model<UserDoc>;
@@ -61,6 +90,7 @@ export interface Models {
   PasswordResetToken: Model<PasswordResetTokenDoc>;
   Session: Model<SessionDoc>;
   Tombstone: Model<TombstoneDoc>;
+  AppearanceProfile: Model<AppearanceProfileDoc>;
 }
 
 export function registerModels(main: Connection, tombstones: Connection): Models {
@@ -70,6 +100,7 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     PasswordResetToken: main.model('PasswordResetToken', passwordResetTokenSchema, 'passwordResetTokens'),
     Session: main.model('Session', sessionSchema, 'sessions'),
     Tombstone: tombstones.model('DeletionTombstone', tombstoneSchema, 'deletionTombstones'),
+    AppearanceProfile: main.model('AppearanceProfile', appearanceProfileSchema, 'appearanceProfiles'),
   };
 }
 

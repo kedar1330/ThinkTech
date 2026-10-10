@@ -117,7 +117,7 @@ Errors never expose stack traces, secrets, database details or internal errors. 
 
 **`GET /v1/appearance`** — returns `{ skinTone, undertone, bodyProportions, useInRecommendations }`; each attribute uses the model in [DATABASE.md](DATABASE.md) §5.
 
-**`PUT /v1/appearance`** — input: any of `skinTone.value`, `undertone.value`, `bodyProportions.value` (or `null` to clear), and `useInRecommendations`. Stores the values as `source: "self_reported"`, `userConfirmed: true`, with no confidence. Returns the updated attributes.
+**`PUT /v1/appearance`** — input: any of `skinTone.value`, `undertone.value`, `bodyProportions.value` (or `null` to clear), and `useInRecommendations`. Stores the values as `source: "self_reported"`, `userConfirmed: true`, with no confidence. Fields not sent are unchanged; an empty body, unknown fields or a `confidence` are rejected with `INVALID_REQUEST`. Values come from the shared vocabulary (`monkRange` as `a-b`, span at most 2 tones). Returns the updated attributes. With no stored signals, `GET` returns all attributes `null` and `useInRecommendations: true`.
 
 ### 3.4 Style (`style.ts`)
 

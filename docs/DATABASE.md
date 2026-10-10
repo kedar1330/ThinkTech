@@ -138,7 +138,7 @@ Age range and height are **not collected** in Stage 1: no Stage 1 rule or featur
 | `skinTone` | attribute object (§5); `value` is `{ monkRange: "4-5" }` (tones `a-b`, 1 ≤ a ≤ b ≤ 10, span ≤ 2) |
 | `undertone` | attribute object (§5); `value` is `warm` \| `cool` \| `neutral` \| `olive` \| `not_sure` |
 | `bodyProportions` | attribute object (§5); `value` is a self-described proportion or silhouette descriptor (D-09) |
-| `useInRecommendations` | boolean; when `false`, all appearance signals are ignored |
+| `useInRecommendations` | boolean, default `true`; when `false`, all appearance signals are ignored (they stay stored until cleared) |
 | `analysisVersion` | only for photo-analysis estimates (deferred) |
 | `createdAt`, `updatedAt` | timestamps |
 

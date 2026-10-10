@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import type { Config } from './config/env';
+import { AppearanceController } from './controllers/appearance.controller';
 import { AuthController } from './controllers/auth.controller';
 import type { Database } from './db';
 import { authenticate } from './middleware/authenticate';
@@ -12,7 +13,9 @@ import { clientIp } from './middleware/client-ip';
 import './middleware/context';
 import { errorHandler, notFound } from './middleware/error-handler';
 import { createAuthRateLimits } from './middleware/rate-limit';
+import { appearanceRoutes } from './routes/appearance.routes';
 import { authRoutes } from './routes/auth.routes';
+import { AppearanceService } from './services/appearance.service';
 import { AuthService } from './services/auth.service';
 import { noEmailProvider, type EmailSender } from './services/email';
 import { sendError } from './utils/respond';
@@ -81,6 +84,7 @@ export function createApp({ config, db, logger, emailSender = noEmailProvider }:
   const authService = new AuthService(config, db.models, db.main, emailSender, logger);
   const requireAuth = authenticate(db.models, authService.sessions);
   app.use('/v1', authRoutes(new AuthController(authService), requireAuth, createAuthRateLimits()));
+  app.use('/v1', appearanceRoutes(new AppearanceController(new AppearanceService(db.models)), requireAuth));
 
   app.use(notFound);
   app.use(errorHandler);
