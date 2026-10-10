@@ -1,196 +1,127 @@
 # Contributing to StyleMe
 
-> Source: StyleMe Final End-to-End Blueprint — §2, §3, §6, §30–§33, §40, §53, §56
+> Part of the StyleMe documentation baseline. Plan: [ImplementationPlan.md](ImplementationPlan.md). Decisions: [ImplementationPlan.md](ImplementationPlan.md) §8.
 
 ---
 
-## 1. Branch Strategy
+## 1. Branches (D-21)
 
 | Branch | Purpose |
 |---|---|
-| `main` | Production branch. Merges trigger Render deployment |
-| `develop` | Integration branch |
+| `main` | Integration branch. Before the hosting checkpoint (D-81) nothing deploys; from S1.7, merges deploy to production after CI passes |
 | `feature/*` | New features |
 | `fix/*` | Bug fixes |
+| `develop` | Not used until a release cadence needs it |
 
-Feature branches are **never** deployed directly to production.
+Feature branches never deploy to production. Once staging exists (after the hosting checkpoint, D-81), their pull requests deploy to staging ([DEPLOYMENT.md](DEPLOYMENT.md) §5); before that, CI only. No Git action on the shared repository happens without the founder's approval.
 
 ---
 
 ## 2. Workflow
 
 ```
-Issue
-    ↓
-Feature Branch
-    ↓
-Implementation
-    ↓
-Local Testing
-    ↓
-Pull Request
-    ↓
-GitHub Actions
-    ↓
-Code Review
-    ↓
-Merge
+Issue → feature/* or fix/* branch → contracts first → implementation → tests → local check
+→ pull request → CI (typecheck, lint, style-rule linter, tests, E2E smoke, build) → review → merge
 ```
 
-1. Start from a GitHub issue (see §6).
-2. Create a `feature/*` or `fix/*` branch.
-3. Implement the change, following the coding principles (§4).
-4. Test locally.
-5. Open a pull request.
-6. GitHub Actions must pass: **typecheck, lint, unit/API tests, build**.
-7. Get a code review.
-8. Merge.
+Commit messages follow Conventional Commits.
 
 ---
 
 ## 3. Definition of Done
 
-A feature is not complete just because the UI works. Every feature needs:
-
-- [ ] UI
-- [ ] API
-- [ ] Validation
-- [ ] Database
-- [ ] Error handling
-- [ ] Authorization
-- [ ] Tests
-- [ ] Documentation
+A feature isn't complete just because the UI works. It needs: UI, API, validation, database, error handling, authorization, tests and documentation (including any change to the decision register).
 
 ---
 
-## 4. Coding Principles
-
-### 4.1 Where code goes
+## 4. Where Code Goes
 
 | Location | Contains |
 |---|---|
-| `apps/web` | What the user sees: UI, pages, components, forms, navigation, Auth.js, client state (Zustand), API client, 3D viewer, MediaPipe browser processing |
-| `apps/api` | What the application does: REST API, auth, authorization, models, business logic, AI orchestration, Cloudinary, filtering, recommendation, budget, PDF, rate limiting, error handling, logging |
-| `packages/contracts` | What frontend and backend agree on: shared Zod schemas, TypeScript types, request/response contracts |
+| `apps/web` | UI, pages, components, forms, Auth.js, client state, server-side API client |
+| `apps/api` | REST API, auth, models, services (look generator, budget engine; later eligibility and quality), integrations, scripts, logging |
+| `apps/api/src/style-rules` | The style knowledge base (§6) |
+| `apps/api/tests/fixtures` | Synthetic test fixtures only |
+| `packages/contracts` | Shared Zod schemas and types |
 
-### 4.2 Backend pattern
+**Backend pattern:** route → authentication → validation → controller (HTTP only) → service (business logic) → model or integration → response.
 
-```
-Route → Authentication Middleware → Validation Middleware → Controller → Service
-→ Database / External Integration → Response
-```
+---
 
-- **Controller:** HTTP concerns only.
-- **Service:** business logic.
-- **Model:** database interaction.
-- **Integration:** external provider communication (`src/integrations/ai | cloudinary | mediapipe | tryon | pdf`).
+## 5. Rules
 
-### 4.3 Rules
-
-- TypeScript everywhere.
-- Shared request/response types and schemas go in `packages/contracts`. Never duplicate them.
-- Version API routes under `/v1`.
-- Use the standard response envelope, and never leak internals in errors.
+- TypeScript everywhere. Shared schemas live in `packages/contracts`; never duplicate them.
+- Version routes under `/v1`; use the response envelope; never leak internals.
 - Validate all input and all AI output with Zod.
+- Keep the core deterministic. Never put an AI call on the core path; optional AI falls back to the deterministic result with the `AI_ENHANCEMENT_SKIPPED` warning and a log entry, without failing the request.
 - Budget and price logic is pure code. AI never sets prices.
-- Keep AI logic isolated behind the AI Service and integrations.
-- Store files in Cloudinary, never on the local filesystem.
-- Keep secrets server-side. Never commit `.env`, and never use `NEXT_PUBLIC_` for secrets.
-- Don't add Redis or BullMQ until they're actually needed.
-- Avoid initially: microservices, Kubernetes, a separate Python service, per-module databases, complex event architecture, a huge marketplace, complex recommendation ML, unnecessary infrastructure.
-
-### 4.4 Core principles
-
-```
-KEEP DETERMINISTIC LOGIC DETERMINISTIC.
-KEEP AI LOGIC ISOLATED.
-VALIDATE ALL AI OUTPUTS.
-LET USERS CONFIRM UNCERTAIN VISION RESULTS.
-KEEP SECRETS SERVER-SIDE.
-KEEP FILES IN CLOUD STORAGE.
-KEEP FRONTEND AND BACKEND CONTRACTS SHARED.
-DEPLOY WEB TO VERCEL AND API TO RENDER.
-```
+- User-entered items and prices are always labelled "not verified by StyleMe" and are never combined with, or presented as, verified data. Never fetch user-entered links.
+- **Never fabricate** products, prices, availability, ratings, reviews, quality claims or confidence values — in code, seed data, UI copy or docs.
+- **Fixtures** are synthetic, marked `isFixture: true`, live in `apps/api/tests/fixtures/`, and are loaded only by test and seed scripts that refuse to run in production. Never put a fixture where a user could see it.
+- Never use affiliate status or commission in ranking or quality logic.
+- Never send personal photos, measurements, appearance signals or unnecessary personal data to an external AI provider (AI rule 16).
+- Get retailer data only through permitted methods. No scrapers.
+- External services only through `src/integrations/`.
+- Secrets server-side and per environment. Never commit `.env`; never use `NEXT_PUBLIC_` for secrets.
+- Database changes use backward-compatible migrations (D-79).
+- Any new user-owned collection must be added to account deletion, the tombstone replay list and its verification before it ships ([DATABASE.md](DATABASE.md) §3.1c, D-85).
+- Don't add Redis, BullMQ or other infrastructure without a concrete need.
 
 ---
 
-## 5. Development Phases
+## 6. Styling-Content Review (founder-owned, D-62)
 
-| Phase | Name | Scope |
-|---|---|---|
-| 0 | Planning | BRD, FRD, SRS, architecture, database design, API specification, AI design, security plan, deployment plan, GitHub repository |
-| 1 | Monorepo Foundation | pnpm workspace, Next.js web, Express API, shared contracts, TypeScript, ESLint, GitHub |
-| 2 | Database + Authentication | MongoDB Atlas, Mongoose, user model, register, login, logout, Auth.js, protected frontend, protected API |
-| 3 | Profile + Dashboard | Dashboard, navigation, profile page, profile form, profile API, MongoDB persistence |
-| 4 | Appearance AI | Face upload, full-body upload, Cloudinary, image validation, MediaPipe, skin tone, undertone, body shape, confidence, confirmation |
-| 5 | Product Catalog | Product model, seed script, product API, search, filters, product detail |
-| 6 | Recommendation Engine | Profile loader, appearance loader, product filters, ranking, budget engine, Gemini, Zod, final outfit |
-| 7 | Outfit Experience | Outfit cards, why this works, price breakdown, total price, save outfit, history |
-| 8 | AI Try-On | Try-on UI, model integration, result handling, Cloudinary, error handling, caching where useful |
-| 9 | 3D Avatar | Three.js, React Three Fiber, GLB model, viewer, rotate, zoom, front/side/back |
-| 10 | Design Studio | Garment selection, color, fabric, neck, sleeve, length, fit, pattern, embroidery, preview, save |
-| 11 | Sketch + Chat + PDF | Sketch AI, fashion chatbot, tailor specification, PDFKit |
-| 12 | Testing + Security | Unit tests, API tests, AI failure tests, E2E, authentication tests, authorization tests, mobile UI, security hardening |
-| 13 | Docker + CI/CD + Deployment | Docker, Docker Compose, GitHub Actions, Vercel, Render, production environment, health check, final QA |
+The founder reviews and approves all palettes, styling/fit rules, fabric rules, outfit templates and style illustrations. Content is produced in sets — C0 development seed (temporary), C1 Stage 1 release set, C2 full library of at least 100 palettes and 100 templates — following the batch process in [ImplementationPlan.md](ImplementationPlan.md) §5.2. Any contributor may draft records; only the founder approves.
 
-### 5.1 Recommended 12-day schedule
+**Workflow:**
+1. **Draft:** create or change a record in `style-rules/` on a branch, with `reviewStatus: draft`, rationale, limitations and tags.
+2. **Automated checks:** schema validation and the linter (contradictions, duplicates, unknown references, missing rationale or limitations, inclusive-language check); licence check for illustrations; the coverage report (FR-STY-11) is updated.
+3. **Founder review:** against the checklist below. On approval, set `reviewStatus: approved`, `reviewedBy`, `reviewedAt`, and bump `version`.
+4. **Merge:** only approved, linter-clean records are used at runtime.
 
-| Day | Work |
+**Checklist:**
+- [ ] The rationale describes an effect, never a judgement.
+- [ ] Limitations are stated.
+- [ ] Nothing implies a body or skin tone makes something objectively unsuitable.
+- [ ] Soft effect only (prefer / deprioritise).
+- [ ] Tags and contexts are correct; no unintended overlap.
+- [ ] Colours, contrast and combinations are consistent; coordination across slots (formality, pattern mixing, proportion, footwear and accessories) is covered.
+- [ ] Fabric guidance is practical and never claims a fabric is always right.
+- [ ] Style illustrations: a recorded source and licence (D-65), and the "Style illustration — not a product" label.
+- [ ] Plain, inclusive language.
+
+**Corrections:** anyone can open an issue against a record ID (including from evaluation results or user feedback). A record producing harmful or judgemental output is set to `retired` immediately, then fixed. Other corrections follow the same workflow with a version bump. The library grows only as fast as the founder can review (FR-STY-08).
+
+---
+
+## 7. Issue Breakdown
+
+Issues follow the milestones in [ImplementationPlan.md](ImplementationPlan.md) §5–§7.
+
+| Milestone | Issues |
 |---|---|
-| 1 | Monorepo, Next.js, Express, MongoDB, shared contracts, auth foundation |
-| 2 | Profile, Cloudinary, MediaPipe, Gemini foundation |
-| 3 | Appearance AI, confidence, user confirmation |
-| 4 | Product catalog, search, filters |
-| 5 | Recommendation, ranking, budget engine |
-| 6 | Outfit experience, save/history |
-| 7 | AI Try-On |
-| 8 | 3D Avatar |
-| 9 | Design Studio |
-| 10 | Sketch AI, chatbot, PDF |
-| 11 | Testing, security, performance, bug fixing |
-| 12 | Docker, GitHub Actions, Vercel, Render, production QA |
+| S1.1 Foundation | Monorepo and tooling · Contracts package · Express skeleton (envelope, errors, `/health`) · Next.js shell · CI workflow · Dockerfile, `docker-compose.yml` and `render.yaml` (built locally, not deployed) |
+| S1.2 Accounts | User model · Auth API · Auth.js integration · Closed-beta registration (invite allow-list) · Password change · Admin-assisted reset (script, confirm endpoint, reset page) · Self-service reset request (disabled) · Account deletion with tombstone and reconciliation script · Rate limits |
+| S1.3 Profile and signals | Profile module · Category sizes and fit · Self-reported signals |
+| S1.4 Look engine | Knowledge-base schemas, loader and linter · Generator · Recommendations endpoint · Results UI |
+| S1.5 Look experience | Explanations · Alternatives · Palettes · Size notes and search phrases · Saved looks and feedback · Optional AI wording module |
+| S1.B Shortlist and budget | Shortlist module · Budget engine on user-entered prices · Price summary on saved looks · Labels |
+| HC-1 Hosting checkpoint | Present hosting options and current costs; record D-81; create staging per the decision |
+| S1.6 Hardening | Fixture safeguards · Security checklist · Privacy notices · Evaluation harness · E2E smoke · Latency measurement |
+| S1.7 Launch (closed beta) | Production environment · Tombstone store · Maintenance mode · Backups and restore test · Monitoring · Rollback rehearsal · Release QA · Inviting beta users · Legal-review reminder |
+| HC-2 Public-launch checkpoint | Legal-review reminder · Present email provider options and costs; record D-84 · Email integration · Enable self-service reset · Verify AC-24 |
+| Product layer | Retailer registry · Product model and provenance validation · Curation import · Source integration (mocked until approved) · Freshness and link checks · Matching and budget · Quality evidence · Product UI |
+| Stage 2 | Full content library C2 (release gate) · Weather |
+| Content programme | C0 seed · C1 release set · C2 full library · Coverage report · Evaluation-set growth (founder approval; not developer-days) |
 
 ---
 
-## 6. GitHub Issue Breakdown
+## 8. Documentation
 
-| # | Issue | # | Issue |
-|---|---|---|---|
-| 1 | Project documentation | 20 | Outfit UI |
-| 2 | Monorepo setup | 21 | Gemini integration |
-| 3 | Next.js web setup | 22 | Groq fallback |
-| 4 | Express API setup | 23 | Try-on integration |
-| 5 | Shared contracts package | 24 | 3D avatar |
-| 6 | MongoDB configuration | 25 | Design studio |
-| 7 | User model | 26 | Sketch-to-design |
-| 8 | Auth API | 27 | Chatbot |
-| 9 | Auth.js integration | 28 | PDF generation |
-| 10 | Profile module | 29 | Unit tests |
-| 11 | Cloudinary integration | 30 | API tests |
-| 12 | MediaPipe integration | 31 | E2E tests |
-| 13 | Appearance analysis | 32 | Security hardening |
-| 14 | Appearance confirmation | 33 | Docker |
-| 15 | Product model | 34 | GitHub Actions |
-| 16 | Product seed | 35 | Vercel deployment |
-| 17 | Product APIs | 36 | Render deployment |
-| 18 | Recommendation engine | 37 | Production environment |
-| 19 | Budget engine | 38 | Final QA |
+Update the relevant document in `docs/` with every feature: [BRD](BRD.md) · [MVP](MVP.md) · [FRD](FRD.md) · [SRS](SRS.md) · [ARCHITECTURE](ARCHITECTURE.md) · [DATABASE](DATABASE.md) · [API](API.md) · [AI](AI.md) · [SECURITY](SECURITY.md) · [TESTING](TESTING.md) · [DEPLOYMENT](DEPLOYMENT.md) · [ImplementationPlan](ImplementationPlan.md).
 
 ---
 
-## 7. Documentation
+## 9. Decisions
 
-Update the relevant document in `docs/` with every feature (it's part of the Definition of Done):
-
-[BRD](BRD.md) · [FRD](FRD.md) · [SRS](SRS.md) · [ARCHITECTURE](ARCHITECTURE.md) · [DATABASE](DATABASE.md) · [API](API.md) · [AI](AI.md) · [SECURITY](SECURITY.md) · [TESTING](TESTING.md) · [DEPLOYMENT](DEPLOYMENT.md)
-
----
-
-## 8. Open Items / To Be Decided
-
-- How `develop` is used relative to `main` (PR target branch, release process).
-- Commit message convention.
-- PR template and number of required reviewers.
-- Branch protection rules.
-- ESLint configuration and any formatter (the blueprint names ESLint only).
-- Issue labels and milestones.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-21, D-62, D-65, D-77, D-78, D-79, D-80.

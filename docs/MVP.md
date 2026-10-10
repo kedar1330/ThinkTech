@@ -1,464 +1,172 @@
-# StyleMe — Minimum Viable Product (MVP)
+# StyleMe — Minimum Viable Product (First Real Release)
 
-> Source of truth: StyleMe Final End-to-End Blueprint (`StyleMe APP.txt`). Main sections used: Project Overview, §1, §8–§28, §34–§38, §52–§56.
->
-> Related documents: [BRD](BRD.md) · [FRD](FRD.md) · [SRS](SRS.md) · [ARCHITECTURE](ARCHITECTURE.md) · [DATABASE](DATABASE.md) · [API](API.md) · [AI](AI.md) · [SECURITY](SECURITY.md) · [TESTING](TESTING.md) · [DEPLOYMENT](DEPLOYMENT.md) · [CONTRIBUTING](CONTRIBUTING.md)
-
-> **Terminology note:** in the blueprint, "Phase 0–13" are **development phases** of building this MVP (for example, Phase 2 = Database + Authentication). They are not product releases. In this document, **"Future scope"** means anything the blueprint defers until "the actual application requires" it (§37, §56), or explicitly excludes from the first MVP.
+> Part of the StyleMe documentation baseline. Business context: [BRD.md](BRD.md). Requirements: [FRD.md](FRD.md), [SRS.md](SRS.md). Plan: [ImplementationPlan.md](ImplementationPlan.md). Tests: [TESTING.md](TESTING.md). Decisions: [ImplementationPlan.md](ImplementationPlan.md) §8.
 
 ---
 
-## 1. MVP Overview and Objective
+## 1. Definition
 
-### 1.1 Overview
-StyleMe is an **AI-powered personal fashion stylist focused on Indian users**. The MVP takes a user from account creation, through photo-based appearance analysis and budget-validated outfit recommendations, to AI visualisation, custom garment design and a downloadable tailor specification.
+The StyleMe MVP is **Stage 1 — Personal Styling**: the smallest product that real users can rely on to answer "what should I wear for this occasion, in colours and cuts that suit my preferences, and why?" — and to keep track of items they find and what those would cost against their budget.
 
-### 1.2 Objective
-> At the end of the project, StyleMe should be a **working MVP, not just a UI demo** (§54).
+It is a real product, not a demo:
+- real accounts, real saved data, real deletion;
+- real, founder-reviewed styling rules, applied deterministically;
+- no fabricated products, prices, retailer links, stock, reviews, quality claims or confidence values;
+- deployed to production with monitoring, backups and a tested restore.
 
-The MVP must:
-
-1. Deliver the full end-to-end user journey (§4) **live in production**: web on Vercel, API on Render.
-2. Keep the core layers **deterministic and reliable**: recommendation, profile, product, budget, validation, security and deployment.
-3. Treat AI and vision features as **probabilistic**, and handle them with **confidence, validation, caching, fallbacks and user confirmation**.
-4. Stay a **modular monorepo** without over-engineering (§56).
+**Product and budget scope (D-77 = Option B, approved 2026-10-10).** Stage 1 includes an optional shortlist: users add items they found themselves, with prices they enter, and StyleMe totals those prices against their budget. Every such item, price and total is labelled as entered by the user and **not verified by StyleMe**. This needs no retailer approval. Verified products and retailer integrations are the product layer, planned for Stage 3 and subject to authorisation.
 
 ---
 
-## 2. Problem and Target Users
+## 2. Problem and Users
 
-### 2.1 Problem
-Users who want personal fashion guidance need recommendations that take into account their **appearance** (skin tone, undertone, body shape), their **preferences**, the **occasion**, and a **real budget**, linked to actual products they can browse. StyleMe brings these together in one guided journey. It also lets users visualise outfits and design custom garments for a tailor.
+People in India who want personal fashion guidance (see [BRD.md](BRD.md) §1–§2). Stage 1 focuses on explained, personal looks and budgeting on the user's own finds. Verified-product shopping follows when StyleMe has an authorised source.
 
-### 2.2 Target users
+---
 
-| Attribute | MVP definition |
+## 3. Scope
+
+### 3.1 In Stage 1
+
+| Capability | Requirements |
 |---|---|
-| Market | Indian users |
-| Currency | Indian Rupee (₹) |
-| Wardrobe | Western and Indian wear: T-shirts, Shirts, Jeans, Trousers, Kurtas, Kurtis, Sarees, Lehengas, Shoes, Accessories |
-| Profile captured | Gender, age range, height, size, budget, liked/disliked colors, preferred styles, preferred occasions |
-| Core need | Personalised, budget-valid outfit suggestions for a chosen occasion and style |
+| Register (invite-only closed beta until D-74), log in, log out, change password, admin-assisted password recovery, delete account. Self-service email reset is built but enabled only at public launch | FR-AUTH |
+| Profile: department, sizes and fit per category, colour likes and dislikes, contrast, silhouette, coverage, comfort, fabrics, styles, occasions, optional per-look budget | FR-PROF, FR-SIZE-01 … 04 |
+| Optional self-reported appearance signals (skin-tone range, undertone, proportions), switchable and deletable | FR-SIG |
+| Founder-reviewed style knowledge base, Stage 1 release set C1: 12–20 palettes, about 20 templates, rules covering every FR-STY-09 area (coordination, occasions, preferences, fit, sizes, budget where it applies, alternatives). Built to support the full library of 100+ palettes and 100+ templates | FR-STY |
+| Deterministic look recommendations for an occasion: up to 5 distinct looks, look specifications per slot, explanations, alternatives, size notes, search phrases | FR-LOOK |
+| Palette view: suggested and all palettes | FR-PAL |
+| Save, list, open and delete looks; feedback | FR-OUT |
+| Shortlist of items the user found: name, price they enter, optional link and note, optionally attached to a saved look's slot | FR-LIST |
+| Budget totals on user-entered prices, per saved look, labelled "not verified by StyleMe" | FR-BUD (Stage 1 rows) |
+| Data honesty labels; style illustrations only where licensed | FR-DATA |
+| Optional AI wording, off by default | FR-LOOK-16 |
+
+### 3.2 Not in Stage 1
+
+- **Product layer (Stage 3, needs authorisation):** verified products, retailer integrations, retailer-sourced prices, stock, ratings, reviews, quality evidence, matching, comparison, size charts and measurements (FR-PROD, FR-MATCH, FR-QUAL, FR-SIZE-05 … 07, verified-price FR-BUD rows).
+- **Full styling library C2 (Stage 2 release requirement):** at least 100 palettes and at least 100 outfit templates, 8–12 categories, comprehensive rules (D-57). Stage 1 ships with C1; C2 is planned and produced from the start ([ImplementationPlan.md](ImplementationPlan.md) §5.2).
+- Weather (Stage 2).
+- Photo-based appearance analysis, 3D avatar, Design Studio, sketch-to-design, chatbot and tailor PDF (D-76).
+- Virtual try-on (D-48).
+- Cart, checkout and payments (never).
 
 ---
 
-## 3. MVP Features and Scope
+## 4. User Journey
 
-### 3.1 Included in the MVP
+```
+Register → Log in → Profile (department, sizes, fit, colours, styles, occasions, optional budget)
+→ (optional) self-reported signals → Ask for looks (occasion, optional style, suggested/explore palette)
+→ Looks: slots with colour swatches, look specification, size note, search phrase, "Why this works"
+→ Explore alternatives and palettes → Change a preference → Regenerate
+→ Save a look → (optional) add an item you found to a slot: name, your price, optional link and note
+→ See "Total of prices you entered: ₹… (n of m slots) — within budget / over budget. Not verified by StyleMe."
+→ Saved looks → Feedback / delete looks and items → Log out → (any time) delete account
+```
 
-Every capability below is **in scope** for the MVP (§52, §54).
+**When there is no product data**, which is always the case in Stage 1, the look is complete as a styling suggestion. StyleMe says plainly that it doesn't show products, offers the search phrase, and lets the user record their own finds. It never fills the gap with placeholders, invented products or test data.
 
-| ID | Capability | MVP scope (what is delivered) | Phase | FRD ref |
-|---|---|---|---|---|
-| MVP-01 | **Account creation / authentication** | Register, login, logout. Auth.js session on the web, API access token checked by Express. Protected pages and protected API | 2 | FR-AUTH |
-| MVP-02 | **Style profile creation** | Dashboard + navigation. Profile form: gender, ageRange, height, size, budget, likedColors, dislikedColors, preferredStyles, preferredOccasions. Saved in MongoDB | 3 | FR-PROF |
-| MVP-03 | **Face and full-body photo upload** | Upload both photos, run image quality validation, store in Cloudinary | 4 | FR-APP-01…04 |
-| MVP-04 | **Appearance analysis** | MediaPipe face detection and pose landmarks drive the analysis pipeline | 4 | FR-APP |
-| MVP-05 | **Skin tone and undertone** | Monk Skin Tone value + range + confidence. Undertone (Warm / Cool / Neutral / Olive / Unknown) + confidence | 4 | FR-APP-05, 06 |
-| MVP-06 | **Body shape analysis** | Proportion ratios → Rectangle / Triangle / Inverted Triangle / Oval / Hourglass + confidence. No calibrated measurements | 4 | FR-APP-07, 08 |
-| MVP-07 | **User confirmation / correction** | Confirmation screen with confidence values and Confirm / Edit. Confirmed values stored with `confidence: 1` and `userConfirmed: true` | 4 | FR-CONF |
-| MVP-08 | **Personal fashion profile** | Profile + confirmed appearance together form the source of truth for recommendations and chat | 3–4 | FR-PROF, FR-CONF-06 |
-| MVP-09 | **Occasion / style / budget selection** | The user picks occasion, style and budget for a recommendation request | 6 | FR-REC-01 |
-| MVP-10 | **Product filtering** | Curated catalog of 500–2,000 products, loaded by a seed script. Search and filters. Hard filters: gender → category → occasion → size → color → price → style | 5–6 | FR-PROD, FR-REC-03 |
-| MVP-11 | **AI outfit recommendations** | Candidate ranking → top candidates → Gemini reasoning (Groq fallback) → Zod validation | 6 | FR-REC |
-| MVP-12 | **Budget validation** | Pure-code budget engine: `totalPrice <= budget`, using only stored product prices | 6 | FR-BUD |
-| MVP-13 | **Outfit suggestions** | Outfit cards, "Why this works", price breakdown, total price, save outfit, outfit history | 7 | FR-OUT |
-| MVP-14 | **Product details** | Product detail view (`GET /v1/products/:id`) | 5 | FR-PROD-05 |
-| MVP-15 | **AI try-on** | User photo + garment image → Leffa / Hugging Face / Qwen → generated image in Cloudinary → result in MongoDB. Fails gracefully | 8 | FR-TRY |
-| MVP-16 | **3D avatar** | GLB/GLTF avatar in Three.js / React Three Fiber / drei. Front, side and back views, rotate, zoom, approximate proportions | 9 | FR-AVT |
-| MVP-17 | **Design Studio** | Choose Garment, Color, Fabric, Neck, Sleeve, Length, Fit, Pattern, Embroidery. Preview. Zustand state while editing, saved to MongoDB | 10 | FR-DES |
-| MVP-18 | **Sketch-to-AI design** | Sketch → Gemini Vision → structured garment JSON → Zod → user confirmation → design generation | 11 | FR-SKT |
-| MVP-19 | **Fashion chatbot** | Authenticated chat that uses the confirmed profile and relevant context with Gemini. Messages stored in MongoDB | 11 | FR-CHAT |
-| MVP-20 | **Tailor specification PDF** | Design → specification JSON → PDFKit → downloadable PDF | 11 | FR-PDF |
-| MVP-21 | **Live deployment** | Docker (API), GitHub Actions CI, Vercel (web), Render (API), `/health`, production QA | 13 | — |
+---
 
-### 3.2 MVP boundaries per capability
+## 5. Acceptance Criteria
 
-| Capability | Included | Not in MVP |
+Each criterion is checked by the tests named in brackets ([TESTING.md](TESTING.md)) or by the stated measurement. A criterion is met only when its result is recorded.
+
+### 5.1 Stage 1 core
+
+| ID | Criterion |
+|---|---|
+| AC-01 | Register, log in, log out and `GET /v1/auth/me` work. Protected pages and endpoints reject unauthenticated access, and revoked tokens are rejected. After logout, the logged-out session's token is rejected even if replayed, while the user's other sessions keep working (T-01 … T-05, T-46) |
+| AC-02 | Deleting the account writes a minimal tombstone first (D-85), then removes the user, sessions, profile, signals, looks, feedback, shortlist items and their beta invite record; the user can no longer log in and existing tokens are rejected (T-06) |
+| AC-03 | A profile can be saved with only `department`; invalid values (including a budget ≤ 0) are rejected; measurement fields are rejected because size charts don't exist yet (T-07, T-08) |
+| AC-04 | Self-reported signals are optional, stored without confidence, can be turned off or cleared, and never appear in any outbound call (T-09 … T-11) |
+| AC-05 | For every evaluation profile, a request with only an occasion returns at least one look, or a `200` with `INSUFFICIENT_MATCHES` naming the limiting constraint. Never an error (T-16, T-18) |
+| AC-06 | Identical requests with the same knowledge-base version return identical looks (T-12) |
+| AC-07 | Across the evaluation set, 0 looks violate a hard constraint (disliked colours, avoided fabrics, coverage, department) (T-13, T-15) |
+| AC-08 | No response repeats a combination signature. Alternatives are 3–5, or fewer with `ALTERNATIVES_LIMITED`; never padded (T-19, T-20) |
+| AC-09 | 100% of explanations in the evaluation set pass the fidelity and inclusive-language checks (T-21, T-22) |
+| AC-10 | The founder reviews every evaluation-set look. The proposed target is at least 80% judged relevant (D-52). The measured result and any documented gaps are recorded before release |
+| AC-11 | No generated look contains a product, price, retailer, stock or availability, and search phrases contain no link or price. The only prices in any response are user-entered and carry `priceBasis: "user_entered"` (T-23, T-24) |
+| AC-12 | Looks are complete with AI wording off, and when AI wording is on but fails, times out or returns invalid output (`AI_ENHANCEMENT_SKIPPED`). Only references and attribute tags are sent to the AI step (T-25 … T-27) |
+| AC-13 | Save, list, open, delete and feedback work; unsaved looks expire after 7 days; size notes use only the user's category size; the palette view lists suggested and all palettes (T-31 … T-33) |
+| AC-14 | Every style illustration is labelled "Style illustration — not a product" and has a recorded licence; otherwise a labelled swatch is shown (T-34) |
+| AC-15 | Fixture safeguards hold: production refuses to start with fixtures; seed scripts refuse production; no endpoint returns a fixture in production configuration (T-29, T-30) |
+| AC-16 | Error responses use the envelope without internals; rate limits are enforced; every item on the security checklist ([SECURITY.md](SECURITY.md) §11) is checked (T-35, T-36) |
+| AC-17 | The Playwright smoke flow, including adding a priced item to a saved look, passes at 375×812 and 1280×800 ([TESTING.md](TESTING.md) §7) |
+| AC-18 | After the hosting checkpoint (D-81), p95 latency of `POST /v1/recommendations` without AI is measured on the plan chosen for production (in staging if it runs on the same plan, otherwise on production before beta users are invited). Proposed target under 2 s (D-68); the measured value is recorded. A plan that sleeps when idle can't meet this target for the first request (DEPLOYMENT.md §9.1) |
+| AC-19 | A backup has been restored into staging with the full restore procedure: accounts deleted after the backup are deleted again by tombstone replay, verification passes before users are served, and a failed replay keeps the system in maintenance (T-43 … T-45). Uptime monitoring alerts the founder; a rollback has been rehearsed in staging (D-79, D-85) |
+| AC-20 | **Public launch only** (checked at HC-2): the legal review (D-74) is recorded as complete in the register, as the D-74 entry describes, with every required change done, and the other public-launch blockers in [ImplementationPlan.md](ImplementationPlan.md) §11 are met. Until then StyleMe is a closed beta for invited users (D-63), and the founder has been reminded to arrange the review |
+| AC-21 | While `PUBLIC_SIGNUP_ENABLED` is `false`, registration with an email not on the invite allow-list fails; invited emails can register; a refused registration gives the same response whether the email isn't invited or is already registered (T-37, T-49) |
+| AC-22 | With a synthetic fixture library of 150 palettes and 150 templates, the loader, linter and generator work without code changes, and generation latency is measured and recorded (T-38) |
+| AC-23 | Password change works with the current password and revokes all other sessions and old tokens; any reset revokes all sessions; admin-assisted recovery issues a single-use, hashed code valid 60 minutes, the user sets the new password, and the admin never sees it (T-39 … T-41) |
+| AC-24 | Public launch only (HC-2): self-service email reset gives generic responses, sends single-use 30-minute links only to active accounts, is rate-limited, and revokes all tokens on reset (T-41, T-42) |
+| AC-25 | Session and reset hardening: the session cookie is `HttpOnly`, `Secure` in staging and production, `SameSite=Lax` and host-only; state-changing requests with a foreign `Origin` are rejected; login and registration refusals are generic; the reset page keeps the token out of the URL after load, sends `Referrer-Policy: no-referrer`, loads no third-party resources, and tokens never appear in logs (T-47 … T-49) |
+
+### 5.2 Stage 1 shortlist and budget (D-77 = B)
+
+| ID | Criterion |
+|---|---|
+| AC-B1 | Every user-entered item, price and total shows the FR-LIST-02 labels ("not verified by StyleMe"), visible without extra clicks; API responses carry `priceBasis: "user_entered"`, `verifiedByStyleMe: false` and `USER_ENTERED_PRICES` (B-01, B-05) |
+| AC-B2 | StyleMe never fetches, previews or modifies a user-entered link, and shows no retailer name, logo, image, stock, rating or quality for user-entered items. Links are https only and rendered with `rel="noopener noreferrer nofollow"` (B-02, B-06) |
+| AC-B3 | The budget engine computes totals, priced-slot counts, budget remaining and status exactly per FR-BUD-03 and FR-BUD-07, including partial pricing and no budget (B-04, B-07, unit tests) |
+| AC-B4 | Validation and limits per FR-LIST-07 and D-80 are enforced; items can only attach to the user's own saved looks; deleting a look detaches its items; deleting the account deletes all items; attachment is by `{outfitId, slotId}`, so repeated slot types never collide; `outfitId` and `slotId` are given together or not at all (B-02, B-03, B-08 … B-10) |
+
+### 5.3 Product layer (Stage 3; not part of the Stage 1 release)
+
+| ID | Criterion |
+|---|---|
+| AC-P1 | Every product shown is verified (`authorised` or `verified_real`) with complete evidence; imports with missing evidence, a foreign domain, a future date or a fixture flag are rejected (P-14) |
+| AC-P2 | Every price shows "Price as of"; stale prices are warned; expired prices are not recommended (P-05, P-06) |
+| AC-P3 | Out-of-stock, size-unavailable, broken-link and quality-`rejected` products are never recommended (P-02, P-08 … P-10) |
+| AC-P4 | Slots with no eligible product show "No verified product available" with the search phrase; never a fixture or a poorer match (P-13) |
+| AC-P5 | No over-budget look is returned; totals are labelled as estimates, not checkout prices (P-11, P-19) |
+| AC-P6 | Ranking and quality are identical with and without affiliate tracking; disclosure appears only on tracked links (P-12) |
+| AC-P7 | Quality verdicts cite evidence; low evidence gives `insufficient_evidence`; confidence is never 1 (P-01, P-03, P-04) |
+| AC-P8 | A source outage doesn't break requests; data ages and an alert is raised; comparison is shown only where permitted (P-15, P-16) |
+| AC-P9 | User-entered and verified prices are never combined into one total (B-04) |
+
+### 5.4 Stage 2 weather (only if weather ships; D-60)
+
+| ID | Criterion |
+|---|---|
+| AC-W1 | With weather off, no provider call is made and results don't depend on location (W-01) |
+| AC-W2 | Provider failure never blocks recommendations; manual entry is offered (W-03, W-06) |
+| AC-W3 | Device coordinates are rounded and never stored, logged or sent to AI (W-05) |
+
+### 5.5 Stage 2 full styling library (release requirement, D-57)
+
+| ID | Criterion |
+|---|---|
+| AC-C1 | At least 100 approved palettes and at least 100 approved outfit templates, across 8–12 categories; linter clean |
+| AC-C2 | The coverage report (FR-STY-11) shows no empty cell for any supported occasion × department combination, and rules cover every FR-STY-09 area |
+| AC-C3 | The expanded evaluation set (every supported occasion × department combination has at least one profile) meets the relevance target (D-52) or documented gaps are accepted by the founder; no regression on AC-07 … AC-09 |
+
+---
+
+## 6. Data Honesty in Stage 1
+
+| Class | Examples in Stage 1 | Label |
 |---|---|---|
-| Product catalog | 500–2,000 curated, high-quality products | Millions of records, a huge marketplace |
-| Body analysis | Ratios and shape class, with confidence | Exact waist/chest measurements without calibration |
-| Undertone | Five values including **Unknown** | Forcing a value when uncertain |
-| Recommendation | Hard filters + ranking + Gemini reasoning | Overly complex recommendation ML |
-| 3D avatar | Simple GLB model, approximate proportions, front/side/back, rotate, zoom | Photorealistic human reconstruction |
-| Try-on | Integrated, with graceful degradation ("Try-on is currently unavailable.") | Breaking the rest of the app when try-on fails |
-| Caching | MongoDB `aiCache` | Redis (until needed) |
-| Background jobs | — | BullMQ (until tasks become long-running) |
+| User-provided | Profile, sizes, signals, budget | "Your …" |
+| User-provided, not verified | Shortlist items, prices the user enters, and totals of those prices | "Added by you — not verified by StyleMe", "Price entered by you — not verified by StyleMe", "Total of prices you entered — not verified by StyleMe; not a checkout price" |
+| Verified | None in Stage 1 (product layer, Stage 3) | — |
+| Derived | Looks, explanations, size notes | "Suggested for you", "Why this works" |
+| Estimated | None in Stage 1 | — |
+| Unavailable | Any missing value | "Not available" |
+
+Test fixtures never exist in production ([DEPLOYMENT.md](DEPLOYMENT.md) §2).
 
 ---
 
-## 4. End-to-End User Journey
+## 7. Definition of Done
 
-```
-Create Account
-    ↓
-Create Style Profile
-    ↓
-Upload Face + Full-Body Photos
-    ↓
-Appearance Analysis
-    ↓
-Skin Tone + Undertone + Body Shape
-    ↓
-Confidence Score
-    ↓
-User Confirms / Corrects
-    ↓
-Personal Fashion Profile
-    ↓
-Select Occasion + Style + Budget
-    ↓
-Product Filtering
-    ↓
-AI Recommendation
-    ↓
-Budget Validation
-    ↓
-Outfit Suggestions
-    ↓
-Product Details
-    ↓
-AI Try-On
-    ↓
-3D Avatar
-    ↓
-Design Studio
-    ↓
-Sketch → AI Design
-    ↓
-Fashion Chatbot
-    ↓
-Tailor Specification PDF
-```
-
-### 4.1 User capability checklist (§52)
-
-A user of the MVP must be able to:
-
-1. Register
-2. Login
-3. Create fashion profile
-4. Upload face photo
-5. Upload full-body photo
-6. Run appearance analysis
-7. See skin tone, undertone, body shape
-8. See confidence values
-9. Confirm or edit results
-10. Select style/occasion/budget
-11. Receive personalized outfit recommendations
-12. Verify that the outfit fits the budget
-13. View product details
-14. Try AI visualization
-15. View 3D avatar
-16. Create a garment design
-17. Upload a sketch
-18. Convert sketch to structured design
-19. Chat with the fashion assistant
-20. Generate a tailor specification
-21. Download the PDF
-22. Logout
+The MVP (Stage 1) is done when content set C1 is approved, every closed-beta criterion in §5.1 and §5.2 (all except AC-20 and AC-24) is met and recorded, the hosting decision (D-81) has been made at the hosting checkpoint, and the release checklist ([DEPLOYMENT.md](DEPLOYMENT.md) §8) is complete. It is released as a closed beta; public launch needs every blocker in [ImplementationPlan.md](ImplementationPlan.md) §11 (D-74 recorded complete, AC-20, AC-24, D-86). The full product styling scope (C2, §5.5) is the Stage 2 release requirement.
 
 ---
 
-## 5. Functional Requirements (MVP)
+## 8. Decisions
 
-Requirement IDs match [FRD.md](FRD.md). This section lists the MVP-critical behavior of each capability.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-07, D-46, D-52, D-53, D-55, D-57, D-62, D-63, D-65, D-67, D-68, D-74, D-76 … D-86.
 
-### 5.1 Authentication (MVP-01)
-- Register (`POST /v1/auth/register`) with email, password and name. Only the password hash is stored.
-- Login (`POST /v1/auth/login`): validate credentials → compare password hash → create API access token → Auth.js protected session.
-- Current user (`GET /v1/auth/me`). Logout.
-- All pages except login/register, and all endpoints except register, login and `/health`, require authentication.
-
-### 5.2 Profile (MVP-02, MVP-08)
-- `GET /v1/profile`, `PUT /v1/profile`. The profile is saved in `profiles` for the authenticated user only.
-
-### 5.3 Photo upload and appearance analysis (MVP-03 – MVP-06)
-- Face and full-body photos are stored in **Cloudinary**, never on the API server's filesystem.
-- **Quality validation** comes first. Bad, dark, multiple-people, no-face and partial-body photos are handled clearly.
-- **Skin tone:** face detection → skin region → pixel/color analysis → Monk estimate + range + confidence (e.g. Monk 5, range 4–5, 84%).
-- **Undertone:** skin/color characteristics + AI reasoning → Warm / Cool / Neutral / Olive / **Unknown** (when uncertain) + confidence.
-- **Body shape:** MediaPipe Pose landmarks → shoulder/chest/waist/hip/torso/leg proportions → ratios → shape class + confidence.
-- Endpoints: `POST /v1/appearance/analyze`, `GET /v1/appearance`.
-
-### 5.4 Confirmation / correction (MVP-07)
-- Show each result with its confidence. **Confirm** or **Edit**.
-- `PUT /v1/appearance/confirm` stores `{ value, confidence: 1, userConfirmed: true }`.
-- Uncertain classifications are never forced. Confirmed values override AI estimates everywhere downstream.
-
-### 5.5 Recommendation, filtering and budget (MVP-09 – MVP-12)
-```
-User Request → Profile → Confirmed Appearance → Hard Filters → MongoDB Products
-→ Candidate Ranking → Gemini Reasoning → Zod Validation → Budget Validation → Final Outfit
-```
-- The full catalog is **never** sent to Gemini. Only the top ranked candidates are.
-- The budget is computed in code from stored prices. An outfit is **VALID** only if `totalPrice <= budget`.
-- AI never invents or overrides prices.
-- Endpoint: `POST /v1/recommendations`.
-
-### 5.6 Outfits and products (MVP-10, MVP-13, MVP-14)
-- Outfit cards with "Why this works", per-item price breakdown and total.
-- Save (`POST /v1/recommendations/:id/save`) and history (`GET /v1/outfits`).
-- Product browsing, search and filters (`GET /v1/products`), and product detail (`GET /v1/products/:id`).
-
-### 5.7 AI try-on (MVP-15)
-- `POST /v1/tryon`, `GET /v1/tryon/:id`. The generated image goes to Cloudinary and the result to MongoDB.
-- If unavailable, show **"Try-on is currently unavailable."** The rest of the app keeps working.
-
-### 5.8 3D avatar (MVP-16)
-- GLB/GLTF model viewer: front, side, back, rotate, zoom, approximate proportions.
-
-### 5.9 Design Studio and sketch-to-design (MVP-17, MVP-18)
-- Design attributes: Garment, Color, Fabric, Neck, Sleeve, Length, Fit, Pattern, Embroidery. Preview. Save.
-- `POST /v1/design`, `GET /v1/design/:id`, `POST /v1/design/sketch`, `POST /v1/design/generate`.
-- Sketch output example: `{ "garment": "kurta", "neck": "mandarin", "sleeve": "full", "length": "knee", "fit": "regular", "fabric": "cotton", "color": "navy" }`. The user confirms it before generation.
-
-### 5.10 Fashion chatbot (MVP-19)
-- `POST /v1/chat`, `GET /v1/chat/conversations`.
-- Auth → load confirmed profile → relevant context only → Gemini → response → MongoDB.
-
-### 5.11 Tailor PDF (MVP-20)
-- `POST /v1/tailor/pdf`. The PDF contains Garment, Fabric, Color, Neck, Sleeve, Length, Fit, Pattern, Embroidery, Design image and Tailor instructions. The user can download it.
-
-### 5.12 Cross-cutting
-- Standard response envelope: `{ success: true, data }`, or `{ success: false, error: { code, message } }`.
-- `GET /health` for health checks.
-
----
-
-## 6. AI Capabilities (MVP)
-
-| Capability | Provider(s) | MVP safeguard |
-|---|---|---|
-| Face detection / skin region | MediaPipe | Quality validation, confidence, user confirmation |
-| Pose landmarks / body proportions | MediaPipe Pose | Ratios only (no calibration), confidence, user confirmation |
-| Undertone reasoning | Gemini (Groq fallback) | "Unknown" when uncertain, confidence, user confirmation |
-| Outfit reasoning | Gemini (Groq fallback) | Pre-filtered candidates only, Zod, coded budget check |
-| Sketch interpretation | Gemini Vision | Zod garment schema, user confirmation before generation |
-| Design interpretation | Gemini | Zod validation. The provider for design **generation** isn't specified in the blueprint (open item) |
-| Fashion chatbot | Gemini (Groq fallback) | Confirmed profile + relevant context only, no fake answers |
-| Virtual try-on | Leffa / Hugging Face / Qwen Image Edit | Isolated in `integrations/tryon/`, graceful "unavailable" message |
-
-### 6.1 AI rules the MVP must enforce (§36)
-1. Never claim exact visual measurements without calibration.
-2. Never force low-confidence classifications.
-3. Show confidence.
-4. Allow user correction.
-5. User-confirmed data overrides AI estimation.
-6. AI cannot invent product prices.
-7. Budget is validated by code.
-8. AI JSON is validated using Zod.
-9. AI failures produce real errors/fallbacks.
-10. Never expose API keys.
-
-### 6.2 AI reliability pattern
-```
-AI → Parse → Zod → Business validation → Use result
-If invalid → Retry / Fallback / Clear error
-```
-- Gemini is primary and Groq is the fallback, through a single **AI Router**.
-- Free tiers are **not** unlimited, so quota exhaustion must be handled gracefully.
-- AI responses are cached in MongoDB `aiCache`.
-
-Full details are in [AI.md](AI.md).
-
----
-
-## 7. Technical Requirements
-
-| Layer | MVP technology |
-|---|---|
-| Monorepo | pnpm workspaces: `apps/web`, `apps/api`, `packages/contracts` |
-| Frontend | Next.js, TypeScript, Tailwind CSS, shadcn/ui, Zustand |
-| Authentication | Auth.js (NextAuth) + Express auth API |
-| Backend | Node.js, Express, TypeScript |
-| Database | MongoDB Atlas + Mongoose |
-| Shared contracts | Zod schemas + TypeScript types in `packages/contracts` |
-| AI | Gemini API (primary), Groq API (fallback) |
-| Vision | MediaPipe |
-| Image AI / try-on | Hugging Face, Qwen Image Edit, Leffa |
-| 3D | Three.js, React Three Fiber, @react-three/drei, GLB/GLTF |
-| Storage | Cloudinary |
-| PDF | PDFKit |
-| Container | Docker (API, multi-stage build, repository-root build context), Docker Compose |
-| CI | GitHub Actions: typecheck → lint → unit/API tests → build |
-| Hosting | Vercel (web, root `apps/web`), Render (API, Docker, `apps/api/Dockerfile`, health `/health`) |
-
-**Backend pattern (every feature):**
-```
-Route → Authentication Middleware → Validation Middleware → Controller → Service
-→ Database / External Integration → Response
-```
-
-**API runtime:** `const port = Number(process.env.PORT) || 4000;` bound to `0.0.0.0`.
-
-**MVP starting set (§56):** Next.js, Express, MongoDB, Mongoose, Auth.js, Zod, Cloudinary, Gemini, MediaPipe, Zustand, Three.js/R3F, PDFKit. Groq and the try-on providers (Hugging Face / Qwen / Leffa) are added in their phases (Groq fallback is issue #22, try-on Phase 8).
-
-Details are in [ARCHITECTURE.md](ARCHITECTURE.md) and [DEPLOYMENT.md](DEPLOYMENT.md).
-
----
-
-## 8. Data / Backend Requirements
-
-### 8.1 Collections
-
-| Collection | MVP purpose | Key fields |
-|---|---|---|
-| `users` | Accounts | email, passwordHash, name, role, isActive, createdAt, updatedAt |
-| `profiles` | Fashion profile | userId, gender, ageRange, height, size, budget, likedColors[], dislikedColors[], preferredStyles[], preferredOccasions[] |
-| `appearanceProfiles` | Analysis results | userId, skinTone{monkValue, range, confidence}, undertone{value, confidence}, bodyShape{value, confidence}, proportions, userConfirmed, analysisVersion |
-| `products` | Curated catalog | name, brand, category, gender, price, colors[], sizes[], fabric, styles[], occasions[], imageUrl, productUrl, tags[], active |
-| `outfits` | Saved outfits | userId, occasion, budget, items[], totalPrice, explanation, aiModel |
-| `designs` | Saved designs | Fields to be defined (see [DATABASE.md](DATABASE.md)) |
-| `chatMessages` | Chat history | Fields to be defined |
-| `aiCache` | AI response cache | cacheKey (indexed), provider, model, requestType, response, createdAt, expiresAt |
-
-### 8.2 Backend responsibilities (`apps/api`)
-REST API · authentication service · authorization · Mongoose models · business logic · AI orchestration · Cloudinary server operations · product filtering · recommendation engine · budget engine · PDF generation · rate limiting · error handling · logging.
-
-### 8.3 API surface
-All 22 `/v1` endpoints plus `GET /health`, as listed in [API.md](API.md), are part of the MVP.
-
-### 8.4 Seed data
-A seed script loads **500–2,000** curated products across the ten categories. The goal is good filtering, useful recommendations and reliable product data.
-
----
-
-## 9. Security and Privacy
-
-| Area | MVP requirement |
-|---|---|
-| Transport | HTTPS |
-| Authentication | Secure authentication, password hashing |
-| Authorization | API authorization on every protected route |
-| Data isolation | User-specific data isolated by authenticated user |
-| Input validation | Zod validation of all requests |
-| AI output | Zod + business validation of all AI output |
-| Secrets | API keys server-side only. `.env` git-ignored. No secrets in Git or Docker images. Never `NEXT_PUBLIC_` for secrets |
-| Abuse control | Rate limiting on expensive endpoints |
-| Web security | CORS configured correctly. Helmet / security headers |
-| Image privacy | All user and generated images in Cloudinary, never on Render's filesystem. Image privacy considered |
-| AI data minimisation | Only relevant profile/context is sent to AI (chatbot, recommendations) |
-| Errors | Safe messages. No stack traces, secrets, database details or internal errors |
-| Database | MongoDB Atlas access secured |
-
-Full checklist in [SECURITY.md](SECURITY.md).
-
----
-
-## 10. Non-Functional Requirements
-
-| Category | MVP requirement |
-|---|---|
-| Reliability | Deterministic core layers (profile, product, budget, validation, security, deployment) |
-| Correctness | Budget is code-validated. Prices come only from the database |
-| Graceful degradation | AI quota/outage → fallback or clear error. Try-on outage does not affect the rest of the app |
-| Performance | Catalog pre-filtering before AI. MongoDB AI cache. Minimal AI context. Try-on caching where useful |
-| Scalability | Modular monorepo. Stateless file handling (Cloudinary). Redis/BullMQ deferred until needed |
-| Maintainability | TypeScript, shared contracts, layered backend, isolated integrations, `/v1` versioning |
-| Usability | Confidence always shown. User can correct results. Mobile UI checked |
-| Observability | `/health` endpoint. Logging in the API |
-| Deployability | Docker image for the API. CI on PRs and pushes to `main`. No direct feature-branch deploys to production |
-
-Full list in [SRS.md](SRS.md).
-
----
-
-## 11. MVP Exclusions / Future Scope
-
-### 11.1 Explicitly excluded from the MVP (§24, §56)
-- Microservices
-- Kubernetes
-- Separate Python service
-- Separate database per module
-- Complex event architecture
-- Huge product marketplace
-- Overly complex recommendation ML
-- Unnecessary infrastructure
-- Photorealistic human reconstruction for the 3D avatar
-- MongoDB running in Docker
-- Exact physical body measurements without real-world calibration
-
-### 11.2 Future scope (introduced only when the application requires it, §37, §38, §56)
-
-| Item | Introduced when needed for |
-|---|---|
-| Redis | High-frequency caching, rate-limit counters, temporary state, distributed locks, background jobs |
-| BullMQ | Long-running tasks: AI image generation, try-on, large PDF generation, image processing, batch processing |
-| Redis in Docker Compose | Once Redis is adopted |
-| More advanced AI / image processing | When the application requires it |
-| A separately published `packages/contracts` | Only if the API ever needs to deploy as an independent repository (§48) |
-
----
-
-## 12. Definition of Done
-
-A feature is **not complete only because the UI works** (§53). Each MVP capability (MVP-01 … MVP-21) is done only when it has:
-
-- [ ] UI
-- [ ] API
-- [ ] Validation
-- [ ] Database
-- [ ] Error handling
-- [ ] Authorization
-- [ ] Tests
-- [ ] Documentation
-
-**Reference example: AI Try-On is done when:**
-- Upload works
-- API works
-- Auth works
-- Input is validated
-- AI failure is handled
-- Result is stored
-- Unauthorized access is blocked
-- Tests pass
-
----
-
-## 13. MVP Success Criteria
-
-The MVP is successful when **all** of the following are true:
-
-### 13.1 Journey completeness
-The target result (§54) works end-to-end in production:
-
-```
-User → Register → Profile → Upload photos → Appearance analysis → Confirm result
-→ Personalized recommendations → Real coded budget validation → Product browsing
-→ AI try-on → 3D avatar → Design studio → Sketch AI → Fashion chatbot → Tailor PDF
-→ Live deployment
-```
-
-### 13.2 Verifiable acceptance criteria
-
-| # | Criterion | Verified by |
-|---|---|---|
-| 1 | All 22 user capabilities in §4.1 work | E2E test flow ([TESTING.md](TESTING.md) §7) |
-| 2 | Every recommended outfit satisfies `totalPrice <= budget`, using stored prices only | Budget unit tests + API tests |
-| 3 | Appearance results always show confidence and can be confirmed or edited. Confirmed values persist with `userConfirmed: true` | API + E2E tests |
-| 4 | Bad, dark, no-face, multiple-people and partial-body photos are handled without forced results | AI tests |
-| 5 | Invalid AI JSON, Gemini unavailable and Groq unavailable produce fallbacks or clear errors, never fake answers | AI failure tests |
-| 6 | Try-on outage shows "Try-on is currently unavailable." and the rest of the app works | AI / E2E tests |
-| 7 | Unauthenticated and cross-user access is blocked | Authentication / authorization tests |
-| 8 | Error responses never leak stack traces, secrets or internals | API tests |
-| 9 | The security checklist (§35) is complete | [SECURITY.md](SECURITY.md) §11 |
-| 10 | CI (typecheck, lint, tests, build) passes on `main` | GitHub Actions |
-| 11 | Web is live on Vercel, API is live on Render, and `/health` passes | Production QA |
-| 12 | Every MVP capability meets the Definition of Done | Feature review |
-
----
-
-## 14. Open Items Affecting the MVP
-
-These are not defined in the blueprint and must be decided during implementation. The full lists are in each document's "Open Items" section.
-
-- Fields for the `designs` and `chatMessages` collections, the conversation model, and how try-on results are stored.
-- Exact request/response schemas (Zod contracts) and the error code list.
-- Confidence thresholds for "low confidence" / Unknown, and the ratio rules behind body-shape classification.
-- The candidate ranking algorithm.
-- Rate-limit thresholds, token lifetime, password-hash algorithm, and logout handling on the API side.
-- Test frameworks and the rollback procedure.
-- Content and source of the "Tailor instructions" in the PDF.
-- Which provider performs design generation (`POST /v1/design/generate`).
-- How the 3D avatar's approximate proportions are derived.
+**D-77 is approved (Option B).** D-48 and D-76 stay pending and are raised only when needed; D-81 (hosting) is decided at the hosting checkpoint; D-74 (legal review) blocks public launch only.

@@ -1,548 +1,213 @@
 # StyleMe — Architecture
 
-> Source: StyleMe Final End-to-End Blueprint — §1–§6, §9, §11, §22–§25, §37, §41, §47–§51, §56
+> Part of the StyleMe documentation baseline. Requirements: [FRD.md](FRD.md), [SRS.md](SRS.md). Data: [DATABASE.md](DATABASE.md). API: [API.md](API.md). Environments: [DEPLOYMENT.md](DEPLOYMENT.md). Decisions: [ImplementationPlan.md](ImplementationPlan.md) §8.
 
 ---
 
-## 1. Technology Stack
+## 1. Architecture at a Glance
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js, TypeScript, Tailwind CSS, shadcn/ui |
-| Backend | Node.js, Express, TypeScript |
-| Database | MongoDB Atlas, Mongoose |
-| Authentication | Auth.js (NextAuth) |
-| AI | Gemini API (primary), Groq API (fallback) |
-| Vision | MediaPipe |
-| AI image generation / editing | Hugging Face, Qwen Image Edit, Leffa |
-| 3D | Three.js, React Three Fiber, @react-three/drei, GLB/GLTF |
-| Storage | Cloudinary |
-| Validation | Zod |
-| Client state | Zustand |
-| Caching / jobs | Redis and BullMQ, **only when needed** (MongoDB cache first) |
-| PDF | PDFKit |
-| Deployment | Next.js → Vercel, Express API → Render |
-| Source control | GitHub |
-| CI/CD | GitHub Actions |
-| Container | Docker |
-| Monorepo tooling | pnpm workspaces |
+StyleMe is a pnpm monorepo with a Next.js web app, an Express API and a shared contracts package, backed by MongoDB Atlas. The core is deterministic. External services are optional enhancements or gated layers, and none is on the critical path of Stage 1.
+
+```
+Browser
+  │  HTTPS
+  ▼
+Next.js (Vercel) ── Auth.js session (encrypted cookie)
+  │  server-side (BFF) call with access token
+  ▼
+Express API (Render, Docker)
+  ├── Auth, profile, appearance signals, looks, saved looks        [Stage 1]
+  ├── Look generator (deterministic) ◄── style-rules/ (versioned files)  [Stage 1]
+  ├── Optional AI wording ──► Gemini (off by default; skipped on failure) [Stage 1, optional]
+  ├── Shortlist + budget engine on user-entered prices              [Stage 1, D-77 = B]
+  ├── Product layer: catalogue, matching, budget, quality ◄── ingestion scripts
+  │      ◄── permitted retailer sources (approved API / feed / permitted curation)  [product layer]
+  ├── Weather integration ──► provider chosen in Stage 2 (optional, off by default)  [Stage 2]
+  ├── Email integration ──► provider chosen at HC-2 (self-service reset only)  [public launch]
+  ├──► Tombstone store (separate, outside the main database's restore scope; API insert-only, D-85)  [Stage 1]
+  ▼
+MongoDB Atlas (separate database per environment)
+```
+
+Hosting platforms are planned (D-40); accounts, plans and costs are decided at the hosting checkpoint HC-1 (D-81). Until then everything runs locally and in CI.
 
 ---
 
-## 2. Monorepo Structure
+## 2. Technology Stack
+
+| Layer | Technology | Stage |
+|---|---|---|
+| Monorepo | pnpm workspaces | 1 |
+| Web | Next.js, TypeScript, Tailwind CSS, shadcn/ui, Zustand | 1 |
+| Auth | Auth.js (session) + Express (API authorization) | 1 |
+| API | Node.js (Active LTS, D-01), Express, TypeScript | 1 |
+| Database | MongoDB Atlas, Mongoose | 1 |
+| Validation | Zod (shared in `packages/contracts`) | 1 |
+| Testing | Vitest, Supertest, mongodb-memory-server, Testing Library, Playwright (D-02, D-36) | 1 |
+| Container, CI, hosting | Docker (API), GitHub Actions, Vercel, Render | 1 |
+| AI (optional wording) | Gemini, off by default (D-67) | 1, optional |
+| Retailer integrations | Per approved source | Product layer |
+| Weather | Provider chosen after terms are verified (D-60) | 2 |
+| Transactional email | Provider chosen at HC-2 (D-84), for self-service password reset | Public launch |
+| Cloudinary | Only when user or generated images are stored | Deferred |
+| MediaPipe | Photo-based analysis | Deferred (D-76) |
+| Three.js / React Three Fiber | 3D avatar | Deferred (D-76) |
+| PDFKit | Tailor PDF | Deferred (D-76) |
+| Groq | Fallback for AI-required deferred features | Deferred (D-76) |
+| Hugging Face / Qwen / Leffa | Original try-on design; not approved | Future (D-48) |
+| Redis, BullMQ | Only when a concrete need appears (rate-limit sharing across instances, long-running jobs) | When needed |
+
+Nothing in the "Deferred", "Future" or "When needed" rows is installed or configured until its stage starts.
+
+---
+
+## 3. Repository Structure
 
 ```
 StyleMe/
-│
 ├── apps/
-│   │
 │   ├── web/
 │   │   ├── app/
-│   │   │   ├── (auth)/
-│   │   │   │   ├── login/
-│   │   │   │   └── register/
-│   │   │   ├── dashboard/
-│   │   │   ├── profile/
-│   │   │   ├── analyze/
-│   │   │   ├── outfits/
-│   │   │   ├── products/
-│   │   │   ├── tryon/
-│   │   │   ├── avatar/
-│   │   │   ├── design/
-│   │   │   ├── chat/
-│   │   │   ├── tailor/
-│   │   │   ├── api/
-│   │   │   │   └── auth/
-│   │   │   ├── layout.tsx
-│   │   │   └── page.tsx
-│   │   │
-│   │   ├── components/
-│   │   │   ├── ui/
-│   │   │   ├── auth/
-│   │   │   ├── profile/
-│   │   │   ├── analysis/
-│   │   │   ├── outfits/
-│   │   │   ├── products/
-│   │   │   ├── tryon/
-│   │   │   ├── avatar/
-│   │   │   ├── design/
-│   │   │   └── chat/
-│   │   │
-│   │   ├── lib/
-│   │   │   ├── auth/
-│   │   │   ├── api/
-│   │   │   ├── cloudinary/
-│   │   │   └── utils/
-│   │   ├── hooks/
-│   │   ├── stores/
-│   │   ├── public/
-│   │   ├── auth.ts
-│   │   ├── next.config.ts
-│   │   └── package.json
-│   │
+│   │   │   ├── (auth)/login, (auth)/register, (auth)/reset-password   [Stage 1; reset-password is new]
+│   │   │   ├── dashboard/, profile/, outfits/   [Stage 1]
+│   │   │   ├── products/                        [product layer]
+│   │   │   ├── analyze/, avatar/, design/, chat/, tailor/   [deferred placeholders, D-76]
+│   │   │   ├── tryon/                           [future placeholder, D-48]
+│   │   │   ├── api/auth/                        [Auth.js]
+│   │   │   ├── layout.tsx, page.tsx
+│   │   ├── components/ (ui, auth, profile, outfits, products, …)
+│   │   ├── lib/ (auth, api, utils; cloudinary placeholder — deferred), hooks/, stores/, public/
+│   │   ├── auth.ts, next.config.ts
+│   │   └── tests/
 │   └── api/
 │       ├── src/
-│       │   ├── config/
-│       │   ├── controllers/
-│       │   ├── middleware/
-│       │   ├── models/
-│       │   ├── routes/
-│       │   ├── services/
-│       │   ├── validators/
+│       │   ├── config/, routes/, middleware/, validators/, controllers/, services/, models/, utils/
+│       │   ├── style-rules/           [Stage 1: palettes, rules, templates (D-66)]
 │       │   ├── integrations/
-│       │   │   ├── ai/
-│       │   │   ├── cloudinary/
-│       │   │   ├── mediapipe/
-│       │   │   ├── tryon/
-│       │   │   └── pdf/
-│       │   ├── utils/
-│       │   ├── jobs/
-│       │   ├── app.ts
-│       │   └── server.ts
-│       │
-│       ├── tests/
-│       ├── scripts/
-│       ├── Dockerfile
-│       ├── tsconfig.json
-│       └── package.json
-│
-├── packages/
-│   └── contracts/
-│       ├── src/
-│       │   ├── auth.ts
-│       │   ├── profile.ts
-│       │   ├── appearance.ts
-│       │   ├── product.ts
-│       │   ├── outfit.ts
-│       │   ├── design.ts
-│       │   ├── chat.ts
-│       │   └── index.ts
-│       ├── package.json
-│       └── tsconfig.json
-│
-├── docs/
-├── infra/
-│   └── docker/
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-├── .env.example
-├── .gitignore
-├── .dockerignore
-├── docker-compose.yml
-├── package.json
-├── pnpm-workspace.yaml
-├── pnpm-lock.yaml
-├── render.yaml
-└── README.md
+│       │   │   ├── ai/                [optional wording; later AI features]
+│       │   │   ├── retailers/         [product layer, one module per approved source]
+│       │   │   ├── weather/           [Stage 2]
+│       │   │   ├── email/             [public launch, HC-2 (D-84)]
+│       │   │   └── cloudinary/, mediapipe/, pdf/, tryon/   [deferred / future placeholders]
+│       │   ├── jobs/                  [only when background jobs are needed]
+│       │   ├── app.ts, server.ts
+│       ├── scripts/ (migrations/, ingestion, link checks, fixture loaders)
+│       ├── tests/ (incl. fixtures/)
+│       └── Dockerfile
+├── packages/contracts/src/ (existing empty files: auth, profile, appearance, outfit, product, chat, design, index; to add: style, shortlist, weather, …)
+├── e2e/                               [Playwright]
+├── docs/, infra/docker/, .github/workflows/ci.yml
+├── docker-compose.yml, render.yaml, .env.example, pnpm-workspace.yaml
 ```
+
+Placeholder folders for deferred and future modules already exist in the repository. They stay empty until their stage is approved. Folders that don't exist yet — `apps/web/app/(auth)/reset-password/`, `apps/web/tests/`, `style-rules/`, `integrations/retailers/`, `integrations/weather/`, `integrations/email/`, `scripts/migrations/`, `tests/fixtures/`, `tests/unit/`, `tests/api/`, `tests/evaluation/`, `e2e/` — are created by the milestone that needs them. All existing code and configuration files are currently empty (0 bytes). New contract files are added per module as it is built.
 
 ---
 
-## 3. Responsibilities
+## 4. Responsibilities
 
-### 3.1 `apps/web`: what the user sees
-- UI, pages, components, forms, navigation
-- Auth.js (browser/session authentication)
-- Browser/client state (Zustand)
-- API client
-- 3D viewer (Three.js / React Three Fiber)
-- MediaPipe browser processing
-
-### 3.2 `apps/api`: what the application does
-- REST API
-- Authentication service and authorization
-- Database access through Mongoose models
-- Business logic
-- AI orchestration
-- Cloudinary server operations
-- Product filtering, recommendation engine, budget engine
-- PDF generation
-- Rate limiting, error handling, logging
-
-### 3.3 `packages/contracts`: what frontend and backend agree on
-- Shared Zod schemas
-- Shared TypeScript types
-- Shared request/response contracts
-- Keeps the frontend and backend in sync
-
-```
-apps/web  ──►  packages/contracts  ◄──  apps/api
-```
-
-### 3.4 Ownership summary
-
-| Component | Role |
+| Part | Responsibility |
 |---|---|
-| apps/web | What the user sees |
-| apps/api | What the application does |
-| packages/contracts | What frontend and backend agree on |
-| MongoDB Atlas | What the application remembers |
-| Cloudinary | Where images live |
-| Gemini / Groq | AI reasoning |
-| MediaPipe | Visual landmarks |
-| Hugging Face / Qwen / Leffa | Image generation/editing/try-on |
-| Three.js / R3F | 3D |
-| Zod | What data is valid |
-| Zustand | Browser-side temporary state |
-| Docker | Consistent runtime |
-| GitHub Actions | Automated code checks |
-| Vercel | Web deployment |
-| Render | Express API deployment |
+| `apps/web` | UI, forms, navigation, Auth.js session, server-side calls to the API, client state (Zustand), labels for data classes (FR-DATA-01) |
+| `apps/api` | REST API, authorization, validation, business logic (look generator, budget engine on user-entered prices, later eligibility and quality), persistence, optional AI orchestration, ingestion scripts, rate limiting, logging |
+| `packages/contracts` | Zod schemas and TypeScript types shared by web and API; the single definition of request and response shapes |
+
+**Backend pattern:** route → authentication middleware → validation middleware → controller (HTTP only) → service (business logic) → model or integration → response. External services are reached only through `src/integrations/`.
 
 ---
 
-## 4. Request Architecture
+## 5. Request and Authentication Flow
 
 ```
-Browser
-    ↓
-Vercel / Next.js
-    ↓
-Auth.js Session
-    ↓
-Next.js server-side/BFF request
-    ↓
-Express API on Render
-    ↓
-Business Logic
-    ↓
-MongoDB / AI / Cloudinary / other services
-```
+User enters email/password → Auth.js credentials provider → POST /v1/auth/login
+→ API verifies argon2id hash → creates a session record → issues JWT (tokenVersion, sid)
+→ stored in the encrypted session cookie (HttpOnly, Secure, SameSite=Lax)
+→ later page requests: Next.js server reads the session → calls the API with the token
+→ API middleware verifies signature, expiry, user isActive, tokenVersion and the session record → scoped to the user
 
-The browser talks to Next.js. Next.js calls the Express API from the server side (BFF) using the authenticated session.
+Logout → POST /v1/auth/logout deletes the session record → Auth.js cookie cleared
+Password change → new hash, tokenVersion++, all session records deleted → new session and token for the current browser
+Reset (admin-issued code in the closed beta; emailed link from public launch, D-83)
+→ POST /v1/auth/password-reset/confirm → token hash checked and marked used atomically → new hash, tokenVersion++, all session records deleted
+```
 
 ---
 
-## 5. Authentication Architecture
+## 6. Look Generation (Stage 1)
 
 ```
-Browser
-    ↓
-Next.js / Auth.js
-    ↓
-Express Auth API
-    ↓
-MongoDB
+POST /v1/recommendations
+  → load profile + enabled self-reported signals
+  → style-rules (approved only; validated and linted at startup)
+  → templates → palettes → rules (precedence) → look specifications
+  → diversity (combination signatures) → alternatives (3–5, never padded)
+  → explanation from rule references
+  → [product layer] eligibility → matching → ranking → look match
+  → [optional] AI rewording (time-limited; any failure → template text)
+  → store as suggested looks (7-day TTL) → response
 ```
 
-- **Auth.js** handles browser/session authentication.
-- **Express** handles API/business authorization.
+- Everything before the optional AI step is deterministic and runs without network calls to third parties.
+- The knowledge base is indexed in memory at startup by occasion, style, department and category, and is designed for at least 150 palettes and 150 templates without code changes (FR-STY-10, T-38).
+- The full catalogue or knowledge base is never sent to an LLM. The optional AI step receives only explanation references.
+- Missing data, conflicts and too few matches produce warnings and fewer looks, never errors ([FRD.md](FRD.md) FR-LOOK-09 … 11).
 
-Login flow:
-
-```
-User enters email/password
-    ↓
-Next.js/Auth.js
-    ↓
-Express /v1/auth/login
-    ↓
-Validate credentials
-    ↓
-Compare password hash
-    ↓
-Create API access token
-    ↓
-Auth.js protected session
-```
-
-Security details are in [SECURITY.md](SECURITY.md).
+**Shortlist and budget (Stage 1).** `POST /v1/shortlist` validates and stores the user's item; StyleMe never fetches its link. `GET /v1/outfits/:id` loads the look's attached items and runs the budget engine (pure functions) to produce the price summary on read. Nothing here calls a third party.
 
 ---
 
-## 6. Express Backend Pattern
-
-Every backend feature normally follows:
+## 7. Product Layer (Stage 3)
 
 ```
-HTTP Request
-    ↓
-Route
-    ↓
-Authentication Middleware
-    ↓
-Validation Middleware
-    ↓
-Controller
-    ↓
-Service
-    ↓
-Database / External Integration
-    ↓
-Response
+Permitted sources                              apps/api
+Approved API / partner feed ──► integrations/retailers/<source> ──► sync script ─┐
+Permitted manual curation ───► curation template ──► import + validation script ─┤
+                                                                               ▼
+                                                            products, retailers, reviewEvidence
+                                                                               │
+Request time: look spec → eligibility → matching → ranking (never affiliate) ─┘
+              → budget engine (verified prices) → quality verdict → look match → response
 ```
 
-| Layer | Folder | Responsibility |
+- Retailer data is stored and timestamped. No retailer is called during a user request.
+- A source outage only makes data age (fresh → stale → expired); it never breaks requests.
+- Sync scheduling is per provider terms (D-51): an operator-run script first, then a scheduled job if needed.
+- Every product passes the validation in [DATABASE.md](DATABASE.md) §4.5. Fixtures are rejected in production.
+
+---
+
+## 8. Environments
+
+Local, CI, staging and production are separate, with separate databases and secrets. Staging and production hosting is set up only after the founder's hosting decision at the hosting checkpoint (D-81); until then development runs locally and in CI. Fixtures are never present in production, and staging never touches production data ([DEPLOYMENT.md](DEPLOYMENT.md) §2, D-78).
+
+---
+
+## 9. Deferred and Future Architecture
+
+| Feature | Architecture when approved | Gate |
 |---|---|---|
-| Route | `src/routes/` | Maps HTTP method + path to the middleware chain and controller |
-| Middleware | `src/middleware/` | Authentication, validation, error handling, rate limiting |
-| Validator | `src/validators/` | Zod request validation (using `packages/contracts`) |
-| Controller | `src/controllers/` | HTTP concerns |
-| Service | `src/services/` | Business logic |
-| Model | `src/models/` | Database interaction (Mongoose) |
-| Integration | `src/integrations/` | External provider communication |
-| Jobs | `src/jobs/` | Background jobs (when BullMQ is introduced) |
-| Config | `src/config/` | Configuration |
+| Photo-based appearance analysis | Photo upload with consent → quality checks → MediaPipe in the browser or on StyleMe's servers → estimates with confidence → user confirmation. Photos deleted after analysis unless kept by choice | D-76, AI rule 16, privacy review |
+| Chatbot | `POST /v1/chat` → minimised context → AI router (Gemini, Groq fallback) → Zod → response; AI failure → clear error | D-76 |
+| Design Studio, sketch-to-design, tailor PDF | Zustand design state → `designs`; sketch → AI vision → Zod → user confirmation; PDFKit for PDFs | D-76; D-32 for the generation provider |
+| 3D avatar | Three.js / React Three Fiber, GLB model, approximate proportions, never used for sizing | D-76 |
+| Virtual try-on | Not designed. The earlier hosted-provider design is superseded by AI rule 16 | D-48 |
+| Weather | Server-side provider call, cached about 1 hour, soft ranking only | Stage 2, D-60 |
 
 ---
 
-## 7. Data Layer
+## 10. Principles
 
-- **MongoDB Atlas** with **Mongoose**.
-- Initial collections: `users`, `profiles`, `appearanceProfiles`, `products`, `outfits`, `designs`, `chatMessages`, `aiCache`.
-- User-specific data is isolated by authenticated user.
+- Keep deterministic logic deterministic; keep AI isolated and optional unless a feature truly requires it.
+- Validate all input and all AI output.
+- Never present unverified information as verified.
+- Keep secrets server-side and environments separate.
+- Share contracts between web and API.
+- Add infrastructure only for a concrete, approved need.
 
-Full schema is in [DATABASE.md](DATABASE.md).
-
----
-
-## 8. AI Architecture
-
-```
-Application
-    ↓
-AI Service
-    ↓
-AI Router
-    ├── Gemini
-    └── Groq fallback
-```
-
-AI output pipeline:
-
-```
-AI → Parse → Zod → Business validation → Use result
-(If invalid: Retry / Fallback / Clear error)
-```
-
-Full AI design is in [AI.md](AI.md).
+**Not planned:** microservices, Kubernetes, a separate Python service, a database per module, complex event architecture, a marketplace (cart, checkout, payments), or complex recommendation ML.
 
 ---
 
-## 9. Vision Architecture
+## 11. Decisions
 
-### 9.1 Skin tone
-```
-Face Photo → Quality Validation → MediaPipe / Face Detection → Skin Region
-→ Pixel/Color Analysis → Monk Skin Tone Estimate → Range + Confidence
-```
-
-### 9.2 Body shape
-```
-MediaPipe Pose → Body Landmarks → Shoulder / Chest / Waist / Hip / Torso / Leg proportions
-→ Ratios → Body Shape Classification
-```
-
-MediaPipe browser processing is listed under `apps/web`, and `integrations/mediapipe/` exists under `apps/api`.
-
----
-
-## 10. Recommendation and Budget Architecture
-
-```
-User Request → Profile → Confirmed Appearance → Hard Filters → MongoDB Products
-→ Candidate Ranking → Gemini Reasoning → Zod Validation → Budget Validation → Final Outfit
-```
-
-- Product filtering and ranking happen in code before AI is involved. The full catalog is never sent to Gemini.
-- The budget engine is pure code.
-
----
-
-## 11. AI Try-On Architecture
-
-Try-on is isolated:
-
-```
-integrations/tryon/
-    ├── leffa.ts
-    ├── huggingface.ts
-    ├── qwen.ts
-    └── tryon.service.ts
-```
-
-```
-User Photo + Garment Image → Try-On Service → Leffa / Hugging Face / Qwen
-→ Generated Image → Cloudinary → MongoDB Result → Frontend
-```
-
-If it is unavailable: "Try-on is currently unavailable." The rest of the application keeps working.
-
----
-
-## 12. 3D Avatar Architecture
-
-- Three.js + React Three Fiber + @react-three/drei, rendering a GLB/GLTF model in `apps/web`.
-- MVP: front, side, back, rotate, zoom, approximate proportions.
-- No photorealistic human reconstruction in the first MVP.
-
----
-
-## 13. Design Studio, Sketch and PDF Architecture
-
-- **Design state** (Garment, Color, Fabric, Neck, Sleeve, Length, Fit, Pattern, Embroidery) is held in **Zustand** while editing. Completed designs are saved in **MongoDB**.
-- **Sketch-to-design:** Sketch → Gemini Vision → Structured Garment JSON → Zod → User Confirmation → Design Generation.
-- **Chatbot:** Browser → `POST /v1/chat` → Auth → Load confirmed profile → Relevant context → Gemini → Response → MongoDB.
-- **Tailor PDF:** Design → Specification JSON → PDFKit (`integrations/pdf/`) → Tailor PDF.
-
----
-
-## 14. Storage Architecture
-
-Cloudinary stores all persistent images:
-
-- Profile photos
-- Face photos
-- Full-body photos
-- Generated try-on images
-- Design images
-- Sketch images
-
-User images and generated images are **never** stored on Render's local filesystem.
-
----
-
-## 15. Caching and Jobs Strategy
-
-| Stage | Mechanism |
-|---|---|
-| Start | MongoDB-based AI cache (`aiCache` collection) |
-| Later, when needed | Redis for high-frequency caching, rate-limit counters, temporary state, distributed locks, background jobs |
-| Later, when tasks become long-running | BullMQ for AI image generation, try-on, large PDF generation, image processing, batch processing |
-
-Redis is not added just because it is on the tech stack.
-
----
-
-## 16. Deployment Topology
-
-```
-                    INTERNET
-                       │
-                       ▼
-               Vercel / Next.js
-                       │
-                     Auth.js
-                       │
-                       ▼
-              Render / Express API
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-        ▼              ▼              ▼
- MongoDB Atlas     Cloudinary      Gemini/Groq
-                                      │
-                                      ▼
-                               Hugging Face
-                               Qwen / Leffa
-```
-
-| Platform | Responsibilities |
-|---|---|
-| Vercel | Next.js frontend, web UI, Auth.js, SSR/SEO, frontend deployment |
-| Render | Express REST API, Docker container, business logic, AI orchestration, database access, image processing, PDF generation |
-| MongoDB Atlas | Persistent application data |
-| Cloudinary | Persistent image/file storage |
-| AI providers | Gemini, Groq, Hugging Face, Qwen, Leffa |
-
-**Monorepo deployment rule:** both `apps/web` and `apps/api` depend on `packages/contracts`, so the deployment system must have access to the workspace root. Do not configure the backend as if `apps/api` were an independent repository unless the shared package has been published separately.
-
-Deployment procedures are in [DEPLOYMENT.md](DEPLOYMENT.md).
-
----
-
-## 17. Central Data Flow
-
-```
-USER
- ↓
-AUTH
- ↓
-PROFILE
- ↓
-PHOTOS
- ↓
-CLOUDINARY
- ↓
-MEDIAPIPE
- ↓
-APPEARANCE ANALYSIS
- ↓
-CONFIDENCE
- ↓
-USER CONFIRMATION
- ↓
-STYLE PROFILE
- ↓
-PRODUCT FILTERING
- ↓
-RANKING
- ↓
-GEMINI
- ↓
-ZOD
- ↓
-BUDGET ENGINE
- ↓
-OUTFIT
- ├── PRODUCT
- ├── TRY-ON
- ├── 3D AVATAR
- └── DESIGN STUDIO
-          ↓
-      SKETCH AI
-          ↓
-       CHATBOT
-          ↓
-       PDFKIT
-          ↓
-      TAILOR PDF
-```
-
----
-
-## 18. Architecture Decisions and Principles
-
-| Decision | Choice |
-|---|---|
-| Monorepo | pnpm workspaces |
-| Frontend | Next.js + TypeScript, Tailwind + shadcn/ui, Zustand, Auth.js |
-| Backend | Express + Node.js + TypeScript |
-| Database | MongoDB Atlas + Mongoose |
-| Shared | `packages/contracts` with Zod |
-| AI | Gemini, with Groq fallback |
-| Vision | MediaPipe |
-| Image AI | Hugging Face, Qwen Image Edit, Leffa |
-| 3D | Three.js, React Three Fiber |
-| Storage | Cloudinary |
-| Cache/jobs | MongoDB cache first; Redis/BullMQ only when needed |
-| PDF | PDFKit |
-| Container | Docker |
-| Source / CI | GitHub / GitHub Actions |
-| Deployment | Next.js → Vercel, Express → Render, MongoDB → Atlas, Images → Cloudinary |
-
-**Avoid initially:** microservices, Kubernetes, a separate Python service, a separate database per module, complex event architecture, a huge product marketplace, overly complex recommendation ML, unnecessary infrastructure.
-
-**Core principles:**
-
-```
-KEEP DETERMINISTIC LOGIC DETERMINISTIC.
-KEEP AI LOGIC ISOLATED.
-VALIDATE ALL AI OUTPUTS.
-LET USERS CONFIRM UNCERTAIN VISION RESULTS.
-KEEP SECRETS SERVER-SIDE.
-KEEP FILES IN CLOUD STORAGE.
-KEEP FRONTEND AND BACKEND CONTRACTS SHARED.
-DEPLOY WEB TO VERCEL AND API TO RENDER.
-```
-
----
-
-## 19. Open Items / To Be Decided
-
-- MediaPipe runs both in the browser (`apps/web`) and as an API integration (`apps/api/src/integrations/mediapipe/`). The exact split of vision processing between the two isn't specified.
-- The API access token format and how Auth.js passes it to Express aren't specified.
-- The source of the GLB/GLTF avatar model and how proportions are applied to it aren't specified.
-- How the try-on provider is selected among Leffa, Hugging Face and Qwen (order or criteria) isn't specified.
-- What the API uses for logging isn't specified.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-01, D-02, D-05, D-06, D-19, D-36, D-40, D-48, D-51, D-60, D-66, D-67, D-76, D-77, D-78.

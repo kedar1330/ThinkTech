@@ -1,0 +1,36 @@
+# Render blueprint for the API (D-40). NOT connected to any Render account: hosting accounts, plans
+# and costs are decided by the founder at the hosting checkpoint HC-1 (D-81). Until then this file is
+# only a definition. Add `plan:` and a staging copy of this service at HC-1.
+#
+# Every secret is `sync: false`, so values are entered in Render, never committed.
+services:
+  - type: web
+    name: styleme-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      - key: PUBLIC_SIGNUP_ENABLED
+        value: 'false'
+      - key: PASSWORD_RESET_EMAIL_ENABLED
+        value: 'false'
+      - key: MAINTENANCE_MODE
+        value: 'false'
+      - key: MONGODB_URI
+        sync: false
+      - key: TOMBSTONE_STORE_URI
+        sync: false
+      - key: TOMBSTONE_HMAC_KEY
+        sync: false
+      - key: AUTH_ACCESS_TOKEN_SECRET
+        sync: false
+      - key: BFF_SHARED_SECRET
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
