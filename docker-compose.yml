@@ -1,0 +1,20 @@
+# Local only: runs the API in Docker against a MongoDB on your machine (DEPLOYMENT.md §4).
+# MongoDB itself isn't run in Docker. The web app runs with `pnpm dev:web`.
+#
+#   docker compose up --build
+#
+# Uses apps/api/.env; the database URIs are pointed at the host from inside the container.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: apps/api/.env
+    environment:
+      MONGODB_URI: mongodb://host.docker.internal:27017/styleme
+      TOMBSTONE_STORE_URI: mongodb://host.docker.internal:27017/styleme_tombstones
+      PORT: 4000
+    ports:
+      - '4000:4000'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'

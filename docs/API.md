@@ -91,7 +91,7 @@ Errors never expose stack traces, secrets, database details or internal errors. 
 
 ### 3.1 Auth and account (`auth.ts`)
 
-**`POST /v1/auth/register`** — input `{ email, password (≥ 8 chars), name }`; creates the user with an argon2id hash; returns the user without `passwordHash`. During the closed beta (`PUBLIC_SIGNUP_ENABLED=false`, FR-AUTH-10) the email must be on the invite allow-list. Errors: `INVALID_REQUEST`; `FORBIDDEN` with one generic message for both an email that isn't invited and an email that is already registered ("We couldn't create an account with this email. If you already have an account, log in; otherwise contact the StyleMe team."); `RATE_LIMITED`. After public launch the same generic message is used for an email already registered (residual risk and email verification: D-86).
+**`POST /v1/auth/register`** — input `{ email, password (8–256 chars), name (1–100 chars) }`; creates the user with an argon2id hash; returns the user without `passwordHash`. During the closed beta (`PUBLIC_SIGNUP_ENABLED=false`, FR-AUTH-10) the email must be on the invite allow-list. Errors: `INVALID_REQUEST`; `FORBIDDEN` with one generic message for both an email that isn't invited and an email that is already registered ("We couldn't create an account with this email. If you already have an account, log in; otherwise contact the StyleMe team."); `RATE_LIMITED`. After public launch the same generic message is used for an email already registered (residual risk and email verification: D-86).
 
 **`POST /v1/auth/login`** — input `{ email, password }`; creates a session record and returns `{ accessToken }` (JWT with `sid`, D-05). Errors: `UNAUTHENTICATED` (one generic message for an unknown email, a wrong password or an inactive account), `RATE_LIMITED`.
 

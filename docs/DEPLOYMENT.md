@@ -48,6 +48,7 @@ These are the planned platforms. **Hosting is postponed by the founder (D-81):**
 | `PORT` | 1 | Provided by Render; the API binds to `0.0.0.0` (default 4000 locally) |
 | `MONGODB_URI` | 1 | Per environment |
 | `AUTH_ACCESS_TOKEN_SECRET` | 1 | Per environment |
+| `BFF_SHARED_SECRET` | 1 | Shared with the web app (same value); the API trusts the forwarded end-user IP header only with it, so per-IP rate limits apply to the real user ([SECURITY.md](SECURITY.md) §5) |
 | `WEB_ORIGIN` | 1 | The environment's web origin (e.g. `http://localhost:3000` locally): the only origin CORS allows (D-37) and the base of reset links |
 | `APP_ENV` | 1 | `local` \| `staging` \| `production`; drives the fixture safeguards |
 | `AI_WORDING_ENABLED` | 1 | `false` by default (D-67) |
@@ -68,6 +69,7 @@ Every variable above is planned; none is set in any hosted environment yet (D-81
 
 | Variable | Notes |
 |---|---|
+| `BFF_SHARED_SECRET` | Same value as the API's; sent on every server-side API call ([SECURITY.md](SECURITY.md) §5) |
 | `AUTH_SECRET`, `AUTH_URL` | Auth.js, per environment. `AUTH_URL` is the web origin used for the `Origin` check on state-changing requests; an `https` URL turns on the `Secure` cookie ([SECURITY.md](SECURITY.md) §1) |
 | `API_BASE_URL` | Staging API for previews, production API for production |
 

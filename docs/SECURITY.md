@@ -22,7 +22,7 @@ Browser → Next.js / Auth.js (session cookie) → Next.js server (BFF) → Expr
 
 ### 1.1 Password change and recovery (D-83)
 
-- **Change:** requires the current password; revokes all existing tokens; the current session gets a new token (FR-AUTH-11).
+- **Change:** requires the current password; revokes all existing tokens; the current session gets a new token (FR-AUTH-11), which the Next.js server writes into the encrypted session cookie with an Auth.js session update. The update is accepted only if the API confirms the new token belongs to the same user.
 - **Admin-assisted recovery (closed beta):** the admin verifies the request through a channel tied to the account before issuing anything. The script issues a single-use code shown once for out-of-band delivery; the user sets the new password. The admin never sees, sets or chooses a password, and no shared or temporary passwords are used. Each issuance is logged without the code (FR-AUTH-12).
 - **Self-service email reset (required before public launch):** generic response to every request; link sent only to an active account; enabled only after the email provider is chosen at HC-2 (FR-AUTH-13, D-84).
 - **Tokens:** at least 128 bits from a cryptographically secure generator; stored only as a SHA-256 hash; single-use, marked used atomically so two concurrent redemptions can't both succeed; expire after 60 minutes (admin-issued) or 30 minutes (emailed); issuing a new one invalidates earlier ones.
@@ -53,6 +53,7 @@ Browser → Next.js / Auth.js (session cookie) → Next.js server (BFF) → Expr
 |---|---|
 | `MONGODB_URI`, `AUTH_ACCESS_TOKEN_SECRET`, `AUTH_SECRET` (Auth.js) | Stage 1. Local values for development; staging and production values only after the hosting checkpoint (D-81) |
 | `GEMINI_API_KEY` | Only if optional AI wording is enabled (D-67) |
+| `BFF_SHARED_SECRET` | Stage 1, per environment, on both the web app and the API (§5) |
 | `TOMBSTONE_STORE_URI`, `TOMBSTONE_HMAC_KEY` | Stage 1, per environment (D-85). Losing the HMAC key prevents matching restored invite records, so it is stored with the other production secrets |
 | Email provider key (name depends on the provider) | Only after the email provider is chosen at HC-2 (D-84) |
 | `FLIPKART_AFFILIATE_ID`, `FLIPKART_AFFILIATE_TOKEN` | Only after Flipkart approves access (D-44). The Affiliate API documents one active token per account, so rotation must update the environment at the same time |
@@ -68,7 +69,7 @@ Browser → Next.js / Auth.js (session cookie) → Next.js server (BFF) → Expr
 
 ## 5. Rate Limiting, Headers and Transport
 
-- Rate limits (D-38): login 5/min per IP, register 3/min per IP, logout 30/min per user, account deletion 3/hour per user, recommendations 20/min per user, feedback 60/min per user, shortlist writes 30/min per user, password change 5/hour per user, reset confirm 10/hour per IP, reset request 3/hour per email and 10/hour per IP. They use an in-memory store until Redis is justified. **Limitation:** in-memory limits are per API instance and reset on restart, so they give the stated protection only with a single API instance; they are not distributed protection. If the hosting decision at HC-1 (D-81) uses more than one instance, a shared store is required.
+- Rate limits (D-38): login 5/min per IP, register 3/min per IP, logout 30/min per user, account deletion 3/hour per user, recommendations 20/min per user, feedback 60/min per user, shortlist writes 30/min per user, password change 5/hour per user, reset confirm 10/hour per IP, reset request 3/hour per email and 10/hour per IP. Per-IP limits must see the end user's address, but every API request comes from the Next.js server, so the web app sends the user's IP (from the platform's `X-Forwarded-For`) in `x-styleme-client-ip` together with `x-styleme-bff-key` carrying `BFF_SHARED_SECRET`; the API trusts the forwarded IP only when that secret matches, so a direct caller can't spoof it and otherwise gets limited on its own address. They use an in-memory store until Redis is justified. **Limitation:** in-memory limits are per API instance and reset on restart, so they give the stated protection only with a single API instance; they are not distributed protection. If the hosting decision at HC-1 (D-81) uses more than one instance, a shared store is required.
 - HTTPS everywhere. Helmet security headers on the API. CORS allows only each environment's web origin (D-37).
 
 ## 6. Personal Data and Privacy (D-49)
