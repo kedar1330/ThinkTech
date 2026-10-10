@@ -96,6 +96,12 @@ Records live in `apps/api/src/style-rules/`, are Zod-validated and linted at sta
 
 **Linter checks:** contradictory prefer/deprioritise effects on the same attribute and context; duplicate records; duplicate `slotId`s within a template (D-82); references to unknown records or categories; missing rationale or limitations; records that aren't `approved` in the runtime set.
 
+**Implementation (`apps/api/src/style-rules/`).** Records are JSON arrays in `data/` (`palettes.json`, `styling-rules.json`, `fabric-rules.json`, `templates.json`), validated by the Zod schemas in `schemas.ts`. All allowed values come from the shared vocabulary in `@styleme/contracts` (D-09). Beyond the common fields, every rule declares `areas[]` (the FR-STY-09 areas it covers, plus `coordinationAspects[]` for coordination rules) so the coverage report can count them; `userAdjustable[]` names the profile preferences that change how a record applies. Effects reference vocabulary attributes (`{ attribute, value }`) with a soft `weight` in (0, 1]. Linter semantics:
+- Two rules contradict when one prefers and the other deprioritises the same attribute value and their `appliesTo` contexts overlap (an empty list means "any"). Listing the other rule in `conflictsWith` declares the conflict instead; the generator resolves it by precedence and weight.
+- `draft` and `reviewed` records fail the lint (`NOT_APPROVED`), so only approved records can be merged; `retired` records stay in the files for history and are skipped.
+- An approved record may reference only approved records. Fixture records (`isFixture`) are rejected in the shipped library, and fixture libraries are refused in production (T-29).
+- The API lints and indexes the library at startup and refuses to start on any issue. In CI, `pnpm --filter @styleme/api style-rules lint` runs the linter and `… style-rules coverage` writes the coverage report to the job summary.
+
 **Coordination rules** (a `STY` rule type) cover how slots work together: colour compatibility from palette combinations and contrast, formality consistency, print and pattern mixing, proportion balance, and footwear and accessory pairing (FR-STY-09).
 
 **Scale.** The loader builds in-memory indexes by occasion, style, department and category once at startup, so generation cost depends on the matching subset, not the library size. The design supports at least 150 palettes and 150 templates without code changes (FR-STY-10); a scale test proves it (T-38). A CI coverage report (FR-STY-11) shows where the library is thin.
