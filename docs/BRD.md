@@ -1,19 +1,20 @@
 # StyleMe — Business Requirements Document (BRD)
 
-> Source: StyleMe Final End-to-End Blueprint — Project Overview, §19, §29, §37, §52, §54, §56
+> Part of the StyleMe documentation baseline. Release scope: [MVP.md](MVP.md). Requirements: [FRD.md](FRD.md). Plan and decisions: [ImplementationPlan.md](ImplementationPlan.md) (decision register §8).
 
 ---
 
 ## 1. Business Problem
 
-Indian users who want personal fashion guidance have no single tool that brings these together:
+People in India who want personal fashion guidance have no single tool that brings together:
+- their **preferences** (colours they like and dislike, styles, occasions, fit, comfort, coverage);
+- their **sizes**, which differ by clothing category;
+- optional **appearance signals** they choose to share (skin-tone range, undertone, proportions);
+- and, eventually, **real products** they can buy from retailers they already use, within a **budget**.
 
-- their **appearance** (skin tone, undertone, body shape),
-- their **preferences** (liked/disliked colors, preferred styles, occasions, size),
-- their **budget**, and
-- products they can actually browse and buy.
+Shoppers on large marketplaces also struggle to judge listing quality (fabric, fit, stitching, durability, sizing) and whether the item matches its pictures.
 
-StyleMe solves this with an **AI-powered personal fashion stylist** that gives recommendations matched to the user's appearance and occasion, and checks every outfit against the user's real budget.
+StyleMe starts with what it can deliver honestly today — explained, personalised styling, plus a shortlist where users record items they find and the prices they enter, totalled against their budget and clearly marked as not verified by StyleMe. Verified real products follow when StyleMe has an authorised source for them.
 
 ---
 
@@ -21,190 +22,148 @@ StyleMe solves this with an **AI-powered personal fashion stylist** that gives r
 
 | Attribute | Description |
 |---|---|
-| Market | Indian users |
-| Need | Personalised outfit recommendations for a given occasion, style and budget |
-| Wardrobe scope | Western and Indian wear, matching the catalog categories: T-shirts, Shirts, Jeans, Trousers, Kurtas, Kurtis, Sarees, Lehengas, Shoes, Accessories |
+| Market | India |
+| Need | Personalised, explained outfit ideas for an occasion; keeping their own finds within a budget; later, verified real products |
+| Wardrobe scope | Western and Indian wear. Stage 1 covers a manageable subset of: T-shirts, Shirts, Jeans, Trousers, Kurtas, Kurtis, Sarees, Lehengas, Shoes, Accessories. Dresses is added in Stage 2 |
 | Currency | Indian Rupee (₹) |
-| Profile data captured | Gender, age range, height, size, budget, liked/disliked colors, preferred styles, preferred occasions |
+| Where they shop | Indian online retailers. Flipkart and Meesho are the intended first retailers, but neither has approved StyleMe (§7) |
 
 ---
 
-## 3. Solution
+## 3. Product Vision
 
-StyleMe is a web application (a Next.js web app plus an Express API) that takes the user through this journey:
+StyleMe is a personal styling platform that grows into a styling-and-shopping platform. Over time it should support:
+- personalised colour palettes and complete look suggestions;
+- skin tone and undertone as optional styling signals, never restrictions;
+- fit preferences and category-specific sizing;
+- categories, silhouettes, necklines, sleeves, patterns, fabrics and accessories;
+- real product discovery from authorised retailers, with honest prices, availability and quality evidence;
+- budget-aware shopping on verified prices;
+- optional weather-aware suggestions;
+- later, if approved: photo-based appearance analysis, a 3D avatar, a Design Studio, sketch-to-design, a fashion chatbot and a tailor specification PDF (D-76);
+- virtual try-on only if D-48 is resolved;
+- a styling engine that generates many combinations from reusable, reviewed rules rather than a fixed menu.
 
-```
-Create Account
-    ↓
-Create Style Profile
-    ↓
-Upload Face + Full-Body Photos
-    ↓
-Appearance Analysis
-    ↓
-Skin Tone + Undertone + Body Shape
-    ↓
-Confidence Score
-    ↓
-User Confirms / Corrects
-    ↓
-Personal Fashion Profile
-    ↓
-Select Occasion + Style + Budget
-    ↓
-Product Filtering
-    ↓
-AI Recommendation
-    ↓
-Budget Validation
-    ↓
-Outfit Suggestions
-    ↓
-Product Details
-    ↓
-AI Try-On
-    ↓
-3D Avatar
-    ↓
-Design Studio
-    ↓
-Sketch → AI Design
-    ↓
-Fashion Chatbot
-    ↓
-Tailor Specification PDF
-```
+**Priorities, in order:** (1) user value and recommendation quality; (2) correctness, trust and honest information; (3) legal permissions, privacy and security; (4) a feasible first release; (5) low operating costs; (6) extensibility. Feature count never outranks quality or feasibility.
 
-### Key value propositions
+### 3.1 Value propositions
 
-- **Appearance-aware styling.** The app estimates Monk skin tone, undertone and body shape from the user's photos, and **shows how confident it is in each value**.
-- **User control.** The user can confirm or correct any visual classification. Confirmed values become the source of truth.
-- **Trustworthy budgets.** Budget checks run in deterministic code. AI never invents or overrides prices.
-- **Visualisation.** Users can see outfits through AI try-on and a simple 3D avatar.
-- **Custom design.** Users can design garments in a Design Studio, turn sketches into structured designs, and download a tailor specification PDF.
-- **Conversational help.** A fashion chatbot answers questions using the user's confirmed profile.
-
----
-
-## 4. MVP Scope
-
-At the end of the project StyleMe must be a **working MVP, not just a UI demo**.
-
-### 4.1 MVP user capabilities
-
-A user must be able to:
-
-1. Register
-2. Login
-3. Create fashion profile
-4. Upload face photo
-5. Upload full-body photo
-6. Run appearance analysis
-7. See skin tone, undertone, body shape
-8. See confidence values
-9. Confirm or edit results
-10. Select style/occasion/budget
-11. Receive personalized outfit recommendations
-12. Verify that the outfit fits the budget
-13. View product details
-14. Try AI visualization
-15. View 3D avatar
-16. Create a garment design
-17. Upload a sketch
-18. Convert sketch to structured design
-19. Chat with the fashion assistant
-20. Generate a tailor specification
-21. Download the PDF
-22. Logout
-
-### 4.2 MVP boundaries
-
-- **Product catalog:** a manageable, curated catalog of **500–2,000 high-quality products**, not millions of records.
-- **3D avatar:** front, side and back views, with rotate, zoom and approximate proportions. Photorealistic human reconstruction is out of scope for the first MVP.
-- **Measurements:** no exact physical body measurements, because there is no real-world calibration.
-- **Infrastructure:** keep it simple. See §6, Non-Goals.
-
-### 4.3 Target result (success criteria)
-
-```
-User
-→ Register
-→ Profile
-→ Upload photos
-→ Appearance analysis
-→ Confirm result
-→ Personalized recommendations
-→ Real coded budget validation
-→ Product browsing
-→ AI try-on
-→ 3D avatar
-→ Design studio
-→ Sketch AI
-→ Fashion chatbot
-→ Tailor PDF
-→ Live deployment
-```
-
-- The core recommendation, profile, product, budget, validation, security and deployment layers must be **deterministic and reliable**.
-- AI and vision features are probabilistic. They must be handled with **confidence, validation, caching, fallbacks and user confirmation**.
-- The application must be **live**: web on Vercel, API on Render.
-
----
-
-## 5. Future Scope
-
-These are introduced **only when the application actually needs them**:
-
-| Item | Trigger for introduction |
+| Value | Stage |
 |---|---|
-| Redis | High-frequency caching, rate-limit counters, temporary state, distributed locks, background jobs |
-| BullMQ | Long-running tasks: AI image generation, try-on, large PDF generation, image processing, batch processing |
-| More advanced AI/image processing | When the application requires it |
-| Redis in Docker Compose | When Redis is introduced |
+| **Explained, personal looks.** Complete looks for an occasion, built from the user's preferences and reviewed styling rules, each with "Why this works" | 1 |
+| **User control.** Every input is optional except the occasion and department; appearance signals are self-reported, switchable and deletable; users can explore any colour | 1 |
+| **A large, coordinated styling library.** 100+ palettes and 100+ outfit templates with rules for coordination, occasions, preferences, fit, sizes and alternatives, combined dynamically | 1 (starting set), 2 (full library) |
+| **Sizing per category.** Tops, bottoms, ethnic wear and shoes each have their own size; body shape never sets size | 1 |
+| **Honesty.** No invented products, prices, reviews or confidence; missing data shown as "Not available" | All |
+| **Real products and trustworthy budgets.** Verified listings with "Price as of" times, availability, quality evidence and budget totals computed in code | Product layer |
+| **Budgeting on your own finds.** Add items you found, with your own prices, to a look and see the total against your budget — always labelled "entered by you, not verified by StyleMe" | 1 |
+| **Optional weather awareness** | 2 |
 
 ---
 
-## 6. Non-Goals (Avoid Initially)
+## 4. Release Scope
 
-- Microservices
-- Kubernetes
-- Separate Python service
-- Separate database per module
-- Complex event architecture
-- Huge product marketplace
-- Overly complex recommendation ML
-- Unnecessary infrastructure
-- Photorealistic 3D human reconstruction (first MVP)
+### 4.1 Stages
 
----
+| Stage | What it is | Key dependencies |
+|---|---|---|
+| **Stage 1 — Personal Styling** | The first real release ([MVP.md](MVP.md)), including a shortlist with budget totals on user-entered prices (D-77 = B); a closed beta until the legal review | Founder content (C1); hosting decision when needed (D-81). Public launch also needs the legal review (D-74) recorded complete and self-service email password reset, with the email provider chosen at HC-2 (D-84); full list in [ImplementationPlan.md](ImplementationPlan.md) §11 |
+| **Product layer** (Stage 3) | Verified products, matching, verified-price budgets, quality evidence | An authorised source (D-43 … D-45); D-74; D-46 |
+| **Stage 2 — Expanded Styling** | The full styling library (100+ palettes, 100+ templates); optional weather | Founder content capacity; D-60 for weather |
+| **Stage 3 — Authorised Shopping** | Product layer release; more retailers | As for the product layer |
+| **Deferred / Future** | D-76 features; try-on (D-48) | Founder decisions |
 
-## 7. Business Rules
+**Styling content requirement (D-57):** at least 100 colour palettes and at least 100 outfit templates (planning range 100–150), 8–12 categories and a comprehensive styling-rule library, complete before the Stage 2 release. Stage 1 releases with a smaller approved set (12–20 palettes, about 20 templates) as a closed beta. Product catalogue target (product layer): 500–1,000 human-reviewed listings.
 
-1. Budget calculation is pure code. AI may recommend products, but **code decides** whether an outfit fits the budget.
-2. AI must never invent or override product prices.
-3. Uncertain visual classifications are never forced. The user can always correct them.
-4. Values the user confirms override AI estimates.
-5. When AI fails, the user gets a real error or a fallback. No fake answers.
-6. User images and generated images are stored in cloud storage (Cloudinary).
+### 4.2 Boundaries
 
----
-
-## 8. Constraints and Assumptions
-
-- AI provider free tiers are **not** assumed to be unlimited. Running out of quota must be handled gracefully.
-- Delivery follows phases 0–13 on a recommended 12-day schedule (see [CONTRIBUTING.md](CONTRIBUTING.md)).
-- Technology stack is fixed (see [ARCHITECTURE.md](ARCHITECTURE.md)).
+- **No demo release.** Every release is real and is used by real people.
+- **Shopping:** StyleMe links out to retailers. No cart, checkout, payments or order handling.
+- **Products:** only verified real products from authorised sources are ever shown as products (§6, rule 7).
+- **Measurements:** no claimed body measurements without calibration. Self-measured values are collected only when product size charts make them useful.
+- **Infrastructure:** simple (§5).
 
 ---
 
-## 9. Related Documents
+## 5. Non-Goals
 
-[FRD.md](FRD.md) · [SRS.md](SRS.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md)
+Microservices; Kubernetes; a separate Python service; a database per module; complex event architecture; a marketplace (cart, checkout, payments, mirrored retailer catalogues); complex recommendation ML; unnecessary infrastructure; photorealistic 3D reconstruction; scraping; price-drop alerts; click-out tracking.
 
 ---
 
-## 10. Open Items / To Be Decided
+## 6. Business Rules
 
-- The blueprint doesn't define quantitative business KPIs, such as user numbers, conversion or retention targets.
-- It doesn't specify a monetisation model or partner/retailer relationships for `productUrl` links.
-- It doesn't specify where the product data comes from beyond "curated catalog" and a seed script.
+1. Looks, rankings, explanations, size notes and budgets are computed in code. No core feature depends on external AI.
+2. AI never invents or changes prices, availability, products or quality claims.
+3. Budget totals are computed in code from user-entered prices (Stage 1) or verified prices (product layer), never combined, always labelled with their basis, and never presented as checkout prices. User-entered items and prices are always labelled as not verified by StyleMe.
+4. When an optional enhancement fails, the core result is returned without it. When a core operation fails, the user gets a clear error, never a fake answer.
+5. Reviews, ratings, prices, availability and quality claims are never fabricated. Missing data is shown as "Not available".
+6. Every verified price shown carries the time it was verified, and the retailer's page is authoritative. Prices the user enters are labelled as entered by them and not verified by StyleMe.
+7. Only verified real products are shown as products. Mock, illustrative and test records are never shown to users. Test fixtures never exist in production.
+8. Retailer data comes only through permitted access methods. No scraping.
+9. StyleMe never guarantees that a product will recreate a look.
+10. Products with serious, evidenced quality problems are not recommended.
+11. Suitability for the user and evidenced quality always outrank commercial considerations. Affiliate monetisation is off by default; affiliate status and commission never influence ranking or quality.
+12. If a product link carries affiliate tracking, a disclosure is shown next to it (D-46).
+13. Styling signals are suggestions, never restrictions. StyleMe never claims an outfit is objectively unsuitable for a body or skin tone.
+14. Body shape never determines clothing size.
+15. Weather is optional and off by default; location is never mandatory; precise location is never stored.
+16. Personal photographs, measurements and unnecessary personal information are never sent to external AI providers, unless a future explicit founder decision, a privacy review and user consent authorise that specific processing.
+17. Users can always override recommendations and explore any colour, fit or style.
+18. Users can delete their data and their account.
+19. Users can change their password; a forgotten password is recovered without anyone at StyleMe seeing or choosing it — admin-assisted during the closed beta, self-service email reset from public launch (D-83).
+
+---
+
+## 7. Retailer Access, Constraints and Assumptions
+
+### 7.1 Constraints
+
+- No AI provider free tier is assumed to be unlimited; Stage 1 doesn't need one.
+- Hosting accounts, plans and costs are decided later, at the hosting checkpoint (D-81). No account, paid plan or free tier is assumed. As checked on 2026-10-10, some free tiers don't fit a commercial product: Vercel Hobby is for non-commercial personal use only, Render's free services sleep when idle and Atlas free clusters have no backups ([DEPLOYMENT.md](DEPLOYMENT.md) §9.1).
+- Retailer APIs, live prices, reviews and inventory are **not** assumed to be accessible.
+- The technology stack is in [ARCHITECTURE.md](ARCHITECTURE.md).
+- Estimates are in [ImplementationPlan.md](ImplementationPlan.md) §5.1. They are estimates, not commitments.
+
+### 7.2 Retailer access (as researched on 2026-10-09; not legal advice)
+
+| Retailer | What was found | Gap or risk | Status |
+|---|---|---|---|
+| Flipkart | [API Terms of Use](https://affiliate.flipkart.com/api-docs/af_tou.html): use "solely in conjunction with Flipkart's platform"; a restriction on use "in a similar or competitive platform"; a restriction on "derivative works" whose scope (API materials or product images) is unclear; restrictions on using Flipkart's name and trademarks (e.g. "You shall not use the name or trademarks of Flipkart in Your advertising"; whether written consent can be obtained is unconfirmed); caching not addressed; 20 calls/second; termination at any time. [Affiliate API](https://affiliate.flipkart.com/api-docs/af_prod_ref.html) for registered affiliates: product feed, delta feed, keyword search, product-ID search; fields include MRP, selling and special prices, stock, images, size, colour, product URL with affiliate ID, and seller ratings | No product-level reviews in the API reference, so review evidence must be curated. Field meanings (`inStock`, special price) unclear | No access approved (D-44) |
+| Meesho | No public product API found; the supplier API serves sellers' own catalogues | Terms of Use not retrieved | No access (D-45) |
+| Amazon.in | PA-API is being replaced by the [Creators API](https://affiliate-program.amazon.in/creatorsapi/docs/en-us/migrating-to-creatorsapi-from-paapi) | Eligibility and fields not verified for StyleMe | Not evaluated further |
+| Others (Myntra, Ajio, …) | Not verified | — | Not evaluated |
+
+These clauses neither clearly permit nor clearly forbid cross-retailer comparison or AI processing of product images. Both stay undecided until confirmed in writing. Written confirmation from each retailer and a legal review (D-74) are needed before any retailer is enabled.
+
+### 7.3 Access levels
+
+| Level | Meaning | What StyleMe may show | Counts toward budgets? |
+|---|---|---|---|
+| A | Approved API or feed, within its terms | Data the terms permit, with timestamps | Yes |
+| B | Permitted manual curation | Facts recorded by a curator with source URL and capture time; images only by the retailer's own URL if permitted | Yes |
+| C | Link-only (no data rights confirmed) | Not used for products. Stage 1 search phrases are generic and name no retailer | No |
+| D | Disabled | Nothing | No |
+
+Every retailer starts at D and moves up only when its access is confirmed. The product layer needs at least one retailer at level A or B.
+
+### 7.4 Affiliate programmes
+
+- Monetisation is off by default; StyleMe adds no tracking of its own.
+- An affiliate programme may be used only as a data-access route, subject to approval and its terms.
+- Source-supplied links that already carry tracking (Flipkart's do) are marked `affiliateTracked` and disclosed.
+- Affiliate status and commission are never ranking inputs, never sent to AI and never stored as commission data.
+- Advertising-disclosure rules in India (ASCI guidance was cited in earlier research but not re-verified in this audit) may require affiliate links to be disclosed; the D-46 wording and its legal basis are for the legal review (D-74).
+
+---
+
+## 8. Success Measures
+
+- **Stage 1 release:** the acceptance criteria in [MVP.md](MVP.md) §5.1 and §5.2 and the evaluation set ([TESTING.md](TESTING.md) §6).
+- **Business KPIs** (e.g. returning users, saved looks per user, "love it" rate) are defined before the closed beta ends (D-71). No figures are claimed until measured.
+
+---
+
+## 9. Decisions
+
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-43 … D-48, D-58, D-61, D-63, D-71, D-74, D-76, D-77, D-83, D-84, D-86.
