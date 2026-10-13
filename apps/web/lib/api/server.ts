@@ -9,7 +9,6 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: ErrorCode,
     message: string,
-    readonly retryAfterSeconds?: number,
   ) {
     super(message);
   }
@@ -49,22 +48,19 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   } catch {
     throw new ApiError(res.status, 'INTERNAL_ERROR', 'Something went wrong');
   }
-  if (!json.success) throw new ApiError(res.status, json.error.code, json.error.message, json.error.retryAfterSeconds);
+  if (!json.success) throw new ApiError(res.status, json.error.code, json.error.message);
   return json.data;
 }
 
-/**
- * Reads claims from an API token without verifying it (the API verifies on every request). Used only
- * to size the session cookie: `rm` says whether the session was created with Remember Me.
- */
-export function decodeTokenClaims(token: string): { sub: string; exp: number; rm: boolean } | null {
+/** Reads claims from an API token without verifying it (the API verifies). Used only for expiry and user ID. */
+export function decodeTokenClaims(token: string): { sub: string; exp: number } | null {
   try {
     const payload = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8')) as Record<
       string,
       unknown
     >;
     return typeof payload.sub === 'string' && typeof payload.exp === 'number'
-      ? { sub: payload.sub, exp: payload.exp, rm: payload.rm === true }
+      ? { sub: payload.sub, exp: payload.exp }
       : null;
   } catch {
     return null;

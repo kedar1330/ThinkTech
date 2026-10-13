@@ -1,35 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import nextConfig, { TOKEN_PAGES, resetPasswordHeaders } from '../next.config';
-import { SESSION_MAX_AGE_REMEMBER_SECONDS, cookieName, cookieOptions, isSecureAuthUrl } from '../lib/auth/cookies';
+import nextConfig, { resetPasswordHeaders } from '../next.config';
+import { isSecureAuthUrl, sessionCookieName, sessionCookieOptions, SESSION_MAX_AGE_SECONDS } from '../lib/auth/cookies';
 import { clientIpFrom, isAllowedOrigin } from '../lib/auth/origin';
 
 // T-47 / T-48 (configuration level). The browser-level checks — the real Set-Cookie header over HTTPS
 // and the reset page's network log — run in the Playwright suite against staging (TESTING.md §7).
 
-describe('T-47: credential cookies (D-06, D-91)', () => {
-  it('over HTTPS: HttpOnly, SameSite=Lax, Secure, host-only, with the __Host- prefix', () => {
+describe('T-47: session cookie', () => {
+  it('is HttpOnly, SameSite=Lax, host-only, and Secure with the __Secure- prefix over HTTPS', () => {
     expect(isSecureAuthUrl('https://styleme.example')).toBe(true);
-    expect(cookieName('session', true)).toBe('__Host-styleme_session');
-    expect(cookieName('pending', true)).toBe('__Host-styleme_pending');
-    const options = cookieOptions(SESSION_MAX_AGE_REMEMBER_SECONDS, true);
-    expect(options).toEqual({ httpOnly: true, sameSite: 'lax', path: '/', secure: true, maxAge: 30 * 24 * 60 * 60 });
-    expect(options).not.toHaveProperty('domain');
+    expect(sessionCookieName(true)).toBe('__Secure-authjs.session-token');
+    expect(sessionCookieOptions(true)).toEqual({ httpOnly: true, sameSite: 'lax', path: '/', secure: true });
+    expect(sessionCookieOptions(true)).not.toHaveProperty('domain');
   });
 
-  it('without Remember Me the session cookie has no Max-Age (ends when the browser closes)', () => {
-    expect(cookieOptions(undefined, true)).not.toHaveProperty('maxAge');
-    expect(cookieOptions(undefined, true)).not.toHaveProperty('expires');
-  });
-
-  it('over plain HTTP (local development only): not Secure, no prefix', () => {
+  it('is not Secure over plain HTTP (local development only)', () => {
     expect(isSecureAuthUrl('http://localhost:3000')).toBe(false);
-    expect(isSecureAuthUrl(undefined)).toBe(false);
-    expect(cookieName('session', false)).toBe('styleme_session');
-    expect(cookieOptions(undefined, false).secure).toBe(false);
+    expect(sessionCookieName(false)).toBe('authjs.session-token');
+    expect(sessionCookieOptions(false).secure).toBe(false);
   });
 
-  it('Remember Me lasts 30 days, matching the API session', () => {
-    expect(SESSION_MAX_AGE_REMEMBER_SECONDS).toBe(30 * 24 * 60 * 60);
+  it('lasts at most 7 days, matching the API token', () => {
+    expect(SESSION_MAX_AGE_SECONDS).toBe(7 * 24 * 60 * 60);
   });
 });
 
@@ -46,18 +38,15 @@ describe('T-47: Origin check on state-changing requests', () => {
   });
 });
 
-describe('T-48: token page headers', () => {
-  it('every page that handles a code or token sends no-referrer and no-store, after the global headers', async () => {
+describe('T-48: reset page headers', () => {
+  it('sends Referrer-Policy: no-referrer and Cache-Control: no-store on /reset-password, after the global headers', async () => {
     const rules = await nextConfig.headers!();
+    const resetIndex = rules.findIndex((r) => r.source === '/reset-password');
     const globalIndex = rules.findIndex((r) => r.source === '/:path*');
+    expect(resetIndex).toBeGreaterThan(globalIndex);
+    expect(rules[resetIndex]!.headers).toEqual(resetPasswordHeaders);
     expect(resetPasswordHeaders).toContainEqual({ key: 'Referrer-Policy', value: 'no-referrer' });
     expect(resetPasswordHeaders).toContainEqual({ key: 'Cache-Control', value: 'no-store' });
-    for (const page of ['/reset-password', '/verify-email/link', '/settings/email/confirm', '/forgot-password/code']) {
-      expect(TOKEN_PAGES).toContain(page);
-      const index = rules.findIndex((r) => r.source === page);
-      expect(index, page).toBeGreaterThan(globalIndex);
-      expect(rules[index]!.headers).toEqual(resetPasswordHeaders);
-    }
   });
 });
 

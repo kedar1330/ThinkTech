@@ -18,6 +18,7 @@ import { loadConfig } from '../src/config/env';
 import { connectDatabase, type Database } from '../src/db';
 import { createLogger } from '../src/logger';
 import { AuthService } from '../src/services/auth.service';
+import { noEmailProvider } from '../src/services/email';
 
 const logger = createLogger();
 
@@ -60,12 +61,7 @@ async function findUser(db: Database, email: string) {
 async function run(db: Database, args: string[]): Promise<void> {
   const [command, arg1, arg2] = args;
   const config = loadConfig();
-  // Operator commands never send email; a sender that refuses keeps that explicit.
-  const email = {
-    kind: 'test' as const,
-    send: async () => Promise.reject(new Error('admin script does not send email')),
-  };
-  const auth = new AuthService({ config, models: db.models, main: db.main, email, logger, google: null });
+  const auth = new AuthService(config, db.models, db.main, noEmailProvider, logger);
 
   switch (command) {
     case 'invite-add': {
@@ -97,7 +93,7 @@ async function run(db: Database, args: string[]): Promise<void> {
       const adminId = await findAdminId(db, flag(args, '--admin'), true);
       const user = await findUser(db, email);
       if (!user.isActive) throw new Error('That account is inactive');
-      const code = await auth.issueAdminResetCode(user._id, adminId);
+      const code = await auth.issueResetToken(user._id, 'admin_issued', adminId);
       process.stdout.write(
         `Single-use reset code (valid 60 minutes). Deliver it out of band; it is not shown again:\n\n${code}\n\n` +
           'The user enters it on the reset-password page and chooses their own new password.\n',

@@ -9,7 +9,7 @@ export const notFound: RequestHandler = (_req, res) => {
 /** Standard envelope; never exposes stack traces, secrets, database details or internals (FR-X-02). */
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (err instanceof AppError) {
-    sendError(res, err.status, err.code, err.message, err.retryAfterSeconds);
+    sendError(res, err.status, err.code, err.message);
     return;
   }
   // Malformed JSON or an oversized body from express.json().

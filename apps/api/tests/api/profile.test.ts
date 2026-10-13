@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { bearer, login, registerUser, startTestEnv, type TestEnv } from '../helpers';
+import { PASSWORD, bearer, login, registerUser, startTestEnv, type TestEnv } from '../helpers';
 
 let env: TestEnv;
 beforeAll(async () => {
@@ -14,9 +14,9 @@ beforeEach(async () => {
 });
 
 async function signedIn(email: string) {
-  const { app, mail } = env.makeApp();
-  await registerUser(app, env, mail, email);
-  return { app, mail, email, token: await login(app, email) };
+  const { app } = env.makeApp();
+  await registerUser(app, env, email);
+  return { app, token: await login(app, email) };
 }
 
 const FULL = {
@@ -176,9 +176,9 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
   });
 
   it('FR-PROF-06: users read and change only their own profile', async () => {
-    const { app, mail } = env.makeApp();
-    await registerUser(app, env, mail, 'ha@example.com');
-    await registerUser(app, env, mail, 'io@example.com');
+    const { app } = env.makeApp();
+    await registerUser(app, env, 'ha@example.com');
+    await registerUser(app, env, 'io@example.com');
     const a = await login(app, 'ha@example.com');
     const b = await login(app, 'io@example.com');
     await request(app).put('/v1/profile').set(bearer(a)).send(FULL);
@@ -190,18 +190,10 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
   });
 
   it('account deletion removes the profile (FR-AUTH-09)', async () => {
-    const { app, token, mail, email } = await signedIn('jo@example.com');
+    const { app, token } = await signedIn('jo@example.com');
     await request(app).put('/v1/profile').set(bearer(token)).send(FULL);
     expect(await env.db.models.Profile.countDocuments()).toBe(1);
-    await request(app).post('/v1/account/deletion-otp').set(bearer(token));
-    expect(
-      (
-        await request(app)
-          .delete('/v1/account')
-          .set(bearer(token))
-          .send({ otp: mail.otp(email), confirm: true })
-      ).status,
-    ).toBe(200);
+    expect((await request(app).delete('/v1/account').set(bearer(token)).send({ password: PASSWORD })).status).toBe(200);
     expect(await env.db.models.Profile.countDocuments()).toBe(0);
   });
 });

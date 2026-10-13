@@ -1,88 +1,35 @@
 @import 'tailwindcss';
 
-/*
- * StyleMe design system (FRONTEND.md). Premium fashion palette: deep aubergine for brand and primary
- * actions, champagne gold for accents, warm ivory surfaces, charcoal text. Every text/background
- * pair used for body copy meets WCAG AA contrast (4.5:1).
- */
+/* shadcn/ui design tokens (neutral base). */
 :root {
-  --background: #fbf8f3; /* ivory */
-  --surface: #ffffff;
-  --surface-muted: #f4eee6; /* sand */
-  --foreground: #1f1a1d; /* charcoal */
-  --muted-foreground: #5f5559;
-  --primary: #4a1f45; /* aubergine */
-  --primary-hover: #3a1736;
-  --primary-foreground: #fdfaf5;
-  --plum: #7a3b6f;
-  --accent: #c8a45c; /* champagne gold */
-  --accent-soft: #f3e8d2;
-  --accent-foreground: #3a2a0c;
-  --destructive: #b42318;
-  --destructive-foreground: #ffffff;
-  --success: #1f7a4d;
-  --success-soft: #e7f4ec;
-  --warning-soft: #fdf3e1;
-  --error-soft: #fdecea;
-  --border: #e6ddd2;
-  --input: #d8ccbf;
-  --ring: #7a3b6f;
-  --radius: 0.75rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
-  --color-muted-foreground: var(--muted-foreground);
   --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
-  --color-plum: var(--plum);
-  --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
-  --color-accent-foreground: var(--accent-foreground);
+  --color-muted-foreground: var(--muted-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
-  --color-warning-soft: var(--warning-soft);
-  --color-error-soft: var(--error-soft);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 6px);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
-}
-
-h1,
-h2,
-h3 {
-  text-wrap: balance;
-}
-
-:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
 }

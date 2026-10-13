@@ -1,13 +1,11 @@
 import jwt from 'jsonwebtoken';
 import type { Types } from 'mongoose';
-import { SESSION_TTL_DEFAULT_MS, SESSION_TTL_REMEMBER_MS } from '../config/env';
-import type { Models, SessionDoc } from '../models/index';
+import { SESSION_TTL_MS } from '../config/env';
+import type { Models } from '../models/index';
 import { randomToken, sha256 } from '../utils/crypto';
 
-// Server-side sessions (D-07, D-91, SECURITY.md §1). The JWT carries the user ID, tokenVersion and a
+// Server-side sessions (D-07, SECURITY.md §1). The JWT carries the user ID, tokenVersion and a
 // random session ID; the session record is checked on every request, so a JWT alone is never enough.
-// Remember Me: 30 days. Otherwise the web app uses a browser-session cookie and the server stops
-// accepting the session after 24 hours. Lifetimes are absolute, never extended by activity.
 
 export interface AccessTokenClaims {
   sub: string;
@@ -22,13 +20,13 @@ export class SessionService {
   ) {}
 
   /** Creates a session record and returns an access token bound to it. Both expire together. */
-  async create(userId: Types.ObjectId | string, tokenVersion: number, remember = false): Promise<string> {
+  async create(userId: Types.ObjectId | string, tokenVersion: number): Promise<string> {
     const sid = randomToken();
     const now = Date.now();
-    const expiresAt = new Date(now + (remember ? SESSION_TTL_REMEMBER_MS : SESSION_TTL_DEFAULT_MS));
-    await this.models.Session.create({ sidHash: sha256(sid), userId, remember, createdAt: new Date(now), expiresAt });
+    const expiresAt = new Date(now + SESSION_TTL_MS);
+    await this.models.Session.create({ sidHash: sha256(sid), userId, createdAt: new Date(now), expiresAt });
     const claims: AccessTokenClaims = { sub: String(userId), tv: tokenVersion, sid };
-    return jwt.sign({ ...claims, rm: remember, exp: Math.floor(expiresAt.getTime() / 1000) }, this.secret, {
+    return jwt.sign({ ...claims, exp: Math.floor(expiresAt.getTime() / 1000) }, this.secret, {
       algorithm: 'HS256',
     });
   }
@@ -46,14 +44,10 @@ export class SessionService {
     }
   }
 
-  /** The live session record, or null if it was revoked or has expired (TTL deletion can lag). */
-  async find(sid: string, userId: string): Promise<SessionDoc | null> {
-    const session = await this.models.Session.findOne({ sidHash: sha256(sid), userId }).lean();
-    return session && session.expiresAt.getTime() > Date.now() ? session : null;
-  }
-
+  /** True if the session record exists and hasn't expired (TTL deletion can lag up to a minute). */
   async isLive(sid: string, userId: string): Promise<boolean> {
-    return (await this.find(sid, userId)) !== null;
+    const session = await this.models.Session.findOne({ sidHash: sha256(sid), userId }).lean();
+    return session !== null && session.expiresAt.getTime() > Date.now();
   }
 
   async revoke(sid: string): Promise<void> {
