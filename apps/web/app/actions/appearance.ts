@@ -8,7 +8,7 @@ import { ApiError, apiRequest } from '@/lib/api/server';
 import { isAllowedOrigin } from '@/lib/auth/origin';
 import { getAccessToken } from '@/lib/auth/session';
 import { CLEAR_ALL_SIGNALS, appearanceFormToRequest } from '@/lib/profile/appearance-form';
-import type { FormState } from './auth';
+import type { FormState } from '@/lib/actions';
 
 // Self-reported appearance signals (FR-SIG). State-changing, so each action checks the Origin first.
 

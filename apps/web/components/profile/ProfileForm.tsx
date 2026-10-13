@@ -18,7 +18,8 @@ import {
   type ProfileResponse,
 } from '@styleme/contracts';
 import { saveProfileAction } from '@/app/actions/profile';
-import type { FormState } from '@/app/actions/auth';
+import type { FormState } from '@/lib/actions';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,27 +28,17 @@ import { Label } from '@/components/ui/label';
 // is used (FR-PROF-04). Only the department is required.
 
 const select =
-  'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'flex h-11 w-full rounded-lg border border-input bg-surface px-3 text-sm focus-visible:border-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30';
 
 function Status({ state }: { state: FormState }) {
-  if (state?.error)
-    return (
-      <p role="alert" className="text-sm text-red-700">
-        {state.error}
-      </p>
-    );
-  if (state?.success)
-    return (
-      <p role="status" className="text-sm text-green-700">
-        {state.success}
-      </p>
-    );
+  if (state?.error) return <Alert tone="error">{state.error}</Alert>;
+  if (state?.success) return <Alert tone="success">{state.success}</Alert>;
   return null;
 }
 
 function Section({ title, why, children }: { title: string; why: string; children: React.ReactNode }) {
   return (
-    <fieldset className="space-y-3 rounded-md border border-border p-4">
+    <fieldset className="space-y-3 rounded-xl border border-border bg-surface p-5">
       <legend className="px-1 text-sm font-semibold">{title}</legend>
       <p className="text-xs text-muted-foreground">{why}</p>
       {children}
@@ -180,12 +171,29 @@ function LikeAvoid({
   );
 }
 
-export function ProfileForm({ initial }: { initial: ProfileResponse }) {
-  const [state, action, pending] = useActionState(saveProfileAction, undefined);
+type ProfileAction = (prev: FormState, formData: FormData) => Promise<FormState>;
+
+/**
+ * `action` replaces the default save (onboarding saves and continues); `before` renders extra fields
+ * at the top of the same form (onboarding asks Google sign-ups for their city there).
+ */
+export function ProfileForm({
+  initial,
+  action: submit = saveProfileAction,
+  before,
+  submitLabel = 'Save style profile',
+}: {
+  initial: ProfileResponse;
+  action?: ProfileAction;
+  before?: React.ReactNode | ((state: FormState) => React.ReactNode);
+  submitLabel?: string;
+}) {
+  const [state, action, pending] = useActionState(submit, undefined);
   const { sizes, fitPreferences: fit, coveragePreferences: coverage } = initial;
 
   return (
     <form action={action} className="space-y-5">
+      {typeof before === 'function' ? before(state) : before}
       <Section
         title="Department (required)"
         why="Which clothes StyleMe suggests. Choose “Show me everything” to see all departments."
@@ -373,7 +381,7 @@ export function ProfileForm({ initial }: { initial: ProfileResponse }) {
 
       <Status state={state} />
       <Button size="full" disabled={pending}>
-        Save style profile
+        {pending ? 'Saving…' : submitLabel}
       </Button>
     </form>
   );

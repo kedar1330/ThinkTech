@@ -6,6 +6,7 @@ export default defineConfig({
     server: 'src/server.ts',
     admin: 'scripts/admin.ts',
     'reconcile-tombstones': 'scripts/reconcile-tombstones.ts',
+    migrate: 'scripts/migrate.ts',
   },
   format: ['esm'],
   target: 'node24',

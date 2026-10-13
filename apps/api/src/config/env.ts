@@ -7,6 +7,11 @@ const bool = z
   .default('false')
   .transform((v) => v === 'true');
 
+const optional = z
+  .string()
+  .optional()
+  .transform((v) => (v && v.trim() !== '' ? v.trim() : undefined));
+
 const envSchema = z.object({
   NODE_ENV: z.string().default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -17,9 +22,30 @@ const envSchema = z.object({
   AUTH_ACCESS_TOKEN_SECRET: z.string().min(32),
   BFF_SHARED_SECRET: z.string().min(32),
   WEB_ORIGIN: z.url(),
-  PUBLIC_SIGNUP_ENABLED: bool,
-  PASSWORD_RESET_EMAIL_ENABLED: bool,
+  // Public sign-up with email-code verification is on by default; set to false to require an invite
+  // (closed beta, `pnpm admin invite-add`).
+  PUBLIC_SIGNUP_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
   MAINTENANCE_MODE: bool,
+  // Email (D-84): SMTP connection string of the chosen provider, e.g. smtps://user:pass@host:465.
+  // Without it, local development writes messages to DEV_OUTBOX_DIR instead; staging and production
+  // refuse to start.
+  SMTP_URL: optional,
+  EMAIL_FROM: optional,
+  // SMS for optional phone verification (D-92). No provider is chosen yet; locally messages go to the
+  // dev outbox, elsewhere phone verification reports that SMS isn't available.
+  SMS_PROVIDER: z.enum(['none']).default('none'),
+  DEV_OUTBOX_DIR: z.string().default('.dev-outbox'),
+  // Local development only: also print each email/SMS (with its code and link) to the API terminal.
+  // Ignored outside APP_ENV=local, so staging and production never print codes.
+  DEV_ECHO_MESSAGES: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // Google sign-in (D-88): the OAuth client ID that Google ID tokens must be issued for.
+  GOOGLE_CLIENT_ID: optional,
 });
 
 export type Config = z.infer<typeof envSchema>;
@@ -34,14 +60,41 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return parsed.data;
 }
 
-// Session and token lifetime: 7 days from login, never extended (D-05).
-export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
 
-// Reset token lifetimes (D-83).
-export const ADMIN_RESET_TTL_MS = 60 * 60 * 1000;
-export const EMAIL_RESET_TTL_MS = 30 * 60 * 1000;
+// Sessions (D-91): Remember Me keeps a session for 30 days; otherwise the browser cookie ends with the
+// browser session and the server stops accepting it after 24 hours. Never extended by activity.
+export const SESSION_TTL_REMEMBER_MS = 30 * DAY;
+export const SESSION_TTL_DEFAULT_MS = 1 * DAY;
+/** @deprecated kept for older call sites; equals the Remember Me lifetime. */
+export const SESSION_TTL_MS = SESSION_TTL_REMEMBER_MS;
+
+// One-time codes and links (D-89).
+export const OTP_TTL_MS = 5 * MINUTE;
+export const VERIFICATION_LINK_TTL_MS = 30 * MINUTE;
+export const RESET_LINK_TTL_MS = 15 * MINUTE;
+export const ADMIN_RESET_TTL_MS = 60 * MINUTE;
+export const EMAIL_CHANGE_LINK_TTL_MS = 30 * MINUTE;
+/** A correct reset OTP is exchanged for a single-use token valid this long to set the new password. */
+export const RESET_SESSION_TTL_MS = 10 * MINUTE;
+export const OTP_MAX_FAILED_ATTEMPTS = 3;
+export const OTP_LOCKOUT_MS = 30 * MINUTE;
+export const RESEND_COOLDOWN_MS = 30 * 1000;
+/** The first send plus up to 5 resends in any rolling hour. */
+export const MAX_SENDS_PER_HOUR = 6;
+/**
+ * How long a pending registration (the `pendingRegistrations` record and its challenge document) is
+ * kept after the last code was sent. Expired records are removed by TTL indexes.
+ */
+export const PENDING_REGISTRATION_TTL_MS = 1 * DAY;
+
+// Failed-login lockout (D-90).
+export const LOGIN_MAX_FAILED_ATTEMPTS = 3;
+export const LOGIN_LOCKOUT_MS = 30 * MINUTE;
 
 // Tombstones are kept for the backup retention period + 7 days (D-85). Backup retention is the
 // proposed 30 days until the founder confirms it at HC-1 (D-79); change this constant with it.
 export const BACKUP_RETENTION_DAYS = 30;
-export const TOMBSTONE_RETENTION_MS = (BACKUP_RETENTION_DAYS + 7) * 24 * 60 * 60 * 1000;
+export const TOMBSTONE_RETENTION_MS = (BACKUP_RETENTION_DAYS + 7) * DAY;

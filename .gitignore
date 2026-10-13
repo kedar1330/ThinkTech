@@ -13,3 +13,6 @@ next-env.d.ts
 npm-debug.log*
 pnpm-debug.log*
 .DS_Store
+
+# Local-only email/SMS outbox (APP_ENV=local without a provider)
+.dev-outbox/

@@ -8,7 +8,7 @@ import { ApiError, apiRequest } from '@/lib/api/server';
 import { isAllowedOrigin } from '@/lib/auth/origin';
 import { getAccessToken } from '@/lib/auth/session';
 import { profileFormToRequest } from '@/lib/profile/profile-form';
-import type { FormState } from './auth';
+import type { FormState } from '@/lib/actions';
 
 // Style profile (FR-PROF). State-changing, so the Origin is checked first.
 
@@ -30,6 +30,6 @@ export async function saveProfileAction(_prev: FormState, formData: FormData): P
     return { error: 'Something went wrong. Please try again.' };
   }
   revalidatePath('/profile');
-  revalidatePath('/dashboard');
+  revalidatePath('/home');
   return { success: 'Your style profile has been saved.' };
 }

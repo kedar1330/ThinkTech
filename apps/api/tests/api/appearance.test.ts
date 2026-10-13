@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { PASSWORD, bearer, login, registerUser, startTestEnv, type TestEnv } from '../helpers';
+import { bearer, login, registerUser, startTestEnv, type TestEnv } from '../helpers';
 
 let env: TestEnv;
 beforeAll(async () => {
@@ -14,9 +14,9 @@ beforeEach(async () => {
 });
 
 async function signedIn(email: string) {
-  const { app } = env.makeApp();
-  await registerUser(app, env, email);
-  return { app, token: await login(app, email) };
+  const { app, mail } = env.makeApp();
+  await registerUser(app, env, mail, email);
+  return { app, mail, email, token: await login(app, email) };
 }
 
 const FULL = {
@@ -124,9 +124,9 @@ describe('self-reported appearance signals (FR-SIG, AC-04)', () => {
   });
 
   it('isolates users: each user reads and changes only their own signals', async () => {
-    const { app } = env.makeApp();
-    await registerUser(app, env, 'fi@example.com');
-    await registerUser(app, env, 'gu@example.com');
+    const { app, mail } = env.makeApp();
+    await registerUser(app, env, mail, 'fi@example.com');
+    await registerUser(app, env, mail, 'gu@example.com');
     const a = await login(app, 'fi@example.com');
     const b = await login(app, 'gu@example.com');
     await request(app).put('/v1/appearance').set(bearer(a)).send(FULL);
@@ -155,10 +155,14 @@ describe('self-reported appearance signals (FR-SIG, AC-04)', () => {
   });
 
   it('account deletion removes the signals (FR-AUTH-09)', async () => {
-    const { app, token } = await signedIn('io@example.com');
+    const { app, token, mail, email } = await signedIn('io@example.com');
     await request(app).put('/v1/appearance').set(bearer(token)).send(FULL);
     expect(await env.db.models.AppearanceProfile.countDocuments()).toBe(1);
-    const res = await request(app).delete('/v1/account').set(bearer(token)).send({ password: PASSWORD });
+    await request(app).post('/v1/account/deletion-otp').set(bearer(token));
+    const res = await request(app)
+      .delete('/v1/account')
+      .set(bearer(token))
+      .send({ otp: mail.otp(email), confirm: true });
     expect(res.status).toBe(200);
     expect(await env.db.models.AppearanceProfile.countDocuments()).toBe(0);
   });
