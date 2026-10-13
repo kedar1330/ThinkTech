@@ -3,17 +3,26 @@
 import { useActionState } from 'react';
 import { MONK_TONES, PROPORTION_DESCRIPTORS, UNDERTONES, type AppearanceResponse } from '@styleme/contracts';
 import { clearAppearanceAction, saveAppearanceAction } from '@/app/actions/appearance';
-import type { FormState } from '@/lib/actions';
-import { Alert } from '@/components/ui/alert';
+import type { FormState } from '@/app/actions/auth';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
 const select =
-  'flex h-11 w-full rounded-lg border border-input bg-surface px-3 text-sm focus-visible:border-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30';
+  'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 function Status({ state }: { state: FormState }) {
-  if (state?.error) return <Alert tone="error">{state.error}</Alert>;
-  if (state?.success) return <Alert tone="success">{state.success}</Alert>;
+  if (state?.error)
+    return (
+      <p role="alert" className="text-sm text-red-700">
+        {state.error}
+      </p>
+    );
+  if (state?.success)
+    return (
+      <p role="status" className="text-sm text-green-700">
+        {state.success}
+      </p>
+    );
   return null;
 }
 

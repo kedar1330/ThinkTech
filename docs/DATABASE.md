@@ -23,8 +23,7 @@
 | `users` | Accounts and credentials | Per user | 1 |
 | `betaInvites` | Closed-beta invite allow-list (FR-AUTH-10) | Admin-managed | 1 |
 | `sessions` | Revocable login sessions (D-07) | Per user | 1 |
-| `authChallenges` | Hashed one-time codes and links: email verification, password reset and change, email change, phone verification, account deletion (D-89) | Per user | 1 |
-| `migrations` | Applied schema migrations (`pnpm --filter @styleme/api migrate`) | System | 1 |
+| `passwordResetTokens` | Hashed single-use password-reset tokens (D-83) | Per user | 1 |
 | `deletionTombstones` | Minimal records of deleted accounts, replayed after a restore (D-85). **Kept in a separate tombstone store, outside the main database's backup and restore scope** | System | 1 |
 | `profiles` | Preferences, category sizes, fit | Per user | 1 |
 | `appearanceProfiles` | Self-reported appearance signals (estimates later) | Per user | 1 |
@@ -48,18 +47,11 @@ The style knowledge base (palettes, rules, templates) is **not** stored in Mongo
 | Field | Type / rule |
 |---|---|
 | `email` | string, unique, lower-cased |
-| `passwordHash` | string (argon2id), or `null` until a Google sign-up creates its StyleMe password (D-88). The plain password is never stored or logged |
-| `name` | string (full name) |
-| `emailVerifiedAt` | timestamp, or `null` until the email is verified (D-89). Unverified accounts can't log in |
-| `googleSub` | Google account ID, unique when set (D-88) |
-| `city` | city ID from the shared list in `packages/contracts/src/cities.ts`, or `null` (Google sign-ups give it during onboarding) |
-| `phone` | `{ e164, verifiedAt }` or `null` (D-92) |
-| `consent` | `{ termsVersion, termsAcceptedAt, privacyVersion, privacyAcceptedAt, marketingOptIn, marketingUpdatedAt }` (D-87) |
-| `loginSecurity` | `{ failedCount, lockedUntil }` — login lockout (D-90) |
-| `onboarding` | `{ styleProfileCompletedAt, appearanceCompletedAt }` — server-authoritative progress (FR-ONB) |
+| `passwordHash` | string (argon2id). The plain password is never stored or logged |
+| `name` | string |
 | `role` | `user` \| `admin` (D-73) |
 | `isActive` | boolean; set only by admin scripts. When `false`, login fails and existing tokens are rejected (FR-AUTH-08) |
-| `tokenVersion` | integer; incremented to revoke all API tokens — on password change or reset, when Google linking discards a pre-registered password, or by admin script (D-05, D-07, D-83, D-88) |
+| `tokenVersion` | integer; incremented to revoke all API tokens — on password change, on password reset, or by admin script (D-05, D-07, D-83) |
 | `passwordChangedAt` | timestamp of the last password change or reset, or `null` |
 | `createdAt`, `updatedAt` | timestamps |
 
@@ -73,25 +65,19 @@ The style knowledge base (palettes, rules, templates) is **not** stored in Mongo
 
 Managed only by a server-side admin script; no API endpoint writes it.
 
-### 3.1b `authChallenges` (D-89; replaces `passwordResetTokens`)
-
-One document per user and purpose. Issuing a new code or link replaces the earlier one, so only the latest works.
+### 3.1b `passwordResetTokens` (D-83)
 
 | Field | Type / rule |
 |---|---|
 | `userId` | reference → `users` |
-| `purpose` | `email_verification` \| `password_reset` \| `password_change` \| `email_change` \| `phone_verification` \| `account_deletion`; unique with `userId` |
-| `target` | the new email (`email_change`) or phone (`phone_verification`) being verified, else `null` |
-| `otpHash`, `otpExpiresAt` | HMAC-SHA-256 of the 6-digit code (keyed with `AUTH_ACCESS_TOKEN_SECRET`); valid 5 minutes |
-| `linkHash`, `linkExpiresAt` | SHA-256 of a random link token (256 bits); unique when set. Verification and email-change links 30 minutes, reset links 15 minutes, admin codes 60 minutes, reset tokens from a verified code 10 minutes |
-| `consumedAt` | set when used; never accepted again |
-| `failedAttempts`, `lockedUntil` | 3 wrong codes lock this challenge for 30 minutes; kept across resends |
-| `sentAt` | send times in the last hour: 30-second cooldown, at most 6 sends (first + 5 resends) per hour |
-| `pendingTokenHash`, `rememberMe` | `email_verification` only: SHA-256 of the pending-registration token held in the registering browser's `HttpOnly` cookie, and its Remember Me choice |
-| `issuedBy` | admin user ID for admin-issued reset codes (FR-AUTH-12), else `null` |
-| `expiresAt` | 24 hours after the last send (TTL index), so the send history, lockout and pending registration outlive the codes themselves |
+| `tokenHash` | SHA-256 of a random token of at least 128 bits; unique. The token itself is never stored or logged |
+| `purpose` | `admin_issued` (closed beta) \| `self_service` (public launch) |
+| `issuedBy` | admin user ID for `admin_issued`, else `null` |
+| `createdAt` | timestamp |
+| `expiresAt` | `createdAt` + 60 minutes (`admin_issued`) or + 30 minutes (`self_service`); TTL index |
+| `usedAt` | set when redeemed; a used token is never accepted again |
 
-Codes, link tokens and pending tokens are never stored or logged in plain form. A successful reset deletes the user's other challenges; account deletion deletes all of them.
+Issuing a token deletes the user's earlier unused tokens. A successful reset or password change deletes all of the user's tokens.
 
 ### 3.1d `sessions` (D-07)
 
@@ -100,10 +86,9 @@ Codes, link tokens and pending tokens are never stored or logged in plain form. 
 | `sidHash` | SHA-256 of the random session ID (≥ 128 bits) carried in the token; unique. The session ID itself is never stored or logged |
 | `userId` | reference → `users` |
 | `createdAt` | login time |
-| `remember` | Remember Me (D-91) |
-| `expiresAt` | `createdAt` + 30 days with Remember Me, otherwise + 24 hours — the same as the token; TTL index |
+| `expiresAt` | `createdAt` + 7 days, the same as the token; TTL index |
 
-Created at login, at verification in the registering browser and at Google sign-in. Deleted at logout (that session only), on password change (all others; the browser that changed it gets a new one), on reset, Google linking of an unverified account and by admin script (all), and on account deletion. No IP address, user agent or other device data is stored.
+Created at login. Deleted at logout (that session only), on password change or reset (all of the user's sessions; a new one is created for the browser that changed the password), by admin script, and on account deletion. No IP address, user agent or other device data is stored.
 
 ### 3.1c `deletionTombstones` (separate tombstone store, D-85)
 
@@ -119,7 +104,7 @@ No name, plain email, IP address, reason text or other personal data. The store 
 
 **Account deletion order:** (1) write the tombstone — if this fails, return `SERVICE_UNAVAILABLE` and delete nothing; (2) delete all of the user's data from the live database, the `users` record last; (3) if step 2 fails partway, the tombstone remains, and the reconciliation script replays all tombstones against the live database. Replay is idempotent.
 
-**Replay list:** `users` (by `_id`), `sessions`, `profiles`, `appearanceProfiles`, `outfits` (including feedback), `shortlistItems`, `authChallenges` and the legacy `passwordResetTokens` (by `userId`), and `betaInvites` (by matching `emailHmac`). Any new user-owned collection must be added to the replay list and its verification before it ships.
+**Replay list:** `users` (by `_id`), `sessions`, `profiles`, `appearanceProfiles`, `outfits` (including feedback), `shortlistItems`, `passwordResetTokens` (by `userId`), and `betaInvites` (by matching `emailHmac`). Any new user-owned collection must be added to the replay list and its verification before it ships.
 
 ### 3.2 `profiles` (one per user)
 
@@ -382,8 +367,7 @@ Safeguards (D-78):
 | `outfits` | `{ userId, status, createdAt }`; `recommendationId`; TTL on `expiresAt` |
 | `aiCache` | `cacheKey` (unique); TTL on `expiresAt` |
 | `shortlistItems` | `{ userId, createdAt }`; `{ outfitId, slotId }` — a partial unique index covering only attached items (`outfitId` set), so unattached items never conflict |
-| `users` | `googleSub` (unique, partial: only when set) |
-| `authChallenges` | `{ userId, purpose }` (unique); `linkHash` (unique, partial); `pendingTokenHash` (partial); TTL on `expiresAt` |
+| `passwordResetTokens` | `tokenHash` (unique); `userId`; TTL on `expiresAt` |
 | `sessions` | `sidHash` (unique); `userId`; TTL on `expiresAt` |
 | `deletionTombstones` (tombstone store) | `userId`; `emailHmac`; TTL on `expiresAt` |
 | `retailers` | `retailerId` (unique) |
@@ -401,7 +385,7 @@ users 1─n outfits                 (outfits.userId)
 users 1─n shortlistItems          (shortlistItems.userId)
 outfits.slots[].productMatch ──► products          (product layer)
 shortlistItems.outfitId + slotId ──► outfits.slots[].slotId (optional attachment)
-users 1─n authChallenges          (authChallenges.userId, one per purpose)
+users 1─n passwordResetTokens     (passwordResetTokens.userId)
 users 1─n sessions                (sessions.userId)
 retailers 1─n products            (products.retailerId)
 products 1─n reviewEvidence       (reviewEvidence.productId)
@@ -416,9 +400,8 @@ outfits.templateId / paletteId ──► style-rules files (by ID)
 |---|---|
 | Account, profile, appearance signals, saved looks, feedback, shortlist | Until the user deletes them; all deleted from the live database immediately on account deletion (FR-AUTH-09) |
 | Suggested (unsaved) looks | 7 days (TTL) |
-| Codes and links (`authChallenges`) | Codes and links stop working when used, superseded or expired (5 to 60 minutes); the hashed record is removed 24 hours after the last send (TTL) and with the account |
-| Consent records | With the account (terms and privacy versions, acceptance times, marketing choice and its time) |
-| Sessions | Until logout, password change or reset, account deletion, or expiry: 24 hours, or 30 days with Remember Me (TTL) |
+| Password reset tokens | Until used, superseded or expired (TTL, at most 60 minutes); deleted with the account |
+| Sessions | Until logout, password change or reset, account deletion, or 7 days after login (TTL) |
 | Beta invites | Until the closed beta ends, then deleted within 30 days; deleted earlier on request or when the invitee deletes their account |
 | Measurements | Deletable at any time on their own |
 | `aiCache` | 7 days (TTL); contains no personal data |
@@ -428,10 +411,10 @@ outfits.templateId / paletteId ──► style-rules files (by ID)
 | Backups | Per the backup retention period (D-79, 30 days, proposed and not yet approved). Backups are not edited when a user deletes data; deleted data disappears when the backups containing it expire. If a backup is restored, deletions made after it are re-applied from tombstones before users are served (D-85) |
 | Deletion tombstones | Backup retention period + 7 days (37 days while backup retention is the proposed 30), then TTL deletion |
 
-Migration `001-auth-onboarding` (2026-10-12) marks existing accounts verified from their creation time, adds the new user fields with defaults, derives onboarding progress from existing profiles and deletes legacy `passwordResetTokens`; applied migrations are recorded in `migrations`, so it runs once. Schema changes use versioned migration scripts that keep old and new code working (add first, remove later), so a rollback never needs a restore (D-79).
+Schema changes use versioned migration scripts that keep old and new code working (add first, remove later), so a rollback never needs a restore (D-79).
 
 ---
 
 ## 11. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-03, D-05, D-07, D-09, D-13, D-16, D-22, D-23, D-49, D-50, D-54, D-58, D-66, D-72, D-73, D-77, D-78, D-79, D-80, D-85, D-87 … D-94.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-03, D-05, D-07, D-09, D-13, D-16, D-22, D-23, D-49, D-50, D-54, D-58, D-66, D-72, D-73, D-77, D-78, D-79, D-80, D-85.

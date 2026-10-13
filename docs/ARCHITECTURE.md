@@ -12,7 +12,7 @@ StyleMe is a pnpm monorepo with a Next.js web app, an Express API and a shared c
 Browser
   │  HTTPS
   ▼
-Next.js (Vercel) ── first-party HttpOnly session cookie (D-06); Google OAuth (PKCE) route handlers
+Next.js (Vercel) ── Auth.js session (encrypted cookie)
   │  server-side (BFF) call with access token
   ▼
 Express API (Render, Docker)
@@ -23,8 +23,7 @@ Express API (Render, Docker)
   ├── Product layer: catalogue, matching, budget, quality ◄── ingestion scripts
   │      ◄── permitted retailer sources (approved API / feed / permitted curation)  [product layer]
   ├── Weather integration ──► provider chosen in Stage 2 (optional, off by default)  [Stage 2]
-  ├── Email (SMTP boundary; dev outbox locally) ──► provider chosen at HC-1 (D-84)  [Stage 1, required]
-  ├── SMS (dev outbox locally; no provider yet, D-92) · Google ID-token verification (JWKS, D-88)  [Stage 1]
+  ├── Email integration ──► provider chosen at HC-2 (self-service reset only)  [public launch]
   ├──► Tombstone store (separate, outside the main database's restore scope; API insert-only, D-85)  [Stage 1]
   ▼
 MongoDB Atlas (separate database per environment)
@@ -39,8 +38,8 @@ Hosting platforms are planned (D-40); accounts, plans and costs are decided at t
 | Layer | Technology | Stage |
 |---|---|---|
 | Monorepo | pnpm workspaces | 1 |
-| Web | Next.js, TypeScript, Tailwind CSS, shadcn/ui, lucide-react icons, `next/font/local` with bundled Playfair Display and Inter (SIL OFL, `apps/web/app/fonts`), Zustand when needed | 1 |
-| Auth | First-party session cookie and Google OAuth on the Next.js server; Express API sessions, argon2id, `jose` for Google ID tokens (D-06, D-88) | 1 |
+| Web | Next.js, TypeScript, Tailwind CSS, shadcn/ui, Zustand | 1 |
+| Auth | Auth.js (session) + Express (API authorization) | 1 |
 | API | Node.js (Active LTS, D-01), Express, TypeScript | 1 |
 | Database | MongoDB Atlas, Mongoose | 1 |
 | Validation | Zod (shared in `packages/contracts`) | 1 |
@@ -49,7 +48,7 @@ Hosting platforms are planned (D-40); accounts, plans and costs are decided at t
 | AI (optional wording) | Gemini, off by default (D-67) | 1, optional |
 | Retailer integrations | Per approved source | Product layer |
 | Weather | Provider chosen after terms are verified (D-60) | 2 |
-| Transactional email | SMTP via Nodemailer; provider chosen at HC-1 (D-84). Verification, reset, notices | 1 |
+| Transactional email | Provider chosen at HC-2 (D-84), for self-service password reset | Public launch |
 | Cloudinary | Only when user or generated images are stored | Deferred |
 | MediaPipe | Photo-based analysis | Deferred (D-76) |
 | Three.js / React Three Fiber | 3D avatar | Deferred (D-76) |
@@ -69,20 +68,16 @@ StyleMe/
 ├── apps/
 │   ├── web/
 │   │   ├── app/
-│   │   │   ├── (site)/            landing, about, terms, privacy, contact   [Stage 1]
-│   │   │   ├── (auth)/            register, login, verify-email/*, forgot-password/*, reset-password, settings/email/confirm
-│   │   │   ├── onboarding/        password (Google), style-profile, appearance
-│   │   │   ├── (app)/             home, profile, settings, features/[slug] ("Coming soon"), dashboard → home
-│   │   │   ├── api/oauth/google/  start, callback (route handlers)
-│   │   │   ├── actions/           server actions (auth, account, onboarding, profile, appearance)
-│   │   │   ├── outfits/                         [Stage 1, later milestone]
+│   │   │   ├── (auth)/login, (auth)/register, (auth)/reset-password   [Stage 1; reset-password is new]
+│   │   │   ├── dashboard/, profile/, outfits/   [Stage 1]
 │   │   │   ├── products/                        [product layer]
 │   │   │   ├── analyze/, avatar/, design/, chat/, tailor/   [deferred placeholders, D-76]
 │   │   │   ├── tryon/                           [future placeholder, D-48]
+│   │   │   ├── api/auth/                        [Auth.js]
 │   │   │   ├── layout.tsx, page.tsx
-│   │   ├── components/ (ui design system, site, auth, app, profile, …)
-│   │   ├── lib/ (auth: cookies, session, google, draft; api; actions; brand images; features), public/images (licensed, CREDITS.md)
-│   │   ├── next.config.ts
+│   │   ├── components/ (ui, auth, profile, outfits, products, …)
+│   │   ├── lib/ (auth, api, utils; cloudinary placeholder — deferred), hooks/, stores/, public/
+│   │   ├── auth.ts, next.config.ts
 │   │   └── tests/
 │   └── api/
 │       ├── src/
@@ -92,11 +87,11 @@ StyleMe/
 │       │   │   ├── ai/                [optional wording; later AI features]
 │       │   │   ├── retailers/         [product layer, one module per approved source]
 │       │   │   ├── weather/           [Stage 2]
+│       │   │   ├── email/             [public launch, HC-2 (D-84)]
 │       │   │   └── cloudinary/, mediapipe/, pdf/, tryon/   [deferred / future placeholders]
 │       │   ├── jobs/                  [only when background jobs are needed]
 │       │   ├── app.ts, server.ts
-│       ├── src/services/messaging.ts, templates.ts, challenges.ts, google.ts   [email/SMS boundary, codes and links, Google]
-│       ├── scripts/ (admin, migrate + migrations/, later ingestion and link checks)
+│       ├── scripts/ (migrations/, ingestion, link checks, fixture loaders)
 │       ├── tests/ (incl. fixtures/)
 │       └── Dockerfile
 ├── packages/contracts/src/ (existing empty files: auth, profile, appearance, outfit, product, chat, design, index; to add: style, shortlist, weather, …)
@@ -105,7 +100,7 @@ StyleMe/
 ├── docker-compose.yml, render.yaml, .env.example, pnpm-workspace.yaml
 ```
 
-Placeholder folders for deferred and future modules stay empty until their stage is approved. Email and SMS live behind `src/services/messaging.ts` (SMTP or the local dev outbox) rather than an `integrations/email/` folder. Folders that don't exist yet (`integrations/retailers/`, `integrations/weather/`, `tests/evaluation/`, `e2e/`) are created by the milestone that needs them.
+Placeholder folders for deferred and future modules already exist in the repository. They stay empty until their stage is approved. Folders that don't exist yet — `apps/web/app/(auth)/reset-password/`, `apps/web/tests/`, `style-rules/`, `integrations/retailers/`, `integrations/weather/`, `integrations/email/`, `scripts/migrations/`, `tests/fixtures/`, `tests/unit/`, `tests/api/`, `tests/evaluation/`, `e2e/` — are created by the milestone that needs them. All existing code and configuration files are currently empty (0 bytes). New contract files are added per module as it is built.
 
 ---
 
@@ -113,7 +108,7 @@ Placeholder folders for deferred and future modules stay empty until their stage
 
 | Part | Responsibility |
 |---|---|
-| `apps/web` | UI and design system, forms (server actions with `Origin` checks), navigation, the session and other credential cookies, Google OAuth round trip, server-side calls to the API, labels for data classes (FR-DATA-01) |
+| `apps/web` | UI, forms, navigation, Auth.js session, server-side calls to the API, client state (Zustand), labels for data classes (FR-DATA-01) |
 | `apps/api` | REST API, authorization, validation, business logic (look generator, budget engine on user-entered prices, later eligibility and quality), persistence, optional AI orchestration, ingestion scripts, rate limiting, logging |
 | `packages/contracts` | Zod schemas and TypeScript types shared by web and API; the single definition of request and response shapes |
 
@@ -124,24 +119,16 @@ Placeholder folders for deferred and future modules stay empty until their stage
 ## 5. Request and Authentication Flow
 
 ```
-Register (server action) → POST /v1/auth/register → unverified user + hashed code/link → email
-→ pending token kept in an HttpOnly cookie → /verify-email
-→ code (six boxes, Verify) or link (#token) → API consumes the challenge → emailVerifiedAt set
-→ same browser: session created → cookie set (Remember Me: 30 days, else browser session) → onboarding
+User enters email/password → Auth.js credentials provider → POST /v1/auth/login
+→ API verifies argon2id hash → creates a session record → issues JWT (tokenVersion, sid)
+→ stored in the encrypted session cookie (HttpOnly, Secure, SameSite=Lax)
+→ later page requests: Next.js server reads the session → calls the API with the token
+→ API middleware verifies signature, expiry, user isActive, tokenVersion and the session record → scoped to the user
 
-Login → POST /v1/auth/login → lockout check → argon2id verify → verified email required
-→ session record + JWT (tokenVersion, sid, rm) → cookie → redirect to the next onboarding step
-
-Google → /api/oauth/google/start (state, PKCE, nonce cookie) → Google → /api/oauth/google/callback
-→ code exchanged on the server → POST /v1/auth/google (API verifies the ID token) → create / link / log in
-
-Every page render → Next.js server reads the cookie → GET /v1/auth/me (signature, expiry, isActive,
-verified email, tokenVersion, session record) → page; 401 → cookie cleared → /login
-
-Logout → POST /v1/auth/logout deletes this session only → cookie cleared
-Password change (emailed code) → new hash, tokenVersion++, other sessions deleted → new session for this browser
-Reset (link, or code → reset token; admin code for support) → POST /v1/auth/password-reset/confirm
-→ consumed atomically → new hash, tokenVersion++, all sessions deleted, lockout cleared → /login
+Logout → POST /v1/auth/logout deletes the session record → Auth.js cookie cleared
+Password change → new hash, tokenVersion++, all session records deleted → new session and token for the current browser
+Reset (admin-issued code in the closed beta; emailed link from public launch, D-83)
+→ POST /v1/auth/password-reset/confirm → token hash checked and marked used atomically → new hash, tokenVersion++, all session records deleted
 ```
 
 ---

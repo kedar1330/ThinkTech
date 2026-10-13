@@ -8,7 +8,7 @@ The specifications are in [`docs/`](docs/). Start with [MVP.md](docs/MVP.md) and
 
 | Path                 | Contents                                                     |
 | -------------------- | ------------------------------------------------------------ |
-| `apps/web`           | Next.js web app (session cookie, server-side API calls)      |
+| `apps/web`           | Next.js web app (Auth.js session, server-side API calls)     |
 | `apps/api`           | Express API, MongoDB models, operator scripts                |
 | `packages/contracts` | Zod schemas and types shared by web and API                  |
 | `docs/`              | Requirements, architecture, security, testing and deployment |
@@ -41,12 +41,6 @@ Registration is invite-only during the closed beta (D-63). Invite an email addre
 
 ```sh
 pnpm --filter @styleme/api admin invite-add you@example.com
-```
-
-Registration only creates user accounts. Create the admin with the seed script: set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `apps/api/.env`, then run the command below. The admin then logs in directly at `/login`. There is no invite, verification or onboarding step, and Google sign-in is not available to admins (D-95). Re-running the seed changes nothing; `--reset-password` replaces the password.
-
-```sh
-pnpm --filter @styleme/api seed
 ```
 
 Other operator commands (issue a reset code, revoke sessions, deactivate an account, set a role) are listed at the top of [`apps/api/scripts/admin.ts`](apps/api/scripts/admin.ts).

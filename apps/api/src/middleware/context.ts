@@ -7,7 +7,7 @@ declare global {
       /** The end user's IP address, used for per-IP rate limits (see client-ip.ts). */
       clientIp: string;
       /** Set by `authenticate` on protected routes. */
-      auth?: { user: UserWithId; sid: string; remember: boolean };
+      auth?: { user: UserWithId; sid: string };
     }
   }
 }

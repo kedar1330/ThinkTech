@@ -111,7 +111,7 @@ Microservices; Kubernetes; a separate Python service; a database per module; com
 16. Personal photographs, measurements and unnecessary personal information are never sent to external AI providers, unless a future explicit founder decision, a privacy review and user consent authorise that specific processing.
 17. Users can always override recommendations and explore any colour, fit or style.
 18. Users can delete their data and their account.
-19. Accounts are protected and in the user's control: every email address is verified (or verified by Google), passwords follow a clear policy, a forgotten password is reset by the user without anyone at StyleMe seeing or choosing it, and the account can be deleted immediately and permanently (D-83, D-86 … D-94).
+19. Users can change their password; a forgotten password is recovered without anyone at StyleMe seeing or choosing it — admin-assisted during the closed beta, self-service email reset from public launch (D-83).
 
 ---
 
@@ -166,4 +166,4 @@ Every retailer starts at D and moves up only when its access is confirmed. The p
 
 ## 9. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-43 … D-48, D-58, D-61, D-63, D-71, D-74, D-76, D-77, D-83, D-84, D-86 … D-94.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-43 … D-48, D-58, D-61, D-63, D-71, D-74, D-76, D-77, D-83, D-84, D-86.
