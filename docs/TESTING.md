@@ -52,7 +52,11 @@ All automated suites run in CI on every pull request and push to `main` (D-42). 
 | Size note | Uses the category size; body shape and signals have no effect |
 | Budget engine (user-entered prices) | Totals, `pricedSlots`/`totalSlots`, `complete`, budget remaining, `within_budget` / `over_budget` / `no_budget`, exact boundary `total == budget` |
 | Style-rule loader and linter | Rejects invalid records, contradictions, duplicates, duplicate `slotId`s within a template, unknown references, missing rationale or limitations; loads only `approved` |
-| Reset tokens | Generated with ≥ 128 bits; only the hash is stored; expiry per purpose; new token invalidates earlier ones |
+| Codes and links (`ChallengeService`) | 6-digit codes and 256-bit link tokens; only hashes stored; expiry per purpose; a new one invalidates the old; 3 wrong codes lock for 30 minutes; 30-second cooldown and 6 sends per hour |
+| Password policy, phone and city schemas | Each password rule enforced separately; Indian mobile numbers normalised to `+91…`; city IDs from the shared list |
+| Registration draft (web) | Only non-sensitive fields kept; expires after 24 hours; corrupt data ignored |
+| Google OAuth helpers (web) | PKCE S256 challenge, random `state` and `nonce`, constant-time state comparison, no client secret in the authorization URL |
+| Migration `001-auth-onboarding` | Legacy users marked verified, defaults added, onboarding derived from profiles, legacy reset tokens removed; runs once |
 | Coverage report | Counts and empty cells computed correctly (FR-STY-11) |
 | Coordination rules | Colour compatibility, formality, pattern mixing and proportion rules applied across slots; alternatives differ meaningfully and stay coordinated |
 | Validators | Zod schemas accept valid and reject invalid input |
@@ -66,12 +70,12 @@ All automated suites run in CI on every pull request and push to `main` (D-42). 
 
 | # | Scenario | Expected |
 |---|---|---|
-| T-01 | Register, log in, `GET /v1/auth/me` | Works; no `passwordHash` returned |
-| T-02 | Wrong password; repeated attempts | Generic `UNAUTHENTICATED`; then `RATE_LIMITED` |
+| T-01 | Register (all D-87 fields), verify by code, `GET /v1/auth/me` | `201`; consent versions recorded; only hashes stored; verification opens a session in the registering browser; no `passwordHash` returned |
+| T-02 | Wrong password; unknown email; 3 wrong passwords; repeated attempts from one IP | Identical generic `UNAUTHENTICATED`; then `ACCOUNT_LOCKED` for 30 minutes even with the right password; per-IP `RATE_LIMITED`; a spoofed client-IP header without the BFF secret is ignored |
 | T-03 | Protected endpoint without a token | `UNAUTHENTICATED` |
 | T-04 | User A requests user B's look | `NOT_FOUND` |
 | T-05 | `tokenVersion` incremented; `isActive` set to `false` | Old tokens rejected; inactive user can't log in and their tokens are rejected |
-| T-06 | `DELETE /v1/account` with the correct password (and, as a variant, a wrong password → `PASSWORD_INCORRECT`, nothing deleted, session still valid) | A tombstone with only `userId`, `emailHmac`, `deletedAt`, `source` and `expiresAt` is written first; user, profile, signals, looks, feedback, shortlist items and the user's beta invite record are gone; login fails; existing tokens are rejected |
+| T-06 | `DELETE /v1/account` with an emailed code, with and without the confirmation | Without: `INVALID_REQUEST`, nothing deleted. With: a tombstone with only `userId`, `emailHmac`, `deletedAt`, `source` and `expiresAt` is written first; all the user's data, sessions and codes are gone; the token is rejected and the account can't log in |
 | T-07 | Profile without `department` / with invalid enums / with `ageRange` or `height` | `INVALID_REQUEST` (age range and height aren't Stage 1 fields) |
 | T-08 | `measurements` sent (no size charts in Stage 1); `budgetPreference` ≤ 0 | Rejected (`INVALID_REQUEST`); a positive budget is saved |
 | T-09 | Set self-reported signals | Stored as `self_reported`, `userConfirmed: true`, no confidence |
@@ -102,19 +106,30 @@ All automated suites run in CI on every pull request and push to `main` (D-42). 
 | T-34 | Style illustration | Labelled "Style illustration — not a product"; missing licence → labelled swatch |
 | T-35 | Any error | Standard envelope; no stack traces or internals |
 | T-36 | Rate limits | Enforced per D-38 |
-| T-37 | Register with `PUBLIC_SIGNUP_ENABLED=false`: invited email; uninvited email | Invited succeeds; uninvited fails with the generic `FORBIDDEN` message without creating a user |
+| T-37 | Register with `PUBLIC_SIGNUP_ENABLED=false`: invited email; uninvited email; Google sign-up uninvited | Invited succeeds; uninvited gets `NOT_INVITED` without creating a user |
 | T-38 | Scale: synthetic fixture library of 150 palettes and 150 templates (never deployed) | Loads and lints without code changes; generator returns valid, diverse looks; latency recorded |
-| T-39 | Change password: correct and wrong current password | Correct: new password works, old tokens rejected, current session gets a new token, outstanding reset tokens deleted. Wrong: `PASSWORD_INCORRECT`; nothing changes and the session stays valid |
+| T-39 | Change password with an emailed code: wrong code, right code | Wrong: `OTP_INVALID`, nothing changes. Right: other sessions rejected, the current browser gets a new session with the same Remember Me choice, a notice is emailed |
 | T-40 | Admin-issued reset code redeemed within 60 minutes | User sets a new password; all old tokens rejected; the admin script output and logs never contain the new password; the code doesn't appear in logs |
-| T-41 | Reset confirm with an unknown, used, expired or superseded token; repeated attempts; two concurrent redemptions of one valid token | One generic `INVALID_REQUEST`; then `RATE_LIMITED`; exactly one concurrent redemption succeeds |
-| T-42 | Reset request: with `PASSWORD_RESET_EMAIL_ENABLED=false`; with it `true` for existing and unknown emails (mocked email provider) | Disabled: `FORBIDDEN` with the beta message. Enabled: identical `202` for both; an email only for the existing active account; rate limits enforced |
+| T-41 | Reset confirm with an unknown, used, expired or superseded token; two concurrent redemptions of one valid link | `LINK_INVALID`; exactly one concurrent redemption succeeds |
+| T-42 | Reset request by link and by code for a registered and an unregistered email; code entry wrong ×3; resend cooldown and hourly limit (mocked email sender) | Link valid 15 minutes; code 5 minutes and exchanged for a reset token; `EMAIL_NOT_REGISTERED` for the unknown email; `OTP_LOCKED`; `RESEND_COOLDOWN` then `RESEND_LIMIT`; reset clears the login lockout and revokes all sessions |
 | T-43 | Staging restore: take a backup, delete an invited test account, restore the backup with the full procedure | The deleted account and its invite are back in the restored database before replay, gone after it; verification passes; the restore report has no personal data. Variant: tombstone store unreadable → the procedure stops and the system stays in maintenance |
 | T-44 | Account deletion while the tombstone store is unavailable; deletion failing partway after the tombstone write | First: `SERVICE_UNAVAILABLE`, nothing deleted. Second: reconciliation replay completes the deletion |
 | T-45 | `MAINTENANCE_MODE=true` | Every `/v1` endpoint returns `SERVICE_UNAVAILABLE`; `/health` reports `maintenance`; login impossible |
-| T-46 | Two sessions for one user; log out of one and replay its token (simulating a copied cookie); then change the password from the other; then reset the password | Logged-out token → `UNAUTHENTICATED`, the other session still works; after the password change every earlier session is rejected and only the new one works; after a reset all sessions are rejected; session records deleted on account deletion |
-| T-47 | Web app in a staging-like HTTPS configuration: inspect the session cookie; send a state-changing request with a foreign `Origin` | Cookie is `HttpOnly`, `Secure`, `SameSite=Lax`, host-only, `__Secure-` prefixed; the foreign-origin request is rejected and changes nothing |
-| T-48 | Open a reset link `/reset-password#token=…` (Playwright, network log captured); redeem it; inspect API and web logs | Token is gone from the address bar after load; response has `Referrer-Policy: no-referrer` and `Cache-Control: no-store`; no request goes to a third-party host; the token goes only in the `POST` body; it appears in no log line |
-| T-49 | Login with an unknown email, a wrong password and an inactive account; register with an uninvited and an already-registered email | Each group gets identical status codes and messages |
+| T-46 | Two sessions for one user; log out of one and replay its token; then change the password from the other; then reset the password | Logged-out token → `UNAUTHENTICATED`, the other session still works; after the change only the changing browser's new session works; after the reset none do |
+| T-47 | Web app in an HTTPS configuration: inspect credential cookies; send a state-changing request with a foreign `Origin` | Cookies are `HttpOnly`, `Secure`, `SameSite=Lax`, host-only, `__Host-` prefixed; no `Max-Age` without Remember Me, 30 days with it; the foreign-origin request changes nothing |
+| T-48 | Open a reset, verification or email-change link (`#token=…`); redeem it; inspect logs | Token gone from the address bar after load; `Referrer-Policy: no-referrer` and `Cache-Control: no-store`; token absent from logs |
+| T-49 | Login with an unknown email and a wrong password; verification recovery for a registered and an unknown email | Each group gets identical responses |
+
+| T-50 | Email verification: right code; wrong ×3; expired code; link once, reused, expired; resend cooldown and limit; correcting the email; verifying from another device | Per D-89: `OTP_INVALID`, `OTP_LOCKED`, `LINK_INVALID`, `RESEND_COOLDOWN`, `RESEND_LIMIT`; old code and link stop working after an email correction; another device verifies without a session |
+| T-51 | Login before verifying | `EMAIL_NOT_VERIFIED`; no session created |
+| T-52 | Remember Me on and off | Token and session expire after 30 days and 24 hours respectively; an expired session is rejected |
+| T-53 | Google: sign-up (terms accepted, invited); without terms; unverified Google email; wrong nonce; sign-up with an existing email; login linking a verified account; login linking an unverified account; unknown email; a second account claiming the same Google ID; not configured | Per D-88 and FR-AUTH-15; the unverified account's old password stops working; `PROVIDER_NOT_CONFIGURED` without configuration |
+| T-54 | Email change: wrong password, address in use, by code, by link, superseded link | Old address works until confirmed; old address notified; superseded link `LINK_INVALID` |
+| T-55 | Phone: valid and invalid numbers, SMS code, removal, no SMS provider | Verified only after the code; `PROVIDER_NOT_CONFIGURED` without a provider |
+| T-56 | Onboarding: email path, Google path, resume after logout, other users' state | Steps complete only on the server's conditions; login returns the next step; no cross-user effect |
+| T-57 | Logs after register, verify, login, reset | No password, code, link token, access token or `Authorization` header |
+
+**Implemented automatically (2026-10-12):** T-01 … T-03, T-05, T-06, T-35, T-37, T-39 … T-42, T-44, T-45, T-46 (its steps across several tests), T-49 … T-57 in `apps/api/tests/api/*.test.ts` (in-memory MongoDB, recording email and SMS senders, a Google verifier that runs the production claim checks on test tokens — no real email, SMS or Google calls); T-43 at service level; T-47 and T-48 at configuration level in `apps/web/tests/security.test.ts`, with their browser-level checks still due in the Playwright suite. Component tests (Testing Library in jsdom, `apps/web/tests/components.test.tsx` and `screens.test.tsx`) cover the six-box code entry (focus movement, paste, Backspace and arrows, no automatic submission), password show/hide and checklist, the city combobox's keyboard operation, accessible error and success messages, the registration form (fields, consent defaults, Google gating, 24-hour draft without secrets), the login form, the public hamburger menu, the dashboard sidebar (Coming soon labels, collapse, mobile drawer) and the deletion confirmation dialog. Layout was checked with screenshots at 1280–1440 px and at 375 px (device emulation), with no horizontal overflow on any checked page; this is not yet automated.
 
 ---
 
@@ -133,14 +148,15 @@ All automated suites run in CI on every pull request and push to `main` (D-42). 
 **Stage 1 smoke flow:**
 
 ```
-Register (with an invited test email; closed beta) → Log in → Profile (department, sizes, fit, colours) → optional signals
+Register (with an invited test email; closed beta) → Verify (code from the test outbox) → Onboarding: style profile
+→ Skip appearance → Personalized Home → Log out → Log in → Profile (department, sizes, fit, colours) → optional signals
 → Request looks → View explanations, swatches, search phrases → Explore palettes
 → Change a preference → Regenerate → Save a look → Add a priced item to a slot and check the labelled total
 → Open saved looks → Delete the item → Delete a look
 → Log out → Log in → Delete account
 ```
 
-It runs at mobile and desktop viewports in CI against a local build with fixtures. After the hosting checkpoint (D-81) it also runs against staging. The smoke flow doesn't test password reset; T-39 … T-42 cover it at API level.
+It runs at mobile and desktop viewports in CI against a local build with fixtures. After the hosting checkpoint (D-81) it also runs against staging. The smoke flow doesn't test password reset; T-39 … T-42 cover it at API level. The Playwright suite is not set up yet; until then the same flow (registration through deletion, including lockout and reset by code) was exercised against locally running servers with plain form posts.
 
 ---
 
@@ -215,4 +231,4 @@ A feature is done only when its unit and API tests exist and pass, the relevant 
 
 ## 13. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-02, D-07, D-19, D-36, D-39, D-42, D-52, D-67, D-70, D-77, D-78, D-80, D-82, D-83.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-02, D-07, D-19, D-36, D-39, D-42, D-52, D-67, D-70, D-77, D-78, D-80, D-82, D-83, D-87 … D-94.

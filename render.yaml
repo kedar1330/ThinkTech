@@ -18,8 +18,8 @@ services:
         value: production
       - key: PUBLIC_SIGNUP_ENABLED
         value: 'false'
-      - key: PASSWORD_RESET_EMAIL_ENABLED
-        value: 'false'
+      - key: SMS_PROVIDER
+        value: none
       - key: MAINTENANCE_MODE
         value: 'false'
       - key: MONGODB_URI
@@ -33,4 +33,11 @@ services:
       - key: BFF_SHARED_SECRET
         sync: false
       - key: WEB_ORIGIN
+        sync: false
+      # Email is required outside local development (the API will not start without it).
+      - key: SMTP_URL
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: GOOGLE_CLIENT_ID
         sync: false

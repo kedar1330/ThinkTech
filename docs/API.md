@@ -32,14 +32,14 @@ Errors never expose stack traces, secrets, database details or internal errors. 
 
 | Endpoints | Auth |
 |---|---|
-| `POST /v1/auth/register`, `POST /v1/auth/login`, `POST /v1/auth/password-reset/request`, `POST /v1/auth/password-reset/confirm`, `GET /health` | No |
-| Everything else | Yes. The token's signature, expiry, `tokenVersion`, the user's `isActive` flag and the session record are checked on every request ([SECURITY.md](SECURITY.md) §1). Every request is scoped to the authenticated user |
+| `POST /v1/auth/register`, `/login`, `/google`, `/email-verification/{otp,link,resend,pending}`, `PUT /v1/auth/email-verification/email`, `POST /v1/auth/password-reset/{request,verify-otp,confirm}`, `POST /v1/account/email-change/confirm`, `GET /health` | No |
+| Everything else | Yes. The token's signature, expiry, `tokenVersion`, the user's `isActive` flag, a verified email and the session record are checked on every request ([SECURITY.md](SECURITY.md) §1). Profile, appearance and onboarding-completion endpoints also need a StyleMe password (`PASSWORD_SETUP_REQUIRED` for Google sign-ups that haven't created one). Every request is scoped to the authenticated user |
 
 ---
 
 ## 2. Endpoint Summary
 
-**Status:** no endpoint is implemented yet (the repository's code files are empty). "Stage 1" endpoints are planned for the closed beta; product-layer and Stage 2 endpoints are planned but gated; deferred and future endpoints are not approved for implementation.
+**Status:** the account, profile and appearance endpoints (#1–#11, #4a, A1–A20) are implemented; the rest are planned. "Stage 1" endpoints are planned for the closed beta; product-layer and Stage 2 endpoints are planned but gated; deferred and future endpoints are not approved for implementation.
 
 | # | Method | Path | Purpose | Stage |
 |---|---|---|---|---|
@@ -48,9 +48,35 @@ Errors never expose stack traces, secrets, database details or internal errors. 
 | 3 | GET | `/v1/auth/me` | Current user | 1 |
 | 4 | DELETE | `/v1/account` | Delete the account and all user data | 1 |
 | 4a | POST | `/v1/auth/logout` | End the current session (deletes its session record) | 1 |
-| 5 | PUT | `/v1/auth/password` | Change password (current password required) | 1 |
-| 6 | POST | `/v1/auth/password-reset/confirm` | Set a new password with a reset code or token | 1 |
-| 7 | POST | `/v1/auth/password-reset/request` | Request a reset email (disabled until HC-2) | 1 (public launch) |
+| 5 | PUT | `/v1/auth/password` | Change password with an emailed code (D-93) | 1 |
+| 6 | POST | `/v1/auth/password-reset/confirm` | Set a new password with a reset link token, code-exchange token or admin code | 1 |
+| 7 | POST | `/v1/auth/password-reset/request` | Send a reset link or code (D-89) | 1 |
+
+Added 2026-10-12 (D-87 … D-94), all Stage 1 and implemented:
+
+| # | Method | Path | Purpose |
+|---|---|---|---|
+| A1 | POST | `/v1/auth/google` | Google sign-up or login with a verified ID token (D-88) |
+| A2 | POST | `/v1/auth/email-verification/otp` | Verify the email with the 6-digit code |
+| A3 | POST | `/v1/auth/email-verification/link` | Verify the email with the link token |
+| A4 | POST | `/v1/auth/email-verification/resend` | New code and link (pending token: exact feedback; email only: generic) |
+| A5 | POST | `/v1/auth/email-verification/pending` | Email and resend wait of the browser's pending registration |
+| A6 | PUT | `/v1/auth/email-verification/email` | Correct the email of a pending registration |
+| A7 | POST | `/v1/auth/password-reset/verify-otp` | Exchange a reset code for a short-lived reset token |
+| A8 | POST | `/v1/auth/password/setup` | Google sign-ups create their StyleMe password |
+| A9 | POST | `/v1/auth/password/change-otp` | Email a code for password change |
+| A10 | PUT | `/v1/account/details` | Full name, city, marketing choice |
+| A11 | POST | `/v1/account/email-change` | Start an email change (current password) |
+| A12 | POST | `/v1/account/email-change/verify` | Confirm it with the code (signed in) |
+| A13 | POST | `/v1/account/email-change/confirm` | Confirm it with the link (public) |
+| A14 | PUT | `/v1/account/phone` | Add or change the phone; sends an SMS code |
+| A15 | POST | `/v1/account/phone/verify` | Verify the phone code |
+| A16 | DELETE | `/v1/account/phone` | Remove the phone |
+| A17 | POST | `/v1/account/deletion-otp` | Email a code for account deletion |
+| A18 | GET | `/v1/onboarding` | Current onboarding step |
+| A19 | POST | `/v1/onboarding/style-profile/complete` | Complete the style profile step |
+| A20 | POST | `/v1/onboarding/appearance/complete` | Complete (or skip) the appearance step |
+
 | 8 | GET | `/v1/profile` | Get the profile | 1 |
 | 9 | PUT | `/v1/profile` | Create or update the profile | 1 |
 | 10 | GET | `/v1/appearance` | Get appearance signals | 1 |
@@ -83,7 +109,7 @@ Errors never expose stack traces, secrets, database details or internal errors. 
 | 37 | GET | `/v1/tryon/:id` | Try-on result | Future (D-48) |
 | — | GET | `/health` | Health check | 1 |
 
-**Counts:** 38 `/v1` endpoints plus `/health`. Stage 1 (planned): 22 — #1–#21 and #4a, including the shortlist (D-77 = B), the password endpoints (D-83) and logout (D-07) — plus `/health`; #7 is built in Stage 1 but enabled only at public launch (HC-2). Product layer (gated): 3. Stage 2 (gated on D-60): 2. Deferred (D-76): 9. Future, not approved (D-48): 2.
+**Counts:** 38 numbered `/v1` endpoints plus `/health`, and 20 account endpoints added on 2026-10-12 (A1–A20). Stage 1: #1–#21, #4a and A1–A20, plus `/health`. Product layer (gated): 3. Stage 2 (gated on D-60): 2. Deferred (D-76): 9. Future, not approved (D-48): 2.
 
 ---
 
@@ -91,21 +117,35 @@ Errors never expose stack traces, secrets, database details or internal errors. 
 
 ### 3.1 Auth and account (`auth.ts`)
 
-**`POST /v1/auth/register`** — input `{ email, password (8–256 chars), name (1–100 chars) }`; creates the user with an argon2id hash; returns the user without `passwordHash`. During the closed beta (`PUBLIC_SIGNUP_ENABLED=false`, FR-AUTH-10) the email must be on the invite allow-list. Errors: `INVALID_REQUEST`; `FORBIDDEN` with one generic message for both an email that isn't invited and an email that is already registered ("We couldn't create an account with this email. If you already have an account, log in; otherwise contact the StyleMe team."); `RATE_LIMITED`. After public launch the same generic message is used for an email already registered (residual risk and email verification: D-86).
+All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` (unknown fields rejected). Codes are 6 digits; link and pending tokens are opaque strings. Cooldowns and lockouts return `retryAfterSeconds` in the error and a `Retry-After` header.
 
-**`POST /v1/auth/login`** — input `{ email, password }`; creates a session record and returns `{ accessToken }` (JWT with `sid`, D-05). Errors: `UNAUTHENTICATED` (one generic message for an unknown email, a wrong password or an inactive account), `RATE_LIMITED`.
+**`POST /v1/auth/register`** — input `{ fullName, email, password, confirmPassword, city, phone?, acceptTerms: true, marketingOptIn?, rememberMe? }` (D-87). Creates an unverified user (argon2id hash, consent versions and times, city, unverified phone) and sends a verification code and link. Returns `201 { email, pendingToken, verificationEmailSent }`; the web app keeps `pendingToken` in an `HttpOnly` cookie. Errors: `INVALID_REQUEST`, `EMAIL_ALREADY_REGISTERED` (409), `NOT_INVITED` (403, closed beta), `RATE_LIMITED`.
 
-**`GET /v1/auth/me`** — returns `{ id, email, name, role }`.
+**`POST /v1/auth/email-verification/otp`** — `{ email, otp, pendingToken? }`; **`/link`** — `{ token, pendingToken? }`. Verify the email. With the matching pending token the response also has `{ accessToken, onboardingStep }` (same browser); otherwise `{ verified: true, email }`. Errors: `OTP_INVALID` (400), `OTP_LOCKED` (429, after 3 wrong codes, 30 minutes), `LINK_INVALID` (400), `RATE_LIMITED`.
 
-**`POST /v1/auth/logout`** — no input. Deletes the session record for the token's `sid`, so this token is rejected from then on; other sessions of the user are unaffected. Returns `{ loggedOut: true }`; idempotent. The web app calls it before clearing the Auth.js cookie, and clears the cookie even if the call fails (D-07). Errors: `UNAUTHENTICATED` (token already invalid; the web app clears the cookie anyway), `RATE_LIMITED`.
+**`POST /v1/auth/email-verification/resend`** — `{ email, pendingToken? }`. With the pending token: `202 { accepted, resendAvailableInSeconds }` or `RESEND_COOLDOWN` / `RESEND_LIMIT`. Email only: always `202 { accepted: true }`. **`/pending`** — `{ pendingToken }` → `{ email, resendAvailableInSeconds }` or `NOT_FOUND`. **`PUT /v1/auth/email-verification/email`** — `{ pendingToken, newEmail }`: changes the unverified address, invalidates the earlier code and link and sends new ones; errors `EMAIL_ALREADY_REGISTERED`, `NOT_INVITED`, `RESEND_COOLDOWN`, `NOT_FOUND`.
 
-**`PUT /v1/auth/password`** — input `{ currentPassword, newPassword (≥ 8 chars) }`. Verifies the current password, stores the new hash, sets `passwordChangedAt`, deletes outstanding reset tokens, deletes all of the user's session records and increments `tokenVersion` (revoking every existing token and session), then creates a new session and returns `{ accessToken }` so the current browser stays logged in (FR-AUTH-11). Errors: `PASSWORD_INCORRECT` (wrong current password; the session stays valid), `INVALID_REQUEST`, `RATE_LIMITED`.
+**`POST /v1/auth/login`** — `{ email, password, rememberMe? }` → `{ accessToken, onboardingStep }` (D-05, D-91). Errors: `UNAUTHENTICATED` (one generic message), `ACCOUNT_LOCKED` (423, D-90), `EMAIL_NOT_VERIFIED` (403), `RATE_LIMITED`.
 
-**`POST /v1/auth/password-reset/confirm`** — input `{ token, newPassword (≥ 8 chars) }`, in the body only (never in the URL). Looks the token up by its SHA-256 hash and marks it used atomically; it must be unused and unexpired. On success applies FR-AUTH-14 and returns `{ reset: true }`; the user then logs in. Used for both admin-issued codes (closed beta) and emailed tokens (public launch). Errors: `INVALID_REQUEST` with one generic message ("This reset code is invalid or has expired") for unknown, used or expired tokens; `RATE_LIMITED`.
+**`POST /v1/auth/google`** — `{ idToken, nonce, intent: "signup" | "login", rememberMe?, acceptTerms?, marketingOptIn? }` → `{ accessToken, onboardingStep, created, linked }` (D-88). Errors: `UNAUTHENTICATED` (token invalid or nonce mismatch), `FORBIDDEN` (email not verified by Google, or the email's account is linked to another Google identity), `INVALID_REQUEST` (sign-up without accepting the terms), `NOT_INVITED`, `GOOGLE_ACCOUNT_EXISTS` (409), `GOOGLE_NO_ACCOUNT` (404), `ACCOUNT_LOCKED`, `PROVIDER_NOT_CONFIGURED` (503).
 
-**`POST /v1/auth/password-reset/request`** — input `{ email }`. While `PASSWORD_RESET_EMAIL_ENABLED` is `true` (from HC-2): always returns `202 { accepted: true }` whether or not the account exists, and emails a reset link only to an active account (FR-AUTH-13). While it is `false` (closed beta): returns `FORBIDDEN` with "Password reset by email isn't available during the beta — please contact the StyleMe team", and the web app shows the admin-assisted recovery instructions. Errors: `RATE_LIMITED`.
+**`GET /v1/auth/me`** — `{ id, email, name, role, emailVerified, hasPassword, googleLinked, city, phone: { number, verified } | null, pendingPhone, pendingEmail, marketingOptIn, onboardingStep }`.
 
-**`DELETE /v1/account`** — input `{ password }`. Deletes the user, their session records and all their data from the live database immediately (backup copies expire under D-79), including shortlist items and the user's beta invite record (FR-AUTH-09), and returns `{ deleted: true }`. Existing tokens then fail because the user no longer exists. A deletion tombstone is written first (D-85); if it can't be written, nothing is deleted and the response is `SERVICE_UNAVAILABLE`. Errors: `PASSWORD_INCORRECT` (wrong password; nothing is deleted and the session stays valid), `RATE_LIMITED`, `SERVICE_UNAVAILABLE`.
+**`POST /v1/auth/logout`** — deletes the current session record only; `{ loggedOut: true }` (D-07).
+
+**`POST /v1/auth/password/setup`** — `{ password, confirmPassword }`, only while the account has no password → `{ onboardingStep }`.
+
+**`POST /v1/auth/password/change-otp`** — emails a code → `{ sent, destination (masked), resendAvailableInSeconds }`. **`PUT /v1/auth/password`** — `{ otp, newPassword, confirmPassword }` → `{ accessToken }`; revokes every other session, keeps the current Remember Me choice, emails a notice (D-93).
+
+**`POST /v1/auth/password-reset/request`** — `{ email, method: "link" | "otp" }` → `202 { accepted, method, resendAvailableInSeconds }`. Errors: `EMAIL_NOT_REGISTERED` (404, founder decision D-89), `RESEND_COOLDOWN`, `RESEND_LIMIT`, `RATE_LIMITED`. **`/verify-otp`** — `{ email, otp }` → `{ resetToken }` (10 minutes). **`/confirm`** — `{ token, newPassword, confirmPassword }` → `{ reset: true }`; the token is a link token, a code-exchange token or an admin code (FR-AUTH-12); applies FR-AUTH-14. Errors: `LINK_INVALID`, `INVALID_REQUEST`, `RATE_LIMITED`.
+
+**`PUT /v1/account/details`** — any of `{ fullName, city, marketingOptIn }` → the user. **`POST /v1/account/email-change`** — `{ password, newEmail }` → `{ sent, destination, resendAvailableInSeconds }`; errors `PASSWORD_INCORRECT`, `EMAIL_ALREADY_REGISTERED`, `RESEND_COOLDOWN`. **`/email-change/verify`** — `{ otp }` → the user. **`/email-change/confirm`** (public) — `{ token }` → `{ email }`. The old address is notified after the change.
+
+**`PUT /v1/account/phone`** — `{ phone }` (Indian mobile, normalised to `+91…`) → `{ sent, destination, resendAvailableInSeconds }`; `PROVIDER_NOT_CONFIGURED` without an SMS provider. **`/phone/verify`** — `{ otp }` → the user. **`DELETE /v1/account/phone`** → the user.
+
+**`POST /v1/account/deletion-otp`** — emails a code. **`DELETE /v1/account`** — `{ otp, confirm: true }` → `{ deleted: true }`. Deletes the user, sessions, codes and all their data immediately, after writing the tombstone (D-85); if the tombstone can't be written nothing is deleted (`SERVICE_UNAVAILABLE`).
+
+**`GET /v1/onboarding`** → `{ step }`. **`POST /v1/onboarding/style-profile/complete`** → `{ step }` (needs a saved profile with a department and a city). **`POST /v1/onboarding/appearance/complete`** → `{ step }` (needs the style profile step done; signals optional).
 
 ### 3.2 Profile (`profile.ts`)
 
@@ -208,10 +248,24 @@ These are specified only at the level needed for planning. Their full contracts 
 |---|---|---|
 | `INVALID_REQUEST` | 400 | Input fails validation |
 | `UNAUTHENTICATED` | 401 | Missing, expired or revoked token; wrong credentials at login. On an authenticated endpoint the web app ends the session (D-05), so this code is never used for a wrong re-entered password |
-| `PASSWORD_INCORRECT` | 403 | A logged-in user re-entered the wrong password (`PUT /v1/auth/password`, `DELETE /v1/account`). The session stays valid |
-| `FORBIDDEN` | 403 | The action isn't allowed: registration refused (one generic message for not invited and already registered); a reset-email request while self-service reset is disabled |
+| `PASSWORD_INCORRECT` | 403 | A logged-in user re-entered the wrong password (`POST /v1/account/email-change`). The session stays valid |
+| `FORBIDDEN` | 403 | The action isn't allowed (e.g. Google did not verify the email; the account is linked to another Google identity) |
+| `EMAIL_ALREADY_REGISTERED` | 409 | Registration, pending-email correction or email change with an address already in use |
+| `EMAIL_NOT_REGISTERED` | 404 | Password reset for an unknown email (D-89) |
+| `EMAIL_NOT_VERIFIED` | 403 | Login before verifying the email |
+| `NOT_INVITED` | 403 | Registration while the closed beta is on and the email isn't invited |
+| `ACCOUNT_LOCKED` | 423 | 3 wrong passwords; 30 minutes (D-90) |
+| `OTP_INVALID` | 400 | Wrong or expired code |
+| `OTP_LOCKED` | 429 | 3 wrong codes; 30 minutes |
+| `LINK_INVALID` | 400 | Unknown, used or expired link or reset token |
+| `RESEND_COOLDOWN` | 429 | A new code was requested within 30 seconds |
+| `RESEND_LIMIT` | 429 | More than 5 resends in an hour |
+| `PASSWORD_SETUP_REQUIRED` | 403 | A Google sign-up hasn't created a StyleMe password yet |
+| `GOOGLE_ACCOUNT_EXISTS` | 409 | Google sign-up for an email that already has an account |
+| `GOOGLE_NO_ACCOUNT` | 404 | Google login for an email without an account |
+| `PROVIDER_NOT_CONFIGURED` | 503 | Google or SMS isn't configured in this environment |
 | `NOT_FOUND` | 404 | Resource doesn't exist or isn't owned by the user |
-| `CONFLICT` | 409 | Conflicting state (e.g. a shortlist slot already has an item, the item limit is reached). Not used for registration, which gives a generic `FORBIDDEN` |
+| `CONFLICT` | 409 | Conflicting state (e.g. a shortlist slot already has an item, the item limit is reached) |
 | `PRODUCT_UNAVAILABLE` | 409 | Product layer: product inactive, expired, out of stock, broken-linked or rejected |
 | `RATE_LIMITED` | 429 | Rate limit exceeded (D-38) |
 | `INTERNAL_ERROR` | 500 | Unexpected server error (no details exposed) |
@@ -245,7 +299,7 @@ These are specified only at the level needed for planning. Their full contracts 
 ## 5. Cross-Cutting Rules
 
 - **Authorization:** users read and change only their own data. Product, retailer and evidence data are read-only through the API and written only by server-side scripts.
-- **Rate limits (D-38):** login 5/min per IP, register 3/min per IP, logout 30/min per user, account deletion 3/hour per user, recommendations 20/min per user, feedback 60/min per user, shortlist writes 30/min per user, password change 5/hour per user, reset confirm 10/hour per IP, reset request 3/hour per email and 10/hour per IP.
+- **Rate limits (D-38, revised 2026-10-12):** per IP — login 5/min and 30/hour, register 3/min and 20/hour, Google 10/min, code and link checks 10/min and 30/hour, code sends 10/min and 30/hour, reset confirm 10/hour; per user — logout 30/min, account-security actions (password, email, phone, details) 30/hour, account deletion 5/hour, recommendations 20/min, feedback 60/min, shortlist writes 30/min. Per account or code, on top of these: 3 wrong passwords lock login for 30 minutes (D-90); 3 wrong codes lock that code for 30 minutes; resend cooldown 30 seconds and at most 6 sends (the first plus 5 resends) per hour (D-89).
 - **CORS:** only the web origin of each environment (D-37). Security headers via Helmet.
 - **Links:** every product URL returned must match its retailer's `domains[]`. User-entered URLs (shortlist) are https-only, never fetched, and labelled as not verified by StyleMe.
 - **No live third-party calls on the request path** except the optional, time-limited AI wording and weather calls, whose failure never fails the request.
@@ -254,4 +308,4 @@ These are specified only at the level needed for planning. Their full contracts 
 
 ## 6. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-03, D-05, D-07, D-18, D-23, D-37, D-38, D-46, D-48, D-60, D-67, D-69, D-76, D-77, D-80, D-82 … D-84, D-86.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-03, D-05, D-07, D-18, D-23, D-37, D-38, D-46, D-48, D-60, D-67, D-69, D-76, D-77, D-80, D-82 … D-84, D-86 … D-94.

@@ -127,6 +127,8 @@ The C0 development seed (≥ 6 palettes, ≥ 6 templates) is a temporary input f
 ## 6. Confidence and Confirmation
 
 Appearance attributes keep the user's value apart from any model estimate ([DATABASE.md](DATABASE.md) §5). In Stage 1 every value is self-reported and has **no** confidence. When photo analysis is built (D-76):
+
+The onboarding "Appearance" step (D-94) collects these self-reported signals only — optional and skippable. It does no photo or AI analysis; photo-based analysis stays deferred (D-76).
 - estimates carry the model's confidence, shown next to the estimate;
 - an estimate below the calibrated threshold (D-15) is shown as "not sure", never forced into a class;
 - confirming copies the estimate into the value and never changes the confidence, which is never 1;
