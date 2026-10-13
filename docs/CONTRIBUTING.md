@@ -38,7 +38,7 @@ A feature isn't complete just because the UI works. It needs: UI, API, validatio
 
 | Location | Contains |
 |---|---|
-| `apps/web` | UI, pages, components, forms, Auth.js, client state, server-side API client |
+| `apps/web` | UI and design system, pages, components, server actions, session and OAuth cookies, server-side API client |
 | `apps/api` | REST API, auth, models, services (look generator, budget engine; later eligibility and quality), integrations, scripts, logging |
 | `apps/api/src/style-rules` | The style knowledge base (§6) |
 | `apps/api/tests/fixtures` | Synthetic test fixtures only |
@@ -101,7 +101,7 @@ Issues follow the milestones in [ImplementationPlan.md](ImplementationPlan.md) �
 | Milestone | Issues |
 |---|---|
 | S1.1 Foundation | Monorepo and tooling · Contracts package · Express skeleton (envelope, errors, `/health`) · Next.js shell · CI workflow · Dockerfile, `docker-compose.yml` and `render.yaml` (built locally, not deployed) |
-| S1.2 Accounts | User model · Auth API · Auth.js integration · Closed-beta registration (invite allow-list) · Password change · Admin-assisted reset (script, confirm endpoint, reset page) · Self-service reset request (disabled) · Account deletion with tombstone and reconciliation script · Rate limits |
+| S1.2 Accounts | User model · Auth API · Web session cookie (replaced Auth.js, D-06) · Closed-beta registration (invite allow-list) · Email verification · Google sign-in · Password change by code · Admin-assisted and self-service reset · Email change · Phone · Onboarding · Landing and design system · Account deletion with tombstone and reconciliation script · Rate limits |
 | S1.3 Profile and signals | Profile module · Category sizes and fit · Self-reported signals |
 | S1.4 Look engine | Knowledge-base schemas, loader and linter · Generator · Recommendations endpoint · Results UI |
 | S1.5 Look experience | Explanations · Alternatives · Palettes · Size notes and search phrases · Saved looks and feedback · Optional AI wording module |

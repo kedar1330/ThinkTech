@@ -5,16 +5,25 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import type { Config } from './config/env';
+import { AppearanceController } from './controllers/appearance.controller';
 import { AuthController } from './controllers/auth.controller';
+import { ProfileController } from './controllers/profile.controller';
 import type { Database } from './db';
-import { authenticate } from './middleware/authenticate';
+import { authenticate, requirePasswordSet } from './middleware/authenticate';
 import { clientIp } from './middleware/client-ip';
 import './middleware/context';
 import { errorHandler, notFound } from './middleware/error-handler';
 import { createAuthRateLimits } from './middleware/rate-limit';
+import { appearanceRoutes } from './routes/appearance.routes';
 import { authRoutes } from './routes/auth.routes';
+import { profileRoutes } from './routes/profile.routes';
+import { AppearanceService } from './services/appearance.service';
+import { AccountService } from './services/account.service';
 import { AuthService } from './services/auth.service';
-import { noEmailProvider, type EmailSender } from './services/email';
+import type { GoogleVerifier } from './services/google';
+import type { EmailSender, SmsSender } from './services/messaging';
+import { OnboardingService } from './services/onboarding.service';
+import { ProfileService } from './services/profile.service';
 import { sendError } from './utils/respond';
 import pkg from '../package.json' with { type: 'json' };
 
@@ -22,15 +31,20 @@ export interface AppDeps {
   config: Config;
   db: Database;
   logger: Logger;
-  emailSender?: EmailSender;
+  emailSender: EmailSender;
+  /** Null when no SMS provider is available (phone verification then reports PROVIDER_NOT_CONFIGURED). */
+  smsSender?: SmsSender | null;
+  /** Null when Google sign-in isn't configured (GOOGLE_CLIENT_ID unset). */
+  googleVerifier?: GoogleVerifier | null;
 }
 
 export interface App {
   app: Express;
   authService: AuthService;
+  accountService: AccountService;
 }
 
-export function createApp({ config, db, logger, emailSender = noEmailProvider }: AppDeps): App {
+export function createApp({ config, db, logger, emailSender, smsSender = null, googleVerifier = null }: AppDeps): App {
   const app = express();
   app.disable('x-powered-by');
   // Staging and production run behind one platform proxy (Render), so req.ip comes from it.
@@ -78,11 +92,23 @@ export function createApp({ config, db, logger, emailSender = noEmailProvider }:
     next();
   });
 
-  const authService = new AuthService(config, db.models, db.main, emailSender, logger);
+  const authService = new AuthService({
+    config,
+    models: db.models,
+    main: db.main,
+    email: emailSender,
+    logger,
+    google: googleVerifier,
+  });
+  const accountService = new AccountService(config, db.models, authService, smsSender, logger);
   const requireAuth = authenticate(db.models, authService.sessions);
-  app.use('/v1', authRoutes(new AuthController(authService), requireAuth, createAuthRateLimits()));
+  const withPassword = [requireAuth, requirePasswordSet];
+  const controller = new AuthController(authService, accountService, new OnboardingService(db.models));
+  app.use('/v1', authRoutes(controller, requireAuth, withPassword, createAuthRateLimits()));
+  app.use('/v1', profileRoutes(new ProfileController(new ProfileService(db.models)), withPassword));
+  app.use('/v1', appearanceRoutes(new AppearanceController(new AppearanceService(db.models)), withPassword));
 
   app.use(notFound);
   app.use(errorHandler);
-  return { app, authService };
+  return { app, authService, accountService };
 }

@@ -63,7 +63,8 @@ describe('config', () => {
     expect(() => loadConfig(env)).not.toThrow(/too-short/);
     const ok = loadConfig({ ...env, TOMBSTONE_HMAC_KEY: BASE_CONFIG.TOMBSTONE_HMAC_KEY });
     expect(ok.PUBLIC_SIGNUP_ENABLED).toBe(false);
-    expect(ok.PASSWORD_RESET_EMAIL_ENABLED).toBe(false);
+    expect(ok.GOOGLE_CLIENT_ID).toBeUndefined();
+    expect(ok.SMTP_URL).toBeUndefined();
     expect(ok.MAINTENANCE_MODE).toBe(false);
   });
 });

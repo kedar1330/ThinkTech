@@ -49,28 +49,31 @@ These are the planned platforms. **Hosting is postponed by the founder (D-81):**
 | `MONGODB_URI` | 1 | Per environment |
 | `AUTH_ACCESS_TOKEN_SECRET` | 1 | Per environment |
 | `BFF_SHARED_SECRET` | 1 | Shared with the web app (same value); the API trusts the forwarded end-user IP header only with it, so per-IP rate limits apply to the real user ([SECURITY.md](SECURITY.md) §5) |
-| `WEB_ORIGIN` | 1 | The environment's web origin (e.g. `http://localhost:3000` locally): the only origin CORS allows (D-37) and the base of reset links |
+| `WEB_ORIGIN` | 1 | The environment's web origin (e.g. `http://localhost:3000` locally): the only origin CORS allows (D-37) and the base of every emailed link |
 | `APP_ENV` | 1 | `local` \| `staging` \| `production`; drives the fixture safeguards |
 | `AI_WORDING_ENABLED` | 1 | `false` by default (D-67) |
 | `PUBLIC_SIGNUP_ENABLED` | 1 | `false` (closed beta, D-63). Set to `true` only after D-74 is recorded complete and AC-24 passes |
 | `TOMBSTONE_STORE_URI` | 1 | Tombstone store connection, per environment; API credentials insert-only (D-85) |
 | `TOMBSTONE_HMAC_KEY` | 1 | Secret for `emailHmac` in tombstones, per environment (D-85) |
 | `MAINTENANCE_MODE` | 1 | `false`; `true` during a restore — all `/v1` endpoints return `SERVICE_UNAVAILABLE` (D-85) |
-| `PASSWORD_RESET_EMAIL_ENABLED` | 1 | `false` until the email provider is set up at HC-2 (D-84) |
-| Email provider key and sender address | 1 (public launch) | Only after HC-2; names depend on the provider |
+| `SMTP_URL`, `EMAIL_FROM` | 1 | **Required in staging and production** — the API refuses to start without them, because registration needs email verification (D-89). `SMTP_URL` is the provider's SMTP connection string including credentials (e.g. `smtps://user:pass@smtp.example.com:465`); `EMAIL_FROM` the sender (e.g. `StyleMe <no-reply@…>`). Turn off the provider's link and open tracking. Provider chosen at HC-1 (D-84). Locally, leave empty to use the dev outbox |
+| `DEV_OUTBOX_DIR` | 1 (local only) | Folder where local development writes emails and SMS as JSON instead of sending them (default `.dev-outbox`, git-ignored). Never used outside `APP_ENV=local` |
+| `SMS_PROVIDER` | 1 | `none` (no SMS provider integrated yet, D-92): phone verification reports "not available" outside local development |
+| `GOOGLE_CLIENT_ID` | 1 (optional) | Google OAuth client ID; the API verifies ID tokens against it (D-88). Empty disables Google sign-in |
 | `GEMINI_API_KEY` | 1 (optional) | Only if AI wording is enabled |
 | `PRODUCT_LAYER_ENABLED` | Product layer | `false` until an authorised source and D-74 allow the Stage 3 release |
 | `FLIPKART_AFFILIATE_ID`, `FLIPKART_AFFILIATE_TOKEN` | Product layer | Only after Flipkart approves access (D-44) |
 | `WEATHER_API_KEY` | 2 | Only if the chosen provider needs one (D-60) |
 
-Every variable above is planned; none is set in any hosted environment yet (D-81). `.env.example` is currently empty and gets these names (no values) in S1.1.
+None of these is set in any hosted environment yet (D-81). `.env.example` lists the names (no values). The 2026-10-12 release removed `PASSWORD_RESET_EMAIL_ENABLED` (self-service reset is always on) and Auth.js's `AUTH_SECRET`.
 
 ### 3.2 Web (Vercel, planned)
 
 | Variable | Notes |
 |---|---|
 | `BFF_SHARED_SECRET` | Same value as the API's; sent on every server-side API call ([SECURITY.md](SECURITY.md) §5) |
-| `AUTH_SECRET`, `AUTH_URL` | Auth.js, per environment. `AUTH_URL` is the web origin used for the `Origin` check on state-changing requests; an `https` URL turns on the `Secure` cookie ([SECURITY.md](SECURITY.md) §1) |
+| `AUTH_URL` | The web origin, per environment: used for the `Origin` check on state-changing requests and the Google redirect URI; an `https` URL turns on `Secure`, `__Host-` cookies ([SECURITY.md](SECURITY.md) §1) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional (D-88). Web application OAuth client; authorised redirect URI `${AUTH_URL}/api/oauth/google/callback`. Without both, Google buttons show "not available yet" |
 | `API_BASE_URL` | Staging API for previews, production API for production |
 
 Never use `NEXT_PUBLIC_` for secrets (D-40). `.env.example` lists names only.
@@ -104,7 +107,7 @@ Checkout → Setup Node/pnpm → Install → Typecheck → Lint → Style-rule l
 
 ## 6. Migrations, Backups and Recovery (D-79)
 
-- **Migrations:** versioned scripts in `apps/api/scripts/migrations/`, applied in order and recorded in a migrations collection. Every change is backward-compatible (add first, remove in a later release), so the previous API version keeps working.
+- **Migrations:** versioned scripts in `apps/api/scripts/migrations/`, applied in order with `pnpm --filter @styleme/api migrate` (built: `node dist/migrate.js`) and recorded in the `migrations` collection. Run them after the backup and before the new API version serves traffic. `001-auth-onboarding` (2026-10-12) prepares existing accounts for verification and onboarding ([DATABASE.md](DATABASE.md) §10). Every change is backward-compatible (add first, remove in a later release), so the previous API version keeps working.
 - **Backups:** use Atlas backups if the chosen tier includes them. Otherwise run a scheduled `mongodump` of production (weekly, and before every migration) to private, access-controlled storage. Keep backups for 30 days (proposed, not yet approved; confirmed at HC-1). Check the tier's capabilities and cost first. The tombstone store (D-85) is outside the main database's backup and restore scope.
 - **Restore procedure (D-85).** Every restore follows these steps; there is no shortcut.
   1. **Maintenance on.** Set `MAINTENANCE_MODE=true` in production: every `/v1` endpoint returns `SERVICE_UNAVAILABLE`, `/health` reports `maintenance`, and the web app shows a maintenance page. No user can log in or read data.
@@ -143,13 +146,15 @@ Checkout → Setup Node/pnpm → Install → Typecheck → Lint → Style-rule l
 - [ ] Backups configured and a restore tested in staging, including tombstone replay and verification (D-85)
 - [ ] Uptime monitoring active
 - [ ] Hosting decision D-81 made by the founder at HC-1; plan limits and costs recorded
+- [ ] Email provider configured (`SMTP_URL`, `EMAIL_FROM`, D-84) and a verification email received in staging and production; Google either configured (redirect URI registered) or shown as not available
+- [ ] Migrations applied (`001-auth-onboarding`)
+- [ ] Terms and Privacy pages replaced or confirmed by the legal review, or still marked as drafts (D-74)
 - [ ] Content set C1 approved
 - [ ] `PUBLIC_SIGNUP_ENABLED=false`; invite allow-list in place
 - [ ] Founder reminded to arrange the legal review (D-74)
 
 **Public launch, additionally** (the blockers in [ImplementationPlan.md](ImplementationPlan.md) §11):
-- [ ] HC-2 complete: email provider chosen (D-84), `PASSWORD_RESET_EMAIL_ENABLED=true`, AC-24 passes in production
-- [ ] D-86 decided; email verification live if required
+- [ ] HC-2 complete: AC-24 (self-service reset by email) passes in production
 - [ ] D-74 legal review recorded complete in the register with every required change done (AC-20)
 - [ ] Closed-beta criteria re-run on the production release and passing
 - [ ] Only then `PUBLIC_SIGNUP_ENABLED=true`
@@ -189,6 +194,9 @@ These facts were checked on the providers' own pages because they affect require
 | Tombstone store (D-85) | Where it lives — it must be outside the main database's backup and restore scope (for example a separate small database deployment), with its own credentials | Whether a restore can safely re-apply deletions; its cost |
 | Backup retention | Confirm or change the proposed 30 days (D-79) | How long deleted data stays in backups; the tombstone retention follows it (+ 7 days) |
 | API instance count | One instance, or more | More than one instance needs a shared rate-limit store, because the in-memory limits are per instance (D-38) |
+| Email provider (D-84, moved here from HC-2) | Transactional email service and sender domain | Registration can't be completed without it (verification, D-89) |
+| Google OAuth client (D-88) | Google Cloud project, consent screen, redirect URI | Whether Google sign-in is offered |
+| SMS provider (D-92) | Optional; any provider for Indian numbers | Whether phone verification is available |
 | Who owns the accounts | Founder-owned accounts, with access granted to developers | Credentials stay with the founder |
 
 ### 9.3 Setup steps once decided
@@ -203,10 +211,10 @@ These facts were checked on the providers' own pages because they affect require
 
 ### 9.4 HC-2 — public-launch checkpoint (D-84)
 
-Raised only when the founder wants to prepare public launch, after the closed beta is running. The implementer reminds the founder about the legal review (D-74) and presents transactional email provider options with current prices, limits, terms, data handling and sender-domain (DNS) setup. After the decision: the founder creates or authorises the account; set the provider key and sender address in production (and staging for testing); turn off the provider's link and open tracking for reset emails; set `PASSWORD_RESET_EMAIL_ENABLED=true`; verify AC-24; record D-84 and D-86. `PUBLIC_SIGNUP_ENABLED` stays `false` until every public-launch blocker in [ImplementationPlan.md](ImplementationPlan.md) §11 is met.
+Raised only when the founder wants to prepare public launch, after the closed beta is running. The email provider is already chosen at HC-1 (D-84) and D-86 is decided (D-89). The implementer reminds the founder about the legal review (D-74), confirms the email plan's volume limits suit public sign-up, and verifies AC-24. `PUBLIC_SIGNUP_ENABLED` stays `false` until every public-launch blocker in [ImplementationPlan.md](ImplementationPlan.md) §11 is met.
 
 ---
 
 ## 10. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-01, D-17, D-20, D-40 … D-42, D-44, D-60, D-63, D-67, D-69, D-74, D-77, D-78, D-79, D-81, D-83, D-84, D-85.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-01, D-17, D-20, D-40 … D-42, D-44, D-60, D-63, D-67, D-69, D-74, D-77, D-78, D-79, D-81, D-83, D-84, D-85, D-88, D-89, D-92.
