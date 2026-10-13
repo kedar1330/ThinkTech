@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useId, useState } from 'react';
+import { useActionState, useEffect, useId, useState } from 'react';
 import type { FormState } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { OtpInput, otpComplete } from '@/components/ui/otp-input';
@@ -26,6 +26,7 @@ export function CodeForm({
   submitDisabled,
   onSubmitClick,
   variant,
+  onResent,
 }: {
   label: string;
   verifyAction: Action;
@@ -42,6 +43,8 @@ export function CodeForm({
   /** Runs before submitting; call `preventDefault()` to stop (e.g. to ask for confirmation first). */
   onSubmitClick?: React.MouseEventHandler<HTMLButtonElement>;
   variant?: 'default' | 'destructive';
+  /** Called with the time a resend succeeded (a new code was issued). */
+  onResent?: (issuedAt: number) => void;
 }) {
   const labelId = useId();
   const [code, setCode] = useState('');
@@ -49,6 +52,10 @@ export function CodeForm({
   const [resendState, resend, resending] = useActionState(resendAction ?? noResend, undefined);
   const locked = state?.code === 'OTP_LOCKED';
   const cooldownSeconds = resendState ? (resendState.retryAfterSeconds ?? 0) : initialCooldown;
+  const resentAt = resendState?.success ? resendState.issuedAt : undefined;
+  useEffect(() => {
+    if (resentAt) onResent?.(resentAt);
+  }, [resentAt, onResent]);
 
   return (
     <div className="space-y-5">

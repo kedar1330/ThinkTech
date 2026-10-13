@@ -37,7 +37,25 @@ pnpm dev:api          # API on http://localhost:4000
 pnpm dev:web          # web app on http://localhost:3000
 ```
 
-Registration is invite-only during the closed beta (D-63). Invite an email address, then register with it in the web app:
+### Sign-up with email verification
+
+Anyone can sign up (`PUBLIC_SIGNUP_ENABLED=true`, the default). Signing up sends a 6-digit code to the email address; the account is created only when that code is entered on the verification page (in the same browser) within 5 minutes. Until then the sign-up waits in `pendingRegistrations` with a password hash and is removed automatically after 24 hours. After verifying, the user is signed in and continues to onboarding; they can then log out and log in with their email and password.
+
+Limits (server-side): 3 wrong codes lock verification for 30 minutes; resend after 30 seconds, at most 6 codes per hour; 3 registrations per minute per IP. Each new code invalidates the previous one.
+
+**Sending real email.** Without `SMTP_URL`, local development writes each email to `apps/api/.dev-outbox/` and prints the code in the API terminal (`DEV_ECHO_MESSAGES=true`). To deliver to real inboxes, set in `apps/api/.env` (Gmail shown; any SMTP provider works):
+
+```sh
+SMTP_URL=smtps://you%40gmail.com:<16-char-app-password>@smtp.gmail.com:465
+EMAIL_FROM="StyleMe <you@gmail.com>"
+DEV_ECHO_MESSAGES=false   # optional: stop printing codes in the terminal
+```
+
+Gmail needs 2-Step Verification and an App Password (Google Account → Security → App passwords). Restart the API after changing `.env`; it logs `"email":"smtp"` on start.
+
+**Diagnosing delivery.** A provider failure is logged as `verification_email_failed` with the provider's reason (never the code), the sign-up page shows "We could not send the verification email", and resend returns `503`. Common causes: a wrong App Password (`535 Authentication failed`), an `@` in the user name not written as `%40`, port 465 blocked (try `smtp://…:587`), or the message in the spam folder.
+
+To run as an invite-only closed beta instead, set `PUBLIC_SIGNUP_ENABLED=false` and invite addresses:
 
 ```sh
 pnpm --filter @styleme/api admin invite-add you@example.com

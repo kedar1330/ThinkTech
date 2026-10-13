@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AUTH_MESSAGES, BFF_KEY_HEADER, CLIENT_IP_HEADER } from '@styleme/contracts';
+import { hashPassword } from '../../src/services/passwords';
 import {
   BASE_CONFIG,
   NEW_PASSWORD,
@@ -10,7 +11,6 @@ import {
   googleToken,
   invite,
   login,
-  registerPending,
   registerUser,
   startTestEnv,
   type TestEnv,
@@ -265,7 +265,15 @@ describe('Google sign-up and login (D-88)', () => {
 
   it('linking an unverified account discards the pre-registered password and sessions (takeover protection)', async () => {
     const { app } = env.makeApp();
-    await registerPending(app, env, 'ka@gmail.com'); // someone registered this email but never verified it
+    // An unverified account from before sign-ups waited for the code: someone registered this email
+    // but never verified it.
+    await env.db.models.User.create({
+      email: 'ka@gmail.com',
+      name: 'Squatter',
+      role: 'user',
+      passwordHash: await hashPassword(PASSWORD),
+      emailVerifiedAt: null,
+    });
     const res = await request(app)
       .post('/v1/auth/google')
       .send({ ...googleToken({ sub: 'g-5', email: 'ka@gmail.com' }), intent: 'login' });

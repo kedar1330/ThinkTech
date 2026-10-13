@@ -62,7 +62,12 @@ describe('config', () => {
     expect(() => loadConfig(env)).toThrow(/TOMBSTONE_HMAC_KEY/);
     expect(() => loadConfig(env)).not.toThrow(/too-short/);
     const ok = loadConfig({ ...env, TOMBSTONE_HMAC_KEY: BASE_CONFIG.TOMBSTONE_HMAC_KEY });
-    expect(ok.PUBLIC_SIGNUP_ENABLED).toBe(false);
+    // Public sign-up (with email-code verification) is the default; operators can turn it off.
+    expect(ok.PUBLIC_SIGNUP_ENABLED).toBe(true);
+    expect(
+      loadConfig({ ...env, TOMBSTONE_HMAC_KEY: BASE_CONFIG.TOMBSTONE_HMAC_KEY, PUBLIC_SIGNUP_ENABLED: 'false' })
+        .PUBLIC_SIGNUP_ENABLED,
+    ).toBe(false);
     expect(ok.GOOGLE_CLIENT_ID).toBeUndefined();
     expect(ok.SMTP_URL).toBeUndefined();
     expect(ok.MAINTENANCE_MODE).toBe(false);

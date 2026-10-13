@@ -144,6 +144,8 @@ export const pendingRequestSchema = z.object({ pendingToken: tokenSchema }).stri
 export interface PendingVerificationResponse {
   email: string;
   resendAvailableInSeconds: number;
+  /** Seconds until the current code expires (0 when it has expired or was used). */
+  codeExpiresInSeconds: number;
 }
 
 // --- Password reset (FR-AUTH-13, D-89) ----------------------------------------------------------------
@@ -222,6 +224,8 @@ export const AUTH_MESSAGES = {
   loginFailed: 'Incorrect email or password.',
   accountLocked: 'Too many incorrect attempts. Try again in 30 minutes, or reset your password.',
   emailNotVerified: 'Verify your email address before logging in.',
+  registrationPending:
+    'Your account is not created yet: verify your email first. Sign up again with this email to get a new code.',
   emailAlreadyRegistered: 'An account with this email already exists. Log in instead.',
   emailNotRegistered: 'Email not registered.',
   notInvited: 'StyleMe is in a closed beta. Registration is by invitation only for now.',

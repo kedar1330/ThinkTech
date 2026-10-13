@@ -177,7 +177,7 @@ export function registration(email: string, extra: Record<string, unknown> = {})
   };
 }
 
-/** Registers (invited) without verifying. Returns the pending-registration token. */
+/** Starts a sign-up (invited) without verifying. Returns the pending-registration token. */
 export async function registerPending(app: Express, env: TestEnv, email: string, extra: Record<string, unknown> = {}) {
   await invite(env, email);
   const res = await request(app).post('/v1/auth/register').send(registration(email, extra));
@@ -185,18 +185,22 @@ export async function registerPending(app: Express, env: TestEnv, email: string,
   return res.body.data as { email: string; pendingToken: string; verificationEmailSent: boolean };
 }
 
-/** Registers and verifies by code. Returns the user's ID and email. */
+/** Signs up and verifies by code (from the registering browser). Returns the user's ID and email. */
 export async function registerUser(
   app: Express,
   env: TestEnv,
   mail: RecordingEmailSender,
   email: string,
 ): Promise<{ id: string; email: string }> {
-  await registerPending(app, env, email);
+  const { pendingToken } = await registerPending(app, env, email);
   const res = await request(app)
     .post('/v1/auth/email-verification/otp')
-    .send({ email, otp: mail.otp(email) });
+    .send({ email, otp: mail.otp(email), pendingToken });
   if (res.status !== 200) throw new Error(`verify failed: ${res.status} ${JSON.stringify(res.body)}`);
+  // Verifying signs the registering browser in; log it out so tests start from a signed-up user with no session.
+  await request(app)
+    .post('/v1/auth/logout')
+    .set(bearer(res.body.data.accessToken as string));
   const user = await env.db.models.User.findOne({ email }).lean();
   return { id: String(user!._id), email };
 }

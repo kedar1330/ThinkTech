@@ -73,6 +73,19 @@ The style knowledge base (palettes, rules, templates) is **not** stored in Mongo
 
 Managed only by a server-side admin script; no API endpoint writes it.
 
+### 3.1e `pendingRegistrations`
+
+A sign-up waiting for its email code. The `users` document is created only when the code is verified, from these fields; this document and its challenge are then deleted.
+
+| Field | Type / rule |
+|---|---|
+| `_id` | reserved as the future user's `_id`; the `email_verification` challenge's `userId` |
+| `email` | string, unique, lower-cased |
+| `name`, `city`, `phone` | as entered (`phone` in E.164 or `null`) |
+| `passwordHash` | argon2id hash; the password is never stored |
+| `termsVersion`, `privacyVersion`, `acceptedAt`, `marketingOptIn` | consent given at sign-up |
+| `expiresAt` | 24 hours after the last code was sent (TTL index) |
+
 ### 3.1b `authChallenges` (D-89; replaces `passwordResetTokens`)
 
 One document per user and purpose. Issuing a new code or link replaces the earlier one, so only the latest works.

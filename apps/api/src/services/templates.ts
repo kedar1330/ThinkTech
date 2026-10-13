@@ -9,7 +9,50 @@ export function link(webOrigin: string, path: string, token: string): string {
   return `${webOrigin}${path}#token=${token}`;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+  );
+}
+
 export const templates = {
+  /** Sign-up code (code only, no link: a pending registration is verified in the browser that registered). */
+  registrationOtp(to: string, name: string, otp: string): EmailMessage {
+    const text =
+      `Hello ${name},\n\nWelcome to StyleMe!\n\n` +
+      'Use the following verification code to verify your email address and complete your registration:\n\n' +
+      `    ${otp}\n\n` +
+      'This code expires in 5 minutes. Do not share this code with anyone.\n\n' +
+      'If you did not request this registration, you can safely ignore this email.\n\n' +
+      'Regards,\nStyleMe Team';
+    const html = `<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verify your StyleMe email address</title></head>
+<body style="margin:0;padding:0;background:#f7f3ee;font-family:Arial,Helvetica,sans-serif;color:#2b1d2a;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f3ee;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;overflow:hidden;">
+        <tr><td style="background:#4a1d3f;padding:20px 28px;font-family:Georgia,'Times New Roman',serif;font-size:24px;color:#ffffff;">Style<span style="font-style:italic;color:#e3c58b;">Me</span></td></tr>
+        <tr><td style="padding:28px;font-size:15px;line-height:1.6;">
+          <p style="margin:0 0 12px;">Hello ${escapeHtml(name)},</p>
+          <p style="margin:0 0 12px;">Welcome to StyleMe!</p>
+          <p style="margin:0 0 20px;">Use the following verification code to verify your email address and complete your registration:</p>
+          <p style="margin:0 0 20px;text-align:center;">
+            <span style="display:inline-block;padding:14px 24px;border:1px solid #e5d9e2;border-radius:10px;background:#faf6f9;font-family:'Courier New',monospace;font-size:30px;font-weight:bold;letter-spacing:8px;color:#4a1d3f;">${otp}</span>
+          </p>
+          <p style="margin:0 0 12px;">This code expires in <strong>5 minutes</strong>. Do not share this code with anyone.</p>
+          <p style="margin:0 0 20px;color:#6b5a68;">If you did not request this registration, you can safely ignore this email.</p>
+          <p style="margin:0;">Regards,<br>StyleMe Team</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+    return { to, subject: 'Verify your StyleMe email address', text, html };
+  },
+
   verifyEmail(to: string, name: string, otp: string, verifyLink: string): EmailMessage {
     return {
       to,

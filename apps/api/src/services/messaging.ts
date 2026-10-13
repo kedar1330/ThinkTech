@@ -12,6 +12,8 @@ export interface EmailMessage {
   to: string;
   subject: string;
   text: string;
+  /** Optional HTML version; `text` is always sent as the plain-text alternative. */
+  html?: string;
 }
 
 export interface SmsMessage {
@@ -35,7 +37,13 @@ export function smtpEmailSender(smtpUrl: string, from: string): EmailSender {
   return {
     kind: 'smtp',
     async send(message) {
-      await transport.sendMail({ from, to: message.to, subject: message.subject, text: message.text });
+      await transport.sendMail({
+        from,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+        ...(message.html ? { html: message.html } : {}),
+      });
     },
   };
 }

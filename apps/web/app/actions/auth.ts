@@ -163,7 +163,7 @@ export async function resendVerificationAction(_prev: FormState): Promise<FormSt
       },
     );
     return {
-      success: 'A new code and link are on their way. Earlier codes no longer work.',
+      success: 'A new code is on its way. Earlier codes no longer work.',
       retryAfterSeconds: res.resendAvailableInSeconds ?? 30,
       issuedAt: Date.now(),
     };
@@ -192,7 +192,7 @@ export async function changePendingEmailAction(_prev: FormState, formData: FormD
     revalidatePath('/verify-email');
     return {
       success: res.verificationEmailSent
-        ? `We sent a new code and link to ${res.email}.`
+        ? `We sent a new code to ${res.email}.`
         : `Your email is now ${res.email}, but we could not send the code. Use "Resend code".`,
       data: { email: res.email },
       retryAfterSeconds: 30,

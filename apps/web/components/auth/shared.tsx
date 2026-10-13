@@ -48,6 +48,11 @@ export function FormMessage({ state }: { state: FormState }) {
             <Link href="/login">Log in</Link> or <Link href="/forgot-password">reset your password</Link>.
           </p>
         )}
+        {state.code === 'REGISTRATION_PENDING' && (
+          <p>
+            <Link href="/register">Sign up again</Link> to get a new code.
+          </p>
+        )}
         {state.code === 'EMAIL_NOT_REGISTERED' && (
           <p>
             <Link href="/register">Sign up</Link> to create an account.

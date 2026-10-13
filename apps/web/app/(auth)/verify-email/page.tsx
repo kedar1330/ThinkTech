@@ -30,7 +30,7 @@ export default async function VerifyEmailPage({
       title="Verify your email"
       subtitle={
         params.recovery
-          ? 'If this email has an account waiting for verification, we sent it a new code and link.'
+          ? 'If this email has an account waiting for verification, we sent it a new code.'
           : 'One last step before your style journey begins.'
       }
     >
@@ -39,6 +39,7 @@ export default async function VerifyEmailPage({
         email={pending?.email ?? recoveryEmail ?? null}
         canEditEmail={Boolean(pending)}
         initialCooldown={pending ? pending.resendAvailableInSeconds : 30}
+        codeExpiresInSeconds={pending ? pending.codeExpiresInSeconds : null}
         sendFailed={Boolean(params.sendFailed)}
       />
     </AuthSplitLayout>

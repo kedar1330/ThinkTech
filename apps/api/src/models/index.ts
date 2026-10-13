@@ -70,6 +70,26 @@ const betaInviteSchema = new Schema({
   usedAt: { type: Date, default: null },
 });
 
+// A sign-up waiting for its email code (DATABASE.md §3.1e). The `users` document is created only once
+// the code is verified; until then the registration lives here. `_id` is reserved as the future user's
+// `_id`, so the email_verification challenge is keyed by it. Only a password hash is stored.
+const pendingRegistrationSchema = new Schema(
+  {
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    name: { type: String, required: true },
+    passwordHash: { type: String, required: true },
+    city: { type: String, default: null },
+    phone: { type: String, default: null },
+    termsVersion: { type: String, required: true },
+    privacyVersion: { type: String, required: true },
+    acceptedAt: { type: Date, required: true },
+    marketingOptIn: { type: Boolean, default: false },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: true },
+);
+pendingRegistrationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 // One-time codes and links for every account flow (DATABASE.md §3.1b). One document per user and
 // purpose, so issuing a new code replaces (invalidates) the previous one while attempt lockouts and
 // resend history carry over. Codes and link tokens are stored only as keyed hashes.
@@ -188,6 +208,7 @@ const profileSchema = new Schema(
 
 export type UserDoc = InferSchemaType<typeof userSchema>;
 export type BetaInviteDoc = InferSchemaType<typeof betaInviteSchema>;
+export type PendingRegistrationDoc = InferSchemaType<typeof pendingRegistrationSchema>;
 export type AuthChallengeDoc = InferSchemaType<typeof authChallengeSchema>;
 export type SessionDoc = InferSchemaType<typeof sessionSchema>;
 export type TombstoneDoc = InferSchemaType<typeof tombstoneSchema>;
@@ -197,6 +218,7 @@ export type ProfileDoc = InferSchemaType<typeof profileSchema>;
 export interface Models {
   User: Model<UserDoc>;
   BetaInvite: Model<BetaInviteDoc>;
+  PendingRegistration: Model<PendingRegistrationDoc>;
   AuthChallenge: Model<AuthChallengeDoc>;
   Session: Model<SessionDoc>;
   Tombstone: Model<TombstoneDoc>;
@@ -208,6 +230,7 @@ export function registerModels(main: Connection, tombstones: Connection): Models
   return {
     User: main.model('User', userSchema, 'users'),
     BetaInvite: main.model('BetaInvite', betaInviteSchema, 'betaInvites'),
+    PendingRegistration: main.model('PendingRegistration', pendingRegistrationSchema, 'pendingRegistrations'),
     AuthChallenge: main.model('AuthChallenge', authChallengeSchema, 'authChallenges'),
     Session: main.model('Session', sessionSchema, 'sessions'),
     Tombstone: tombstones.model('DeletionTombstone', tombstoneSchema, 'deletionTombstones'),

@@ -74,11 +74,11 @@ const UPCOMING = [
 const FAQ = [
   {
     q: 'Is StyleMe free?',
-    a: 'Yes. StyleMe is currently in a closed beta and free for invited members.',
+    a: 'Yes. StyleMe is currently in beta and free to use.',
   },
   {
     q: 'Can anyone sign up?',
-    a: 'During the closed beta, registration is by invitation. If your email is on the invite list you can sign up with email or Google.',
+    a: 'Yes. Sign up with your email address (we send a 6-digit code to verify it) or with Google.',
   },
   {
     q: 'Do I have to share photos or my skin tone?',

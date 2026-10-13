@@ -70,22 +70,31 @@ export class ChallengeService {
     return last && now - last < RESEND_COOLDOWN_MS ? secondsUntil(new Date(last + RESEND_COOLDOWN_MS)) : 0;
   }
 
+  /** Seconds until the current code expires (0 when there is none, or it was used or has expired). */
+  codeExpiresInSeconds(challenge: Challenge | null): number {
+    const expires = challenge?.otpHash && !challenge.consumedAt ? challenge.otpExpiresAt : null;
+    return expires && expires.getTime() > Date.now() ? secondsUntil(expires) : 0;
+  }
+
+  /** Throws RESEND_COOLDOWN or RESEND_LIMIT while another send isn't allowed yet. */
+  assertCanSend(challenge: Challenge | null): void {
+    if (!challenge) return;
+    const wait = this.resendWaitSeconds(challenge);
+    if (wait === 0) return;
+    const now = Date.now();
+    const recent = sends(challenge).filter((d) => now - d.getTime() < HOUR_MS);
+    throw recent.length >= MAX_SENDS_PER_HOUR
+      ? new AppError('RESEND_LIMIT', undefined, wait)
+      : new AppError('RESEND_COOLDOWN', undefined, wait);
+  }
+
   /**
    * Issues a fresh code and/or link, replacing (and so invalidating) any earlier one for the same user
    * and purpose. Lockouts and send history carry over. Throws RESEND_COOLDOWN or RESEND_LIMIT.
    */
   async issue(userId: Types.ObjectId, purpose: ChallengePurpose, options: IssueOptions): Promise<Issued> {
     const existing = await this.find(userId, purpose);
-    if (!options.bypassLimits && existing) {
-      const now = Date.now();
-      const recent = sends(existing).filter((d) => now - d.getTime() < HOUR_MS);
-      const wait = this.resendWaitSeconds(existing);
-      if (wait > 0) {
-        throw recent.length >= MAX_SENDS_PER_HOUR
-          ? new AppError('RESEND_LIMIT', undefined, wait)
-          : new AppError('RESEND_COOLDOWN', undefined, wait);
-      }
-    }
+    if (!options.bypassLimits) this.assertCanSend(existing);
 
     const now = new Date();
     const key = `${String(userId)}:${purpose}`;

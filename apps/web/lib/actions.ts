@@ -52,6 +52,7 @@ const MESSAGE: Partial<Record<ErrorCode, string>> = {
   EMAIL_ALREADY_REGISTERED: AUTH_MESSAGES.emailAlreadyRegistered,
   EMAIL_NOT_REGISTERED: AUTH_MESSAGES.emailNotRegistered,
   EMAIL_NOT_VERIFIED: AUTH_MESSAGES.emailNotVerified,
+  REGISTRATION_PENDING: AUTH_MESSAGES.registrationPending,
   NOT_INVITED: AUTH_MESSAGES.notInvited,
   ACCOUNT_LOCKED: AUTH_MESSAGES.accountLocked,
   OTP_INVALID: AUTH_MESSAGES.otpInvalid,

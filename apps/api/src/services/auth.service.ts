@@ -1,5 +1,5 @@
 import type { Logger } from 'pino';
-import type { Connection, Types } from 'mongoose';
+import { Types, type Connection } from 'mongoose';
 import {
   LEGAL_VERSIONS,
   type ChangePasswordRequest,
@@ -27,13 +27,14 @@ import {
   ADMIN_RESET_TTL_MS,
   LOGIN_LOCKOUT_MS,
   LOGIN_MAX_FAILED_ATTEMPTS,
+  PENDING_REGISTRATION_TTL_MS,
   RESET_LINK_TTL_MS,
   RESET_SESSION_TTL_MS,
   VERIFICATION_LINK_TTL_MS,
   type Config,
 } from '../config/env';
-import type { Models, UserDoc } from '../models/index';
-import { randomToken, sha256 } from '../utils/crypto';
+import type { Models, PendingRegistrationDoc, UserDoc } from '../models/index';
+import { randomToken, safeEqual, sha256 } from '../utils/crypto';
 import { AppError, secondsUntil } from '../utils/errors';
 import { ChallengeService } from './challenges';
 import type { GoogleVerifier } from './google';
@@ -43,6 +44,10 @@ import { SessionService } from './sessions';
 import { link, maskEmail, templates } from './templates';
 
 export type UserWithId = UserDoc & { _id: Types.ObjectId };
+type PendingWithId = PendingRegistrationDoc & { _id: Types.ObjectId };
+
+const SESSION_ENDED = 'This verification session has ended. Sign up again to get a new code.';
+const EMAIL_FAILED = 'We could not send the email. Please try again in a moment.';
 
 /** Server-authoritative onboarding position (FR-ONB-01). Admins are seeded and skip onboarding (D-95). */
 export function onboardingStep(user: UserWithId): OnboardingStep {
@@ -125,49 +130,85 @@ export class AuthService {
   }
 
   // --- Registration and email verification (FR-AUTH-01, FR-AUTH-16) ----------------------------------
+  //
+  // Registering creates no account. The details and a password hash wait in `pendingRegistrations`
+  // (whose `_id` is reserved for the future user) until the emailed 6-digit code is verified; only then
+  // is the `users` document created, already verified. A pending registration can be verified only from
+  // the browser that registered it (it holds the pending token), so someone who re-registers the same
+  // email cannot get their password onto an account that the email's owner then verifies.
+  //
+  // Unverified `users` created before this design are still verified by the earlier flow (code or link).
 
-  /** Creates `user` accounts only; admins are seeded (D-95) and the request schema rejects a `role`. */
+  /** Starts a registration and emails the code. Registering again replaces the pending details. */
   async register(input: RegisterRequest): Promise<RegisterResponse> {
     if (await this.models.User.exists({ email: input.email })) throw new AppError('EMAIL_ALREADY_REGISTERED');
     await this.requireInvite(input.email);
 
+    const existing = await this.models.PendingRegistration.findOne({ email: input.email }).lean();
+    const challenge = existing ? await this.challenges.find(existing._id, 'email_verification') : null;
+    // Re-registering sends a new code, so the resend cooldown and hourly limit apply to it too.
+    this.challenges.assertCanSend(challenge);
+
     const now = new Date();
-    let user: UserWithId;
+    let pending: PendingWithId | null;
     try {
-      const created = await this.models.User.create({
-        email: input.email,
-        name: input.fullName,
-        role: 'user',
-        passwordHash: await hashPassword(input.password),
-        passwordChangedAt: now,
-        city: input.city,
-        phone: input.phone ? { e164: input.phone, verifiedAt: null } : null,
-        consent: {
-          termsVersion: LEGAL_VERSIONS.terms,
-          termsAcceptedAt: now,
-          privacyVersion: LEGAL_VERSIONS.privacy,
-          privacyAcceptedAt: now,
-          marketingOptIn: input.marketingOptIn,
-          marketingUpdatedAt: now,
+      pending = await this.models.PendingRegistration.findOneAndUpdate(
+        { email: input.email },
+        {
+          $set: {
+            name: input.fullName,
+            passwordHash: await hashPassword(input.password),
+            city: input.city,
+            phone: input.phone ?? null,
+            termsVersion: LEGAL_VERSIONS.terms,
+            privacyVersion: LEGAL_VERSIONS.privacy,
+            acceptedAt: now,
+            marketingOptIn: input.marketingOptIn,
+            expiresAt: new Date(now.getTime() + PENDING_REGISTRATION_TTL_MS),
+          },
+          $setOnInsert: { _id: existing?._id ?? new Types.ObjectId() },
         },
-      });
-      user = created.toObject() as UserWithId;
+        { upsert: true, returnDocument: 'after' },
+      ).lean();
     } catch (err) {
-      if (isDuplicateKeyError(err)) throw new AppError('EMAIL_ALREADY_REGISTERED');
+      if (isDuplicateKeyError(err)) throw new AppError('CONFLICT', 'Please try again in a moment.');
       throw err;
     }
-    await this.models.BetaInvite.updateOne({ email: input.email, usedAt: null }, { $set: { usedAt: now } });
+    if (!pending) throw new AppError('CONFLICT', 'Please try again in a moment.');
 
     const pendingToken = randomToken();
-    const sent = await this.sendVerification(user, {
+    const sent = await this.sendRegistrationCode(pending, {
       pendingTokenHash: sha256(pendingToken),
       rememberMe: input.rememberMe,
-      first: true,
+      first: !challenge,
     });
-    this.logger.info({ event: 'account_registered', userId: String(user._id) });
-    return { email: user.email, pendingToken, verificationEmailSent: sent };
+    this.logger.info({ event: 'registration_pending', pendingId: String(pending._id) });
+    return { email: pending.email, pendingToken, verificationEmailSent: sent };
   }
 
+  /** Issues a new sign-up code (invalidating the previous one) and emails it. */
+  private async sendRegistrationCode(
+    pending: PendingWithId,
+    options: { pendingTokenHash?: string; rememberMe?: boolean; first?: boolean } = {},
+  ): Promise<boolean> {
+    const issued = await this.challenges.issue(pending._id, 'email_verification', {
+      otp: true,
+      pendingTokenHash: options.pendingTokenHash,
+      rememberMe: options.rememberMe,
+      bypassLimits: options.first,
+    });
+    await this.models.PendingRegistration.updateOne(
+      { _id: pending._id },
+      { $set: { expiresAt: new Date(Date.now() + PENDING_REGISTRATION_TTL_MS) } },
+    );
+    return this.deliver(
+      templates.registrationOtp(pending.email, pending.name, issued.otp!),
+      'verification_email',
+      pending._id,
+    );
+  }
+
+  /** Legacy unverified accounts: a code and a link. */
   private async sendVerification(
     user: UserWithId,
     options: { pendingTokenHash?: string; rememberMe?: boolean; first?: boolean } = {},
@@ -187,7 +228,67 @@ export class AuthService {
     );
   }
 
-  /** Completes verification; opens a session only for the browser holding the pending-registration token. */
+  /** The pending registration (or legacy unverified user) that a pending-registration token belongs to. */
+  private async findPending(pendingToken: string) {
+    const challenge = await this.challenges.findByPendingToken(pendingToken);
+    if (!challenge) return null;
+    const pending = await this.models.PendingRegistration.findById(challenge.userId).lean();
+    if (pending) return { challenge, pending, user: null, email: pending.email };
+    const user = await this.models.User.findOne({ _id: challenge.userId, emailVerifiedAt: null }).lean();
+    return user ? { challenge, pending: null, user, email: user.email } : null;
+  }
+
+  /**
+   * Creates the account from a pending registration whose code was just consumed. Code consumption is
+   * atomic and `users.email` is unique, so concurrent requests can't create two accounts.
+   */
+  private async createAccount(pendingId: Types.ObjectId, rememberMe: boolean): Promise<VerifyEmailResponse> {
+    const pending = await this.models.PendingRegistration.findById(pendingId).lean();
+    if (!pending) throw new AppError('OTP_INVALID');
+    let user: UserWithId;
+    try {
+      const created = await this.models.User.create({
+        _id: pending._id,
+        email: pending.email,
+        name: pending.name,
+        role: 'user',
+        passwordHash: pending.passwordHash,
+        passwordChangedAt: pending.acceptedAt,
+        emailVerifiedAt: new Date(),
+        city: pending.city,
+        phone: pending.phone ? { e164: pending.phone, verifiedAt: null } : null,
+        consent: {
+          termsVersion: pending.termsVersion,
+          termsAcceptedAt: pending.acceptedAt,
+          privacyVersion: pending.privacyVersion,
+          privacyAcceptedAt: pending.acceptedAt,
+          marketingOptIn: pending.marketingOptIn,
+          marketingUpdatedAt: pending.acceptedAt,
+        },
+      });
+      user = created.toObject() as UserWithId;
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        await this.discardPending(pending.email);
+        throw new AppError('EMAIL_ALREADY_REGISTERED');
+      }
+      throw err;
+    }
+    await this.models.PendingRegistration.deleteOne({ _id: pending._id });
+    await this.challenges.clear(pending._id, 'email_verification');
+    await this.models.BetaInvite.updateOne({ email: user.email, usedAt: null }, { $set: { usedAt: new Date() } });
+    this.logger.info({ event: 'account_registered', userId: String(user._id) });
+    const accessToken = await this.sessions.create(user._id, user.tokenVersion, rememberMe);
+    return { verified: true, email: user.email, accessToken, onboardingStep: onboardingStep(user) };
+  }
+
+  /** Ends a pending registration (its email became an account another way, e.g. Google). */
+  private async discardPending(email: string): Promise<void> {
+    const pending = await this.models.PendingRegistration.findOneAndDelete({ email }).lean();
+    if (pending) await this.challenges.clear(pending._id, 'email_verification');
+  }
+
+  /** Legacy unverified account: opens a session only for the browser holding the pending token. */
   private async completeVerification(
     userId: Types.ObjectId,
     challenge: { pendingTokenHash?: string | null; rememberMe?: boolean | null },
@@ -212,12 +313,24 @@ export class AuthService {
   }
 
   async verifyEmailOtp(input: VerifyEmailOtpRequest): Promise<VerifyEmailResponse> {
+    const pending = await this.models.PendingRegistration.findOne({ email: input.email }).lean();
+    if (pending) {
+      const challenge = await this.challenges.find(pending._id, 'email_verification');
+      const sameBrowser =
+        input.pendingToken !== undefined &&
+        typeof challenge?.pendingTokenHash === 'string' &&
+        safeEqual(challenge.pendingTokenHash, sha256(input.pendingToken));
+      if (!sameBrowser) throw new AppError('NOT_FOUND', SESSION_ENDED);
+      const consumed = await this.challenges.verifyOtp(pending._id, 'email_verification', input.otp);
+      return this.createAccount(pending._id, Boolean(consumed.rememberMe));
+    }
     const user = await this.models.User.findOne({ email: input.email, emailVerifiedAt: null, isActive: true }).lean();
     if (!user) throw new AppError('OTP_INVALID');
     const challenge = await this.challenges.verifyOtp(user._id, 'email_verification', input.otp);
     return this.completeVerification(user._id, challenge, input.pendingToken);
   }
 
+  /** Verification links exist only for legacy unverified accounts; sign-up codes have no link. */
   async verifyEmailLink(input: VerifyEmailLinkRequest): Promise<VerifyEmailResponse> {
     const challenge = await this.challenges.consumeLink(['email_verification'], input.token);
     return this.completeVerification(challenge.userId, challenge, input.pendingToken);
@@ -225,34 +338,35 @@ export class AuthService {
 
   /** The pending registration a browser is working on (verification page after a refresh). */
   async pendingVerification(pendingToken: string): Promise<PendingVerificationResponse> {
-    const challenge = await this.challenges.findByPendingToken(pendingToken);
-    const user = challenge
-      ? await this.models.User.findOne({ _id: challenge.userId, emailVerifiedAt: null }).lean()
-      : null;
-    if (!challenge || !user)
-      throw new AppError('NOT_FOUND', 'This verification session has ended. Enter your email to continue.');
-    return { email: user.email, resendAvailableInSeconds: this.challenges.resendWaitSeconds(challenge) };
+    const found = await this.findPending(pendingToken);
+    if (!found) throw new AppError('NOT_FOUND', SESSION_ENDED);
+    return {
+      email: found.email,
+      resendAvailableInSeconds: this.challenges.resendWaitSeconds(found.challenge),
+      codeExpiresInSeconds: this.challenges.codeExpiresInSeconds(found.challenge),
+    };
   }
 
   /**
-   * Resend. With the pending-registration token the caller learns about cooldowns; recovery by email
-   * alone always gets the same generic response (no account enumeration).
+   * Resend. With the pending-registration token the caller learns about cooldowns and delivery
+   * failures; recovery by email alone (legacy unverified accounts only) always gets the same generic
+   * response (no account enumeration).
    */
   async resendVerification(
     input: ResendVerificationRequest,
   ): Promise<{ accepted: true; resendAvailableInSeconds?: number }> {
     if (input.pendingToken) {
-      const challenge = await this.challenges.findByPendingToken(input.pendingToken);
-      const user = challenge
-        ? await this.models.User.findOne({ _id: challenge.userId, emailVerifiedAt: null }).lean()
-        : null;
-      if (!challenge || !user || user.email !== input.email)
-        throw new AppError('NOT_FOUND', 'This verification session has ended. Enter your email to continue.');
-      await this.sendVerification(user);
+      const found = await this.findPending(input.pendingToken);
+      if (!found || found.email !== input.email) throw new AppError('NOT_FOUND', SESSION_ENDED);
+      const id = found.pending?._id ?? found.user!._id;
+      const sent = found.pending
+        ? await this.sendRegistrationCode(found.pending)
+        : await this.sendVerification(found.user!);
+      if (!sent) throw new AppError('SERVICE_UNAVAILABLE', EMAIL_FAILED);
       return {
         accepted: true,
         resendAvailableInSeconds: this.challenges.resendWaitSeconds(
-          await this.challenges.find(user._id, 'email_verification'),
+          await this.challenges.find(id, 'email_verification'),
         ),
       };
     }
@@ -267,31 +381,44 @@ export class AuthService {
     return { accepted: true };
   }
 
-  /** Corrects the email of a pending registration; earlier codes and links stop working. */
+  /** Corrects the email of a pending registration; earlier codes (and links) stop working. */
   async changePendingEmail(
     input: ChangePendingEmailRequest,
   ): Promise<{ email: string; verificationEmailSent: boolean }> {
-    const challenge = await this.challenges.findByPendingToken(input.pendingToken);
-    const user = challenge
-      ? await this.models.User.findOne({ _id: challenge.userId, emailVerifiedAt: null }).lean()
-      : null;
-    if (!challenge || !user)
-      throw new AppError('NOT_FOUND', 'This verification session has ended. Enter your email to continue.');
-    if (input.newEmail === user.email)
+    const found = await this.findPending(input.pendingToken);
+    if (!found) throw new AppError('NOT_FOUND', SESSION_ENDED);
+    if (input.newEmail === found.email)
       throw new AppError('INVALID_REQUEST', 'This is already the email on your account.');
     if (await this.models.User.exists({ email: input.newEmail })) throw new AppError('EMAIL_ALREADY_REGISTERED');
     await this.requireInvite(input.newEmail);
 
-    const wait = this.challenges.resendWaitSeconds(challenge);
+    const wait = this.challenges.resendWaitSeconds(found.challenge);
     if (wait > 0) throw new AppError('RESEND_COOLDOWN', undefined, wait);
+
+    if (found.pending) {
+      try {
+        await this.models.PendingRegistration.updateOne(
+          { _id: found.pending._id },
+          { $set: { email: input.newEmail } },
+        );
+      } catch (err) {
+        if (isDuplicateKeyError(err))
+          throw new AppError('CONFLICT', 'A sign-up with this email is already waiting for verification.');
+        throw err;
+      }
+      const sent = await this.sendRegistrationCode({ ...found.pending, email: input.newEmail });
+      this.logger.info({ event: 'pending_email_changed', pendingId: String(found.pending._id) });
+      return { email: input.newEmail, verificationEmailSent: sent };
+    }
+
+    const user = found.user!;
     try {
       await this.models.User.updateOne({ _id: user._id, emailVerifiedAt: null }, { $set: { email: input.newEmail } });
     } catch (err) {
       if (isDuplicateKeyError(err)) throw new AppError('EMAIL_ALREADY_REGISTERED');
       throw err;
     }
-    const updated = { ...user, email: input.newEmail };
-    const sent = await this.sendVerification(updated);
+    const sent = await this.sendVerification({ ...user, email: input.newEmail });
     this.logger.info({ event: 'pending_email_changed', userId: String(user._id) });
     return { email: input.newEmail, verificationEmailSent: sent };
   }
@@ -301,7 +428,12 @@ export class AuthService {
   async login(input: LoginRequest): Promise<SessionResponse> {
     const user = await this.models.User.findOne({ email: input.email }).lean();
     if (!user) {
-      await verifyAgainstDummy(input.password);
+      // A sign-up that was never verified has no account yet; tell only someone who knows its password.
+      const pending = await this.models.PendingRegistration.findOne({ email: input.email }).lean();
+      const pendingMatch = pending
+        ? await verifyPassword(pending.passwordHash, input.password)
+        : (await verifyAgainstDummy(input.password), false);
+      if (pendingMatch) throw new AppError('REGISTRATION_PENDING');
       throw new AppError('UNAUTHENTICATED', 'Incorrect email or password.');
     }
     const lockedUntil = user.loginSecurity?.lockedUntil;
@@ -408,6 +540,7 @@ export class AuthService {
       throw err;
     }
     await this.models.BetaInvite.updateOne({ email: identity.email, usedAt: null }, { $set: { usedAt: now } });
+    await this.discardPending(identity.email);
     this.logger.info({ event: 'account_registered_google', userId: String(created._id) });
     const accessToken = await this.sessions.create(created._id, created.tokenVersion, input.rememberMe);
     return { accessToken, onboardingStep: onboardingStep(created), created: true, linked: false };

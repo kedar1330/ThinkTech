@@ -16,6 +16,9 @@ export async function deleteUserData(db: Connection, userId: Types.ObjectId, ema
     await db.collection(name).deleteMany({ userId });
   }
   if (email) await db.collection('betaInvites').deleteMany({ email: normaliseEmail(email) });
+  // A pending registration reserves the future user's _id; clear any leftover one too.
+  await db.collection('pendingRegistrations').deleteMany({ _id: userId });
+  if (email) await db.collection('pendingRegistrations').deleteMany({ email: normaliseEmail(email) });
   await db.collection('users').deleteOne({ _id: userId });
 }
 

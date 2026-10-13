@@ -22,7 +22,12 @@ const envSchema = z.object({
   AUTH_ACCESS_TOKEN_SECRET: z.string().min(32),
   BFF_SHARED_SECRET: z.string().min(32),
   WEB_ORIGIN: z.url(),
-  PUBLIC_SIGNUP_ENABLED: bool,
+  // Public sign-up with email-code verification is on by default; set to false to require an invite
+  // (closed beta, `pnpm admin invite-add`).
+  PUBLIC_SIGNUP_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
   MAINTENANCE_MODE: bool,
   // Email (D-84): SMTP connection string of the chosen provider, e.g. smtps://user:pass@host:465.
   // Without it, local development writes messages to DEV_OUTBOX_DIR instead; staging and production
@@ -79,7 +84,10 @@ export const OTP_LOCKOUT_MS = 30 * MINUTE;
 export const RESEND_COOLDOWN_MS = 30 * 1000;
 /** The first send plus up to 5 resends in any rolling hour. */
 export const MAX_SENDS_PER_HOUR = 6;
-/** How long a pending registration (and its challenge document) is kept for recovery. */
+/**
+ * How long a pending registration (the `pendingRegistrations` record and its challenge document) is
+ * kept after the last code was sent. Expired records are removed by TTL indexes.
+ */
 export const PENDING_REGISTRATION_TTL_MS = 1 * DAY;
 
 // Failed-login lockout (D-90).
