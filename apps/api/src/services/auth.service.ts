@@ -1,92 +1,573 @@
 import type { Logger } from 'pino';
 import type { Connection, Types } from 'mongoose';
 import {
-  AUTH_MESSAGES,
+  LEGAL_VERSIONS,
   type ChangePasswordRequest,
+  type ChangePendingEmailRequest,
+  type GoogleAuthRequest,
+  type GoogleAuthResponse,
   type LoginRequest,
+  type OnboardingStep,
+  type OtpSentResponse,
+  type PendingVerificationResponse,
   type RegisterRequest,
+  type RegisterResponse,
+  type ResendVerificationRequest,
   type ResetConfirmRequest,
+  type ResetRequestRequest,
+  type ResetVerifyOtpRequest,
+  type SessionResponse,
+  type SetupPasswordRequest,
   type UserResponse,
+  type VerifyEmailLinkRequest,
+  type VerifyEmailOtpRequest,
+  type VerifyEmailResponse,
 } from '@styleme/contracts';
-import { ADMIN_RESET_TTL_MS, EMAIL_RESET_TTL_MS, type Config } from '../config/env';
+import {
+  ADMIN_RESET_TTL_MS,
+  LOGIN_LOCKOUT_MS,
+  LOGIN_MAX_FAILED_ATTEMPTS,
+  RESET_LINK_TTL_MS,
+  RESET_SESSION_TTL_MS,
+  VERIFICATION_LINK_TTL_MS,
+  type Config,
+} from '../config/env';
 import type { Models, UserDoc } from '../models/index';
 import { randomToken, sha256 } from '../utils/crypto';
-import { AppError } from '../utils/errors';
-import { deleteAccount } from './account-deletion';
-import type { EmailSender } from './email';
+import { AppError, secondsUntil } from '../utils/errors';
+import { ChallengeService } from './challenges';
+import type { GoogleVerifier } from './google';
+import type { EmailMessage, EmailSender } from './messaging';
 import { hashPassword, verifyAgainstDummy, verifyPassword } from './passwords';
 import { SessionService } from './sessions';
+import { link, maskEmail, templates } from './templates';
 
 export type UserWithId = UserDoc & { _id: Types.ObjectId };
 
-export function toUserResponse(user: UserWithId): UserResponse {
-  return { id: String(user._id), email: user.email, name: user.name, role: user.role as UserResponse['role'] };
+/** Server-authoritative onboarding position (FR-ONB-01). Admins are seeded and skip onboarding (D-95). */
+export function onboardingStep(user: UserWithId): OnboardingStep {
+  if (!user.passwordHash) return 'set_password';
+  if (user.role === 'admin') return 'complete';
+  if (!user.onboarding?.styleProfileCompletedAt) return 'style_profile';
+  if (!user.onboarding?.appearanceCompletedAt) return 'appearance';
+  return 'complete';
+}
+
+export function toUserResponse(
+  user: UserWithId,
+  pending: { email?: string | null; phone?: string | null } = {},
+): UserResponse {
+  return {
+    id: String(user._id),
+    email: user.email,
+    name: user.name,
+    role: user.role as UserResponse['role'],
+    emailVerified: Boolean(user.emailVerifiedAt),
+    hasPassword: Boolean(user.passwordHash),
+    googleLinked: typeof user.googleSub === 'string',
+    city: user.city ?? null,
+    phone: user.phone ? { number: user.phone.e164, verified: Boolean(user.phone.verifiedAt) } : null,
+    pendingPhone: pending.phone ?? null,
+    pendingEmail: pending.email ?? null,
+    marketingOptIn: Boolean(user.consent?.marketingOptIn),
+    onboardingStep: onboardingStep(user),
+  };
 }
 
 function isDuplicateKeyError(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { code?: number }).code === 11000;
 }
 
+export interface AuthDeps {
+  config: Config;
+  models: Models;
+  main: Connection;
+  email: EmailSender;
+  logger: Logger;
+  google: GoogleVerifier | null;
+}
+
 export class AuthService {
   readonly sessions: SessionService;
+  readonly challenges: ChallengeService;
+  private readonly config: Config;
+  private readonly models: Models;
+  readonly main: Connection;
+  private readonly email: EmailSender;
+  private readonly logger: Logger;
+  private readonly googleVerify: GoogleVerifier | null;
 
-  constructor(
-    private readonly config: Config,
-    private readonly models: Models,
-    private readonly main: Connection,
-    private readonly emailSender: EmailSender,
-    private readonly logger: Logger,
-  ) {
-    this.sessions = new SessionService(models, config.AUTH_ACCESS_TOKEN_SECRET);
+  constructor(deps: AuthDeps) {
+    this.config = deps.config;
+    this.models = deps.models;
+    this.main = deps.main;
+    this.email = deps.email;
+    this.logger = deps.logger;
+    this.googleVerify = deps.google;
+    this.sessions = new SessionService(deps.models, deps.config.AUTH_ACCESS_TOKEN_SECRET);
+    this.challenges = new ChallengeService(deps.models, deps.config.AUTH_ACCESS_TOKEN_SECRET);
   }
 
-  /** FR-AUTH-01, FR-AUTH-10. One generic refusal for "not invited" and "already registered". */
-  async register(input: RegisterRequest): Promise<UserResponse> {
-    const refused = new AppError('FORBIDDEN', AUTH_MESSAGES.registrationRefused);
-    if (!this.config.PUBLIC_SIGNUP_ENABLED) {
-      const invite = await this.models.BetaInvite.findOne({ email: input.email }).lean();
-      if (!invite) throw refused;
-    }
-    if (await this.models.User.exists({ email: input.email })) throw refused;
-
-    let user;
+  /** Sends an email; a provider failure is logged (without content) and reported as `false`. */
+  async deliver(message: EmailMessage, event: string, userId: Types.ObjectId): Promise<boolean> {
     try {
-      user = await this.models.User.create({
-        email: input.email,
-        name: input.name,
-        passwordHash: await hashPassword(input.password),
-      });
+      await this.email.send(message);
+      return true;
     } catch (err) {
-      if (isDuplicateKeyError(err)) throw refused;
+      this.logger.error({ event: `${event}_failed`, userId: String(userId), reason: (err as Error).message });
+      return false;
+    }
+  }
+
+  private async requireInvite(email: string): Promise<void> {
+    if (this.config.PUBLIC_SIGNUP_ENABLED) return;
+    if (!(await this.models.BetaInvite.exists({ email }))) throw new AppError('NOT_INVITED');
+  }
+
+  // --- Registration and email verification (FR-AUTH-01, FR-AUTH-16) ----------------------------------
+
+  /** Creates `user` accounts only; admins are seeded (D-95) and the request schema rejects a `role`. */
+  async register(input: RegisterRequest): Promise<RegisterResponse> {
+    if (await this.models.User.exists({ email: input.email })) throw new AppError('EMAIL_ALREADY_REGISTERED');
+    await this.requireInvite(input.email);
+
+    const now = new Date();
+    let user: UserWithId;
+    try {
+      const created = await this.models.User.create({
+        email: input.email,
+        name: input.fullName,
+        role: 'user',
+        passwordHash: await hashPassword(input.password),
+        passwordChangedAt: now,
+        city: input.city,
+        phone: input.phone ? { e164: input.phone, verifiedAt: null } : null,
+        consent: {
+          termsVersion: LEGAL_VERSIONS.terms,
+          termsAcceptedAt: now,
+          privacyVersion: LEGAL_VERSIONS.privacy,
+          privacyAcceptedAt: now,
+          marketingOptIn: input.marketingOptIn,
+          marketingUpdatedAt: now,
+        },
+      });
+      user = created.toObject() as UserWithId;
+    } catch (err) {
+      if (isDuplicateKeyError(err)) throw new AppError('EMAIL_ALREADY_REGISTERED');
       throw err;
     }
-    await this.models.BetaInvite.updateOne({ email: input.email, usedAt: null }, { $set: { usedAt: new Date() } });
-    return toUserResponse(user.toObject());
+    await this.models.BetaInvite.updateOne({ email: input.email, usedAt: null }, { $set: { usedAt: now } });
+
+    const pendingToken = randomToken();
+    const sent = await this.sendVerification(user, {
+      pendingTokenHash: sha256(pendingToken),
+      rememberMe: input.rememberMe,
+      first: true,
+    });
+    this.logger.info({ event: 'account_registered', userId: String(user._id) });
+    return { email: user.email, pendingToken, verificationEmailSent: sent };
   }
 
-  /** FR-AUTH-03. One generic error for unknown email, wrong password and inactive account. */
-  async login(input: LoginRequest): Promise<string> {
-    const failed = new AppError('UNAUTHENTICATED', AUTH_MESSAGES.loginFailed);
+  private async sendVerification(
+    user: UserWithId,
+    options: { pendingTokenHash?: string; rememberMe?: boolean; first?: boolean } = {},
+  ): Promise<boolean> {
+    const issued = await this.challenges.issue(user._id, 'email_verification', {
+      otp: true,
+      linkTtlMs: VERIFICATION_LINK_TTL_MS,
+      pendingTokenHash: options.pendingTokenHash,
+      rememberMe: options.rememberMe,
+      bypassLimits: options.first,
+    });
+    const verifyLink = link(this.config.WEB_ORIGIN, '/verify-email/link', issued.linkToken!);
+    return this.deliver(
+      templates.verifyEmail(user.email, user.name, issued.otp!, verifyLink),
+      'verification_email',
+      user._id,
+    );
+  }
+
+  /** Completes verification; opens a session only for the browser holding the pending-registration token. */
+  private async completeVerification(
+    userId: Types.ObjectId,
+    challenge: { pendingTokenHash?: string | null; rememberMe?: boolean | null },
+    pendingToken: string | undefined,
+  ): Promise<VerifyEmailResponse> {
+    const user = await this.models.User.findOneAndUpdate(
+      { _id: userId, isActive: true },
+      { $set: { emailVerifiedAt: new Date() } },
+      { returnDocument: 'after' },
+    ).lean();
+    if (!user) throw new AppError('OTP_INVALID');
+    await this.challenges.clear(userId, 'email_verification');
+    this.logger.info({ event: 'email_verified', userId: String(userId) });
+
+    const sameBrowser =
+      pendingToken !== undefined &&
+      challenge.pendingTokenHash != null &&
+      challenge.pendingTokenHash === sha256(pendingToken);
+    if (!sameBrowser) return { verified: true, email: user.email };
+    const accessToken = await this.sessions.create(user._id, user.tokenVersion, Boolean(challenge.rememberMe));
+    return { verified: true, email: user.email, accessToken, onboardingStep: onboardingStep(user) };
+  }
+
+  async verifyEmailOtp(input: VerifyEmailOtpRequest): Promise<VerifyEmailResponse> {
+    const user = await this.models.User.findOne({ email: input.email, emailVerifiedAt: null, isActive: true }).lean();
+    if (!user) throw new AppError('OTP_INVALID');
+    const challenge = await this.challenges.verifyOtp(user._id, 'email_verification', input.otp);
+    return this.completeVerification(user._id, challenge, input.pendingToken);
+  }
+
+  async verifyEmailLink(input: VerifyEmailLinkRequest): Promise<VerifyEmailResponse> {
+    const challenge = await this.challenges.consumeLink(['email_verification'], input.token);
+    return this.completeVerification(challenge.userId, challenge, input.pendingToken);
+  }
+
+  /** The pending registration a browser is working on (verification page after a refresh). */
+  async pendingVerification(pendingToken: string): Promise<PendingVerificationResponse> {
+    const challenge = await this.challenges.findByPendingToken(pendingToken);
+    const user = challenge
+      ? await this.models.User.findOne({ _id: challenge.userId, emailVerifiedAt: null }).lean()
+      : null;
+    if (!challenge || !user)
+      throw new AppError('NOT_FOUND', 'This verification session has ended. Enter your email to continue.');
+    return { email: user.email, resendAvailableInSeconds: this.challenges.resendWaitSeconds(challenge) };
+  }
+
+  /**
+   * Resend. With the pending-registration token the caller learns about cooldowns; recovery by email
+   * alone always gets the same generic response (no account enumeration).
+   */
+  async resendVerification(
+    input: ResendVerificationRequest,
+  ): Promise<{ accepted: true; resendAvailableInSeconds?: number }> {
+    if (input.pendingToken) {
+      const challenge = await this.challenges.findByPendingToken(input.pendingToken);
+      const user = challenge
+        ? await this.models.User.findOne({ _id: challenge.userId, emailVerifiedAt: null }).lean()
+        : null;
+      if (!challenge || !user || user.email !== input.email)
+        throw new AppError('NOT_FOUND', 'This verification session has ended. Enter your email to continue.');
+      await this.sendVerification(user);
+      return {
+        accepted: true,
+        resendAvailableInSeconds: this.challenges.resendWaitSeconds(
+          await this.challenges.find(user._id, 'email_verification'),
+        ),
+      };
+    }
+    const user = await this.models.User.findOne({ email: input.email, emailVerifiedAt: null, isActive: true }).lean();
+    if (user) {
+      try {
+        await this.sendVerification(user);
+      } catch (err) {
+        if (!(err instanceof AppError)) throw err; // cooldown or limit: stay generic
+      }
+    }
+    return { accepted: true };
+  }
+
+  /** Corrects the email of a pending registration; earlier codes and links stop working. */
+  async changePendingEmail(
+    input: ChangePendingEmailRequest,
+  ): Promise<{ email: string; verificationEmailSent: boolean }> {
+    const challenge = await this.challenges.findByPendingToken(input.pendingToken);
+    const user = challenge
+      ? await this.models.User.findOne({ _id: challenge.userId, emailVerifiedAt: null }).lean()
+      : null;
+    if (!challenge || !user)
+      throw new AppError('NOT_FOUND', 'This verification session has ended. Enter your email to continue.');
+    if (input.newEmail === user.email)
+      throw new AppError('INVALID_REQUEST', 'This is already the email on your account.');
+    if (await this.models.User.exists({ email: input.newEmail })) throw new AppError('EMAIL_ALREADY_REGISTERED');
+    await this.requireInvite(input.newEmail);
+
+    const wait = this.challenges.resendWaitSeconds(challenge);
+    if (wait > 0) throw new AppError('RESEND_COOLDOWN', undefined, wait);
+    try {
+      await this.models.User.updateOne({ _id: user._id, emailVerifiedAt: null }, { $set: { email: input.newEmail } });
+    } catch (err) {
+      if (isDuplicateKeyError(err)) throw new AppError('EMAIL_ALREADY_REGISTERED');
+      throw err;
+    }
+    const updated = { ...user, email: input.newEmail };
+    const sent = await this.sendVerification(updated);
+    this.logger.info({ event: 'pending_email_changed', userId: String(user._id) });
+    return { email: input.newEmail, verificationEmailSent: sent };
+  }
+
+  // --- Login (FR-AUTH-03, D-90) ----------------------------------------------------------------------
+
+  async login(input: LoginRequest): Promise<SessionResponse> {
     const user = await this.models.User.findOne({ email: input.email }).lean();
     if (!user) {
       await verifyAgainstDummy(input.password);
-      throw failed;
+      throw new AppError('UNAUTHENTICATED', 'Incorrect email or password.');
     }
-    const ok = await verifyPassword(user.passwordHash, input.password);
-    if (!ok || !user.isActive) throw failed;
-    return this.sessions.create(user._id, user.tokenVersion);
+    const lockedUntil = user.loginSecurity?.lockedUntil;
+    if (lockedUntil && lockedUntil > new Date())
+      throw new AppError('ACCOUNT_LOCKED', undefined, secondsUntil(lockedUntil));
+
+    const ok = user.passwordHash
+      ? await verifyPassword(user.passwordHash, input.password)
+      : (await verifyAgainstDummy(input.password), false);
+    if (!ok) {
+      await this.recordLoginFailure(user._id);
+      throw new AppError('UNAUTHENTICATED', 'Incorrect email or password.');
+    }
+    if (!user.isActive) throw new AppError('UNAUTHENTICATED', 'Incorrect email or password.');
+    await this.models.User.updateOne(
+      { _id: user._id },
+      { $set: { 'loginSecurity.failedCount': 0, 'loginSecurity.lockedUntil': null } },
+    );
+    if (!user.emailVerifiedAt) throw new AppError('EMAIL_NOT_VERIFIED');
+
+    const accessToken = await this.sessions.create(user._id, user.tokenVersion, input.rememberMe);
+    return { accessToken, onboardingStep: onboardingStep(user) };
   }
 
-  /** FR-AUTH-06: deletes only this session's record. */
+  private async recordLoginFailure(userId: Types.ObjectId): Promise<void> {
+    const updated = await this.models.User.findOneAndUpdate(
+      { _id: userId },
+      { $inc: { 'loginSecurity.failedCount': 1 } },
+      { returnDocument: 'after' },
+    ).lean();
+    if ((updated?.loginSecurity?.failedCount ?? 0) >= LOGIN_MAX_FAILED_ATTEMPTS) {
+      const lockedUntil = new Date(Date.now() + LOGIN_LOCKOUT_MS);
+      await this.models.User.updateOne(
+        { _id: userId },
+        { $set: { 'loginSecurity.failedCount': 0, 'loginSecurity.lockedUntil': lockedUntil } },
+      );
+      this.logger.warn({ event: 'login_locked', userId: String(userId) });
+      throw new AppError('ACCOUNT_LOCKED', undefined, secondsUntil(lockedUntil));
+    }
+  }
+
   async logout(sid: string): Promise<void> {
     await this.sessions.revoke(sid);
   }
 
-  /** FR-AUTH-11: revokes every session and token, then opens a new session for this browser. */
-  async changePassword(user: UserWithId, input: ChangePasswordRequest): Promise<string> {
-    if (!(await verifyPassword(user.passwordHash, input.currentPassword))) {
-      throw new AppError('PASSWORD_INCORRECT', AUTH_MESSAGES.passwordIncorrect);
+  // --- Google (FR-AUTH-15, D-88) ---------------------------------------------------------------------
+
+  async google(input: GoogleAuthRequest): Promise<GoogleAuthResponse> {
+    if (!this.googleVerify) throw new AppError('PROVIDER_NOT_CONFIGURED', 'Google sign-in is not available yet.');
+    const identity = await this.googleVerify(input.idToken, input.nonce);
+
+    const bySub = await this.models.User.findOne({ googleSub: identity.sub }).lean();
+    const byEmail = bySub ?? (await this.models.User.findOne({ email: identity.email }).lean());
+
+    if (byEmail) {
+      if (input.intent === 'signup') throw new AppError('GOOGLE_ACCOUNT_EXISTS');
+      if (!byEmail.isActive) throw new AppError('UNAUTHENTICATED', 'Google sign-in could not be completed.');
+      // Admins log in only with their seeded email and password; never link Google to them (D-95).
+      if (byEmail.role === 'admin') throw new AppError('FORBIDDEN', 'Admin accounts log in with email and password.');
+      const lockedUntil = byEmail.loginSecurity?.lockedUntil;
+      if (lockedUntil && lockedUntil > new Date())
+        throw new AppError('ACCOUNT_LOCKED', undefined, secondsUntil(lockedUntil));
+
+      let user: UserWithId = byEmail;
+      let linked = false;
+      if (byEmail.googleSub !== identity.sub) {
+        if (typeof byEmail.googleSub === 'string') {
+          throw new AppError('FORBIDDEN', 'This StyleMe account is linked to a different Google account.');
+        }
+        user = await this.linkGoogle(byEmail, identity.sub);
+        linked = true;
+      }
+      const accessToken = await this.sessions.create(user._id, user.tokenVersion, input.rememberMe);
+      return { accessToken, onboardingStep: onboardingStep(user), created: false, linked };
     }
+
+    if (input.intent === 'login') throw new AppError('GOOGLE_NO_ACCOUNT');
+    if (!input.acceptTerms)
+      throw new AppError('INVALID_REQUEST', 'Accept the Terms of Service and Privacy Policy to continue');
+    await this.requireInvite(identity.email);
+    const now = new Date();
+    let created: UserWithId;
+    try {
+      created = (
+        await this.models.User.create({
+          email: identity.email,
+          name: identity.name ?? identity.email.split('@')[0],
+          role: 'user',
+          googleSub: identity.sub,
+          emailVerifiedAt: now,
+          passwordHash: null,
+          consent: {
+            termsVersion: LEGAL_VERSIONS.terms,
+            termsAcceptedAt: now,
+            privacyVersion: LEGAL_VERSIONS.privacy,
+            privacyAcceptedAt: now,
+            marketingOptIn: input.marketingOptIn,
+            marketingUpdatedAt: now,
+          },
+        })
+      ).toObject() as UserWithId;
+    } catch (err) {
+      if (isDuplicateKeyError(err)) throw new AppError('GOOGLE_ACCOUNT_EXISTS');
+      throw err;
+    }
+    await this.models.BetaInvite.updateOne({ email: identity.email, usedAt: null }, { $set: { usedAt: now } });
+    this.logger.info({ event: 'account_registered_google', userId: String(created._id) });
+    const accessToken = await this.sessions.create(created._id, created.tokenVersion, input.rememberMe);
+    return { accessToken, onboardingStep: onboardingStep(created), created: true, linked: false };
+  }
+
+  /**
+   * Links a Google identity to an existing account after Google verified the email. If that account's
+   * email was never verified, whoever registered it had not proved they own the address, so their
+   * password and sessions are discarded first (pre-registration takeover protection); the Google user
+   * then sets their own password during onboarding.
+   */
+  private async linkGoogle(user: UserWithId, sub: string): Promise<UserWithId> {
+    const unverified = !user.emailVerifiedAt;
+    const update = unverified
+      ? { $set: { googleSub: sub, emailVerifiedAt: new Date(), passwordHash: null }, $inc: { tokenVersion: 1 } }
+      : { $set: { googleSub: sub } };
+    let updated: UserWithId | null;
+    try {
+      updated = await this.models.User.findOneAndUpdate({ _id: user._id, googleSub: { $exists: false } }, update, {
+        returnDocument: 'after',
+      }).lean();
+    } catch (err) {
+      if (isDuplicateKeyError(err))
+        throw new AppError('FORBIDDEN', 'This Google account is already linked to another StyleMe account.');
+      throw err;
+    }
+    if (!updated) throw new AppError('CONFLICT', 'Please try signing in with Google again.');
+    if (unverified) {
+      await this.sessions.revokeAll(user._id);
+      await this.challenges.clearAll(user._id);
+    }
+    this.logger.info({ event: 'google_linked', userId: String(user._id), takeoverProtection: unverified });
+    return updated;
+  }
+
+  /** Google-registered users create their StyleMe password before onboarding (D-88). */
+  async setupPassword(user: UserWithId, input: SetupPasswordRequest): Promise<{ onboardingStep: OnboardingStep }> {
+    if (user.passwordHash) throw new AppError('CONFLICT', 'Your account already has a password.');
+    const updated = await this.models.User.findOneAndUpdate(
+      { _id: user._id, passwordHash: null },
+      { $set: { passwordHash: await hashPassword(input.password), passwordChangedAt: new Date() } },
+      { returnDocument: 'after' },
+    ).lean();
+    if (!updated) throw new AppError('CONFLICT', 'Your account already has a password.');
+    return { onboardingStep: onboardingStep(updated) };
+  }
+
+  // --- Password reset (FR-AUTH-13, D-89) --------------------------------------------------------------
+
+  async requestPasswordReset(
+    input: ResetRequestRequest,
+  ): Promise<{ accepted: true; method: 'link' | 'otp'; resendAvailableInSeconds: number }> {
+    const user = await this.models.User.findOne({ email: input.email }).lean();
+    // Agreed UI decision: tell the user the email isn't registered (with a Sign Up link). Rate limits apply.
+    if (!user) throw new AppError('EMAIL_NOT_REGISTERED');
+    if (user.isActive) {
+      if (input.method === 'otp') {
+        const { otp } = await this.challenges.issue(user._id, 'password_reset', { otp: true });
+        await this.deliver(templates.resetPasswordOtp(user.email, otp!), 'reset_email', user._id);
+      } else {
+        const { linkToken } = await this.challenges.issue(user._id, 'password_reset', { linkTtlMs: RESET_LINK_TTL_MS });
+        await this.deliver(
+          templates.resetPasswordLink(user.email, link(this.config.WEB_ORIGIN, '/reset-password', linkToken!)),
+          'reset_email',
+          user._id,
+        );
+      }
+    }
+    const challenge = await this.challenges.find(user._id, 'password_reset');
+    return {
+      accepted: true,
+      method: input.method,
+      resendAvailableInSeconds: this.challenges.resendWaitSeconds(challenge),
+    };
+  }
+
+  /** A correct reset code is exchanged for a single-use token to set the new password. */
+  async verifyResetOtp(input: ResetVerifyOtpRequest): Promise<{ resetToken: string }> {
+    const user = await this.models.User.findOne({ email: input.email, isActive: true }).lean();
+    if (!user) throw new AppError('OTP_INVALID');
+    const challenge = await this.challenges.verifyOtp(user._id, 'password_reset', input.otp);
+    const resetToken = randomToken();
+    await this.models.AuthChallenge.updateOne(
+      { _id: challenge._id },
+      {
+        $set: {
+          linkHash: sha256(resetToken),
+          linkExpiresAt: new Date(Date.now() + RESET_SESSION_TTL_MS),
+          consumedAt: null,
+          otpHash: null,
+          otpExpiresAt: null,
+        },
+      },
+    );
+    return { resetToken };
+  }
+
+  /** FR-AUTH-14: sets the password, revokes every session and token, clears a login lockout. */
+  async confirmPasswordReset(input: ResetConfirmRequest): Promise<void> {
+    const challenge = await this.challenges.consumeLink(['password_reset'], input.token).catch(() => {
+      throw new AppError('LINK_INVALID', 'This reset link or code is invalid or has expired.');
+    });
+    const now = new Date();
+    const user = await this.models.User.findOneAndUpdate(
+      { _id: challenge.userId, isActive: true },
+      {
+        $set: {
+          passwordHash: await hashPassword(input.newPassword),
+          passwordChangedAt: now,
+          'loginSecurity.failedCount': 0,
+          'loginSecurity.lockedUntil': null,
+        },
+        $inc: { tokenVersion: 1 },
+      },
+      { returnDocument: 'after' },
+    ).lean();
+    if (!user) throw new AppError('LINK_INVALID', 'This reset link or code is invalid or has expired.');
+    // Receiving the code or link proves control of the address.
+    if (!user.emailVerifiedAt) await this.models.User.updateOne({ _id: user._id }, { $set: { emailVerifiedAt: now } });
+    await this.challenges.clear(user._id, 'password_reset');
+    await this.sessions.revokeAll(user._id);
+    this.logger.info({
+      event: 'password_reset_completed',
+      userId: String(user._id),
+      adminIssued: Boolean(challenge.issuedBy),
+    });
+  }
+
+  /** Admin-assisted recovery (FR-AUTH-12): a single-use code the user redeems on the reset page. */
+  async issueAdminResetCode(userId: Types.ObjectId, issuedBy: Types.ObjectId | null): Promise<string> {
+    const { linkToken } = await this.challenges.issue(userId, 'password_reset', {
+      linkTtlMs: ADMIN_RESET_TTL_MS,
+      issuedBy,
+      bypassLimits: true,
+    });
+    this.logger.info({
+      event: 'password_reset_code_issued',
+      userId: String(userId),
+      issuedBy: issuedBy ? String(issuedBy) : null,
+    });
+    return linkToken!;
+  }
+
+  // --- Password change while logged in (FR-AUTH-11, D-93) --------------------------------------------
+
+  async sendPasswordChangeOtp(user: UserWithId): Promise<OtpSentResponse> {
+    const { otp } = await this.challenges.issue(user._id, 'password_change', { otp: true });
+    await this.deliver(templates.passwordChangeOtp(user.email, otp!), 'password_change_email', user._id);
+    const challenge = await this.challenges.find(user._id, 'password_change');
+    return {
+      sent: true,
+      destination: maskEmail(user.email),
+      resendAvailableInSeconds: this.challenges.resendWaitSeconds(challenge),
+    };
+  }
+
+  /** Verifies the emailed code, sets the password, revokes all other sessions and keeps this browser signed in. */
+  async changePassword(user: UserWithId, sid: string, input: ChangePasswordRequest): Promise<string> {
+    await this.challenges.verifyOtp(user._id, 'password_change', input.otp);
+    const current = await this.sessions.find(sid, String(user._id));
     const updated = await this.models.User.findOneAndUpdate(
       { _id: user._id },
       {
@@ -96,91 +577,10 @@ export class AuthService {
       { returnDocument: 'after' },
     ).lean();
     if (!updated) throw new AppError('UNAUTHENTICATED');
-    await this.models.PasswordResetToken.deleteMany({ userId: user._id });
+    await this.challenges.clear(user._id, 'password_change');
+    await this.challenges.clear(user._id, 'password_reset');
     await this.sessions.revokeAll(user._id);
-    return this.sessions.create(updated._id, updated.tokenVersion);
-  }
-
-  /**
-   * Issues a single-use reset token (D-83). Earlier unused tokens for the user are invalidated.
-   * Returns the token; only its SHA-256 hash is stored. The token itself is never logged.
-   */
-  async issueResetToken(
-    userId: Types.ObjectId,
-    purpose: 'admin_issued' | 'self_service',
-    issuedBy: Types.ObjectId | null = null,
-  ): Promise<string> {
-    await this.models.PasswordResetToken.deleteMany({ userId, usedAt: null });
-    const token = randomToken();
-    const now = Date.now();
-    await this.models.PasswordResetToken.create({
-      userId,
-      tokenHash: sha256(token),
-      purpose,
-      issuedBy,
-      createdAt: new Date(now),
-      expiresAt: new Date(now + (purpose === 'admin_issued' ? ADMIN_RESET_TTL_MS : EMAIL_RESET_TTL_MS)),
-    });
-    this.logger.info({
-      event: 'password_reset_token_issued',
-      userId: String(userId),
-      purpose,
-      issuedBy: issuedBy ? String(issuedBy) : null,
-    });
-    return token;
-  }
-
-  /** FR-AUTH-13. Always the same response; an email only for an active account. */
-  async requestPasswordReset(email: string): Promise<void> {
-    if (!this.config.PASSWORD_RESET_EMAIL_ENABLED) {
-      throw new AppError('FORBIDDEN', AUTH_MESSAGES.resetEmailDisabled);
-    }
-    const user = await this.models.User.findOne({ email, isActive: true }).lean();
-    if (!user) return;
-    const token = await this.issueResetToken(user._id, 'self_service');
-    // The token goes in the URL fragment, which browsers never send to servers or in Referer headers.
-    const link = `${this.config.WEB_ORIGIN}/reset-password#token=${token}`;
-    // Not awaited, so the response time doesn't depend on whether the account exists.
-    this.emailSender.sendPasswordReset(user.email, link).catch((err: unknown) => {
-      this.logger.error({
-        event: 'password_reset_email_failed',
-        userId: String(user._id),
-        reason: err instanceof Error ? err.message : 'unknown',
-      });
-    });
-  }
-
-  /** FR-AUTH-14. The token is marked used atomically, so only one concurrent redemption succeeds. */
-  async confirmPasswordReset(input: ResetConfirmRequest): Promise<void> {
-    const invalid = new AppError('INVALID_REQUEST', AUTH_MESSAGES.resetTokenInvalid);
-    const now = new Date();
-    const record = await this.models.PasswordResetToken.findOneAndUpdate(
-      { tokenHash: sha256(input.token), usedAt: null, expiresAt: { $gt: now } },
-      { $set: { usedAt: now } },
-      { returnDocument: 'after' },
-    ).lean();
-    if (!record) throw invalid;
-
-    const user = await this.models.User.findOneAndUpdate(
-      { _id: record.userId, isActive: true },
-      {
-        $set: { passwordHash: await hashPassword(input.newPassword), passwordChangedAt: now },
-        $inc: { tokenVersion: 1 },
-      },
-    ).lean();
-    if (!user) throw invalid;
-
-    await this.models.PasswordResetToken.deleteMany({ userId: record.userId, _id: { $ne: record._id } });
-    await this.sessions.revokeAll(record.userId);
-    this.logger.info({ event: 'password_reset_completed', userId: String(record.userId), purpose: record.purpose });
-  }
-
-  /** FR-AUTH-09, D-85. */
-  async deleteOwnAccount(user: UserWithId, password: string): Promise<void> {
-    if (!(await verifyPassword(user.passwordHash, password))) {
-      throw new AppError('PASSWORD_INCORRECT', AUTH_MESSAGES.passwordIncorrect);
-    }
-    await deleteAccount(this.models, this.main, this.config.TOMBSTONE_HMAC_KEY, user, 'self_service');
-    this.logger.info({ event: 'account_deleted', userId: String(user._id), source: 'self_service' });
+    await this.deliver(templates.passwordChanged(updated.email), 'password_changed_email', user._id);
+    return this.sessions.create(updated._id, updated.tokenVersion, Boolean(current?.remember));
   }
 }

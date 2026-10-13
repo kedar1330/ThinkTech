@@ -30,7 +30,8 @@ People in India who want personal fashion guidance (see [BRD.md](BRD.md) §1–�
 
 | Capability | Requirements |
 |---|---|
-| Register (invite-only closed beta until D-74), log in, log out, change password, admin-assisted password recovery, delete account. Self-service email reset is built but enabled only at public launch | FR-AUTH |
+| Public landing site; sign-up by email (verified by code or link) or Google (invite-only closed beta until D-74); login with Remember Me and lockout; logout of this device; self-service reset by link or code; password change by emailed code; email change; optional verified phone; account deletion by code and confirmation (D-87 … D-94) | FR-AUTH, FR-UI |
+| Server-authoritative onboarding (style profile → optional appearance → Personalized Home) and a dashboard whose unbuilt sections are labelled "Coming soon" | FR-ONB, FR-UI |
 | Profile: department, sizes and fit per category, colour likes and dislikes, contrast, silhouette, coverage, comfort, fabrics, styles, occasions, optional per-look budget | FR-PROF, FR-SIZE-01 … 04 |
 | Optional self-reported appearance signals (skin-tone range, undertone, proportions), switchable and deletable | FR-SIG |
 | Founder-reviewed style knowledge base, Stage 1 release set C1: 12–20 palettes, about 20 templates, rules covering every FR-STY-09 area (coordination, occasions, preferences, fit, sizes, budget where it applies, alternatives). Built to support the full library of 100+ palettes and 100+ templates | FR-STY |
@@ -56,8 +57,8 @@ People in India who want personal fashion guidance (see [BRD.md](BRD.md) §1–�
 ## 4. User Journey
 
 ```
-Register → Log in → Profile (department, sizes, fit, colours, styles, occasions, optional budget)
-→ (optional) self-reported signals → Ask for looks (occasion, optional style, suggested/explore palette)
+Landing → Sign up (email + verification, or Google + password) → Style profile (department, sizes, fit, colours,
+styles, occasions, optional budget) → (optional) self-reported signals → Personalized Home → Ask for looks (occasion, optional style, suggested/explore palette)
 → Looks: slots with colour swatches, look specification, size note, search phrase, "Why this works"
 → Explore alternatives and palettes → Change a preference → Regenerate
 → Save a look → (optional) add an item you found to a slot: name, your price, optional link and note
@@ -77,8 +78,8 @@ Each criterion is checked by the tests named in brackets ([TESTING.md](TESTING.m
 
 | ID | Criterion |
 |---|---|
-| AC-01 | Register, log in, log out and `GET /v1/auth/me` work. Protected pages and endpoints reject unauthenticated access, and revoked tokens are rejected. After logout, the logged-out session's token is rejected even if replayed, while the user's other sessions keep working (T-01 … T-05, T-46) |
-| AC-02 | Deleting the account writes a minimal tombstone first (D-85), then removes the user, sessions, profile, signals, looks, feedback, shortlist items and their beta invite record; the user can no longer log in and existing tokens are rejected (T-06) |
+| AC-01 | Register (D-87 fields, consent recorded), verify by code or link, log in (with and without Remember Me), log out and `GET /v1/auth/me` work; unverified accounts can't log in; 3 wrong passwords lock login for 30 minutes. Protected pages and endpoints reject unauthenticated access and revoked tokens. After logout only that session's token is rejected; other sessions keep working (T-01 … T-05, T-46, T-50 … T-52) |
+| AC-02 | Account deletion needs an emailed code and explicit confirmation; it writes a minimal tombstone first (D-85), then removes the user, sessions, codes, profile, signals, looks, feedback, shortlist items and their beta invite record; the user can no longer log in and existing tokens are rejected (T-06) |
 | AC-03 | A profile can be saved with only `department`; invalid values (including a budget ≤ 0) are rejected; measurement fields are rejected because size charts don't exist yet (T-07, T-08) |
 | AC-04 | Self-reported signals are optional, stored without confidence, can be turned off or cleared, and never appear in any outbound call (T-09 … T-11) |
 | AC-05 | For every evaluation profile, a request with only an occasion returns at least one look, or a `200` with `INSUFFICIENT_MATCHES` naming the limiting constraint. Never an error (T-16, T-18) |
@@ -97,11 +98,11 @@ Each criterion is checked by the tests named in brackets ([TESTING.md](TESTING.m
 | AC-18 | After the hosting checkpoint (D-81), p95 latency of `POST /v1/recommendations` without AI is measured on the plan chosen for production (in staging if it runs on the same plan, otherwise on production before beta users are invited). Proposed target under 2 s (D-68); the measured value is recorded. A plan that sleeps when idle can't meet this target for the first request (DEPLOYMENT.md §9.1) |
 | AC-19 | A backup has been restored into staging with the full restore procedure: accounts deleted after the backup are deleted again by tombstone replay, verification passes before users are served, and a failed replay keeps the system in maintenance (T-43 … T-45). Uptime monitoring alerts the founder; a rollback has been rehearsed in staging (D-79, D-85) |
 | AC-20 | **Public launch only** (checked at HC-2): the legal review (D-74) is recorded as complete in the register, as the D-74 entry describes, with every required change done, and the other public-launch blockers in [ImplementationPlan.md](ImplementationPlan.md) §11 are met. Until then StyleMe is a closed beta for invited users (D-63), and the founder has been reminded to arrange the review |
-| AC-21 | While `PUBLIC_SIGNUP_ENABLED` is `false`, registration with an email not on the invite allow-list fails; invited emails can register; a refused registration gives the same response whether the email isn't invited or is already registered (T-37, T-49) |
+| AC-21 | While `PUBLIC_SIGNUP_ENABLED` is `false`, registration (email or Google) with an email not on the invite allow-list fails with `NOT_INVITED`; invited emails can register; an already-registered email gets the "already registered" message with a Log in link (T-37) |
 | AC-22 | With a synthetic fixture library of 150 palettes and 150 templates, the loader, linter and generator work without code changes, and generation latency is measured and recorded (T-38) |
-| AC-23 | Password change works with the current password and revokes all other sessions and old tokens; any reset revokes all sessions; admin-assisted recovery issues a single-use, hashed code valid 60 minutes, the user sets the new password, and the admin never sees it (T-39 … T-41) |
-| AC-24 | Public launch only (HC-2): self-service email reset gives generic responses, sends single-use 30-minute links only to active accounts, is rate-limited, and revokes all tokens on reset (T-41, T-42) |
-| AC-25 | Session and reset hardening: the session cookie is `HttpOnly`, `Secure` in staging and production, `SameSite=Lax` and host-only; state-changing requests with a foreign `Origin` are rejected; login and registration refusals are generic; the reset page keeps the token out of the URL after load, sends `Referrer-Policy: no-referrer`, loads no third-party resources, and tokens never appear in logs (T-47 … T-49) |
+| AC-23 | Password change by emailed code revokes all other sessions and keeps this browser signed in; reset by link (15 minutes) or code (5 minutes) revokes all sessions and doesn't log in; codes lock after 3 wrong tries and resend is limited; admin-assisted recovery issues a single-use, hashed code valid 60 minutes that the admin never sees; email change, phone verification and Google sign-in follow D-88, D-92 and D-93 (T-39 … T-42, T-53 … T-55) |
+| AC-24 | Checked in production before public launch: self-service reset and verification emails arrive through the chosen provider with tracking off; resets are rate-limited and revoke all sessions (T-41, T-42) |
+| AC-25 | Session and token hardening: credential cookies are `HttpOnly`, `Secure` with `__Host-` in staging and production, `SameSite=Lax` and host-only; state-changing requests with a foreign `Origin` are rejected; token pages keep the token out of the URL after load and send `Referrer-Policy: no-referrer` and `Cache-Control: no-store`; passwords, codes and tokens never appear in logs (T-47, T-48, T-57) |
 
 ### 5.2 Stage 1 shortlist and budget (D-77 = B)
 
@@ -161,12 +162,12 @@ Test fixtures never exist in production ([DEPLOYMENT.md](DEPLOYMENT.md) §2).
 
 ## 7. Definition of Done
 
-The MVP (Stage 1) is done when content set C1 is approved, every closed-beta criterion in §5.1 and §5.2 (all except AC-20 and AC-24) is met and recorded, the hosting decision (D-81) has been made at the hosting checkpoint, and the release checklist ([DEPLOYMENT.md](DEPLOYMENT.md) §8) is complete. It is released as a closed beta; public launch needs every blocker in [ImplementationPlan.md](ImplementationPlan.md) §11 (D-74 recorded complete, AC-20, AC-24, D-86). The full product styling scope (C2, §5.5) is the Stage 2 release requirement.
+The MVP (Stage 1) is done when content set C1 is approved, every closed-beta criterion in §5.1 and §5.2 (all except AC-20 and AC-24) is met and recorded, the hosting decision (D-81) has been made at the hosting checkpoint, and the release checklist ([DEPLOYMENT.md](DEPLOYMENT.md) §8) is complete. It is released as a closed beta; public launch needs every blocker in [ImplementationPlan.md](ImplementationPlan.md) §11 (D-74 recorded complete, AC-20, AC-24). A working email provider (D-84) is needed before the closed beta, because registration requires email verification. The full product styling scope (C2, §5.5) is the Stage 2 release requirement.
 
 ---
 
 ## 8. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-07, D-46, D-52, D-53, D-55, D-57, D-62, D-63, D-65, D-67, D-68, D-74, D-76 … D-86.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-07, D-46, D-86 … D-94, D-52, D-53, D-55, D-57, D-62, D-63, D-65, D-67, D-68, D-74, D-76 … D-86.
 
 **D-77 is approved (Option B).** D-48 and D-76 stay pending and are raised only when needed; D-81 (hosting) is decided at the hosting checkpoint; D-74 (legal review) blocks public launch only.

@@ -50,7 +50,7 @@ Platforms marked "planned" are not configured: no hosting account, plan or crede
 
 | Component | Role |
 |---|---|
-| `apps/web` | UI, Auth.js session, server-side API calls |
+| `apps/web` | UI, first-party session cookie and Google OAuth round trip, server-side API calls |
 | `apps/api` | REST API, business logic, persistence, integrations, scripts |
 | `packages/contracts` | Shared Zod schemas and types |
 | `apps/api/src/style-rules` | The style knowledge base |
@@ -129,7 +129,7 @@ Summary only; full detail in [SECURITY.md](SECURITY.md).
 | NFR-SEC-03 | Authorization on every protected route; all user data isolated to its owner. |
 | NFR-SEC-04 | Zod validation of every request and every AI output. |
 | NFR-SEC-05 | Secrets are server-side, per environment, never in Git, images or logs; no `NEXT_PUBLIC_` secrets. |
-| NFR-SEC-06 | Rate limits on authentication, password change and reset, account deletion, recommendations, feedback and shortlist writes (D-38). |
+| NFR-SEC-06 | Rate limits on authentication, verification and reset codes, account changes, account deletion, recommendations, feedback and shortlist writes (D-38); login lockout after 3 wrong passwords and code lockout after 3 wrong codes (D-89, D-90). |
 | NFR-SEC-07 | CORS restricted to each environment's web origin; Helmet headers. |
 | NFR-SEC-08 | Error responses never expose internals. |
 | NFR-SEC-09 | Separate databases and least-privilege credentials per environment (D-78). |
