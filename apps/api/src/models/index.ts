@@ -53,6 +53,8 @@ const userSchema = new Schema(
         {
           styleProfileCompletedAt: { type: Date, default: null },
           appearanceCompletedAt: { type: Date, default: null },
+          // Set when the user chose "Skip for now" instead of setting up the style profile.
+          skippedAt: { type: Date, default: null },
         },
         { _id: false },
       ),

@@ -2,7 +2,12 @@
 
 import { useActionState, useState } from 'react';
 import type { ProfileResponse } from '@styleme/contracts';
-import { completeAppearanceAction, completeStyleProfileAction, setupPasswordAction } from '@/app/actions/onboarding';
+import {
+  completeAppearanceAction,
+  completeStyleProfileAction,
+  setupPasswordAction,
+  skipOnboardingAction,
+} from '@/app/actions/onboarding';
 import { FormMessage, SubmitButton } from '@/components/auth/shared';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { Card } from '@/components/ui/card';
@@ -93,6 +98,30 @@ export function StyleProfileStep({ initial, askCity }: { initial: ProfileRespons
         ) : null
       }
     />
+  );
+}
+
+/** "Skip for now" on the style profile step: go to Home now and complete the profile later. */
+export function SkipStyleProfile() {
+  const [state, action, pending] = useActionState(skipOnboardingAction, undefined);
+  return (
+    <form
+      action={action}
+      className="flex flex-col gap-3 rounded-xl border border-dashed border-input bg-surface/60 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+    >
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm font-medium">Not ready yet?</p>
+        <p className="text-sm text-muted-foreground">
+          Skip for now and explore StyleMe. You can finish your profile anytime from Home or your profile menu.
+        </p>
+        <FormMessage state={state} />
+      </div>
+      <div className="shrink-0 sm:w-44">
+        <SubmitButton pending={pending} pendingLabel="Skipping…" variant="outline">
+          Skip for now
+        </SubmitButton>
+      </div>
+    </form>
   );
 }
 

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import type { AppearanceResponse, ProfileResponse } from '@styleme/contracts';
+import { profileCompleteness, type AppearanceResponse, type ProfileResponse } from '@styleme/contracts';
+import { ProfileCompletenessCard } from '@/components/app/ProfileCompleteness';
 import { AppearanceForm } from '@/components/profile/AppearanceForm';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { Card } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { requireOnboarded } from '@/lib/auth/session';
 export const metadata: Metadata = { title: 'Discover My Style' };
 
 export default async function ProfilePage() {
-  const { accessToken } = await requireOnboarded();
+  const { user, accessToken } = await requireOnboarded();
   const [profile, appearance] = await Promise.all([
     apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }),
     apiRequest<AppearanceResponse>('/v1/appearance', { token: accessToken }),
@@ -34,6 +35,7 @@ export default async function ProfilePage() {
           </a>
         </nav>
       </header>
+      <ProfileCompletenessCard completeness={profileCompleteness(profile, user)} compact />
       <section id="style-profile" className="scroll-mt-20 space-y-4">
         <h2 className="font-display text-2xl text-primary">Style profile</h2>
         <p className="text-sm text-muted-foreground">

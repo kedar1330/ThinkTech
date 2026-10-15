@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { ProfileResponse } from '@styleme/contracts';
 import { OnboardingFrame } from '@/components/app/OnboardingFrame';
-import { StyleProfileStep } from '@/components/app/OnboardingForms';
+import { SkipStyleProfile, StyleProfileStep } from '@/components/app/OnboardingForms';
 import { apiRequest } from '@/lib/api/server';
 import { requireStep } from '@/lib/auth/session';
 
@@ -14,8 +14,9 @@ export default async function StyleProfileStepPage() {
     <OnboardingFrame
       current="style_profile"
       title="Tell us about your style"
-      intro="Only the department is required. Everything else helps StyleMe understand you, and you can change it at any time."
+      intro="Set it up now — only the department is required, and everything else helps StyleMe understand you — or skip and finish it later."
     >
+      <SkipStyleProfile />
       <StyleProfileStep initial={profile} askCity={!user.city} />
     </OnboardingFrame>
   );

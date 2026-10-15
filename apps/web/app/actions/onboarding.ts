@@ -88,6 +88,23 @@ export async function completeStyleProfileAction(prev: FormState, formData: Form
   redirect(`${pathForStep(step)}${phoneNotice ? `?phone=${phoneNotice}` : ''}`);
 }
 
+/**
+ * "Skip for now" (FR-ONB-05): finishes onboarding without a style profile. Nothing is saved; the
+ * profile can be completed later from Home or the profile menu.
+ */
+export async function skipOnboardingAction(_prev: FormState): Promise<FormState> {
+  if (!(await sameOrigin())) return BLOCKED;
+  const token = await tokenOrLogin();
+  let step: OnboardingStep;
+  try {
+    ({ step } = await apiRequest<{ step: OnboardingStep }>('/v1/onboarding/skip', { method: 'POST', token }));
+  } catch (err) {
+    redirectIfSignedOut(err);
+    return errorState(err);
+  }
+  redirect(step === 'complete' ? '/home?skipped=1' : pathForStep(step));
+}
+
 /** Appearance step: optional. Saving signals happens in the form; this finishes the step (or skips). */
 export async function completeAppearanceAction(_prev: FormState): Promise<FormState> {
   if (!(await sameOrigin())) return BLOCKED;

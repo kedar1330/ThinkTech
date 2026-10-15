@@ -52,11 +52,11 @@ The style knowledge base (palettes, rules, templates) is **not** stored in Mongo
 | `name` | string (full name) |
 | `emailVerifiedAt` | timestamp, or `null` until the email is verified (D-89). Unverified accounts can't log in |
 | `googleSub` | Google account ID, unique when set (D-88) |
-| `city` | city ID from the shared list in `packages/contracts/src/cities.ts`, or `null` (Google sign-ups give it during onboarding) |
+| `city` | city ID from the shared list in `packages/contracts/src/cities.ts`, or `null` (Google sign-ups give it during onboarding; users who skip onboarding may add it later in Settings) |
 | `phone` | `{ e164, verifiedAt }` or `null` (D-92) |
 | `consent` | `{ termsVersion, termsAcceptedAt, privacyVersion, privacyAcceptedAt, marketingOptIn, marketingUpdatedAt }` (D-87) |
 | `loginSecurity` | `{ failedCount, lockedUntil }` — login lockout (D-90) |
-| `onboarding` | `{ styleProfileCompletedAt, appearanceCompletedAt }` — server-authoritative progress (FR-ONB) |
+| `onboarding` | `{ styleProfileCompletedAt, appearanceCompletedAt, skippedAt }` — server-authoritative progress (FR-ONB). `skippedAt` is set when the user chose "Skip for now" instead of saving a style profile (FR-ONB-05); such users may have no `profiles` document and no city |
 | `role` | `user` \| `admin` (D-73) |
 | `isActive` | boolean; set only by admin scripts. When `false`, login fails and existing tokens are rejected (FR-AUTH-08) |
 | `tokenVersion` | integer; incremented to revoke all API tokens — on password change or reset, when Google linking discards a pre-registered password, or by admin script (D-05, D-07, D-83, D-88) |
