@@ -1,30 +1,81 @@
 # StyleMe
 
-Personal styling for users in India: explained, deterministic look suggestions, with a shortlist and budget on prices the user enters. Stage 1 ships as an invite-only closed beta.
+Personal styling for users in India: explained, deterministic look suggestions built from a curated, founder-approved style knowledge base, with a shortlist and budget on prices the user enters. StyleMe is a styling guide, not a shop — it never invents products, prices or availability.
 
-The specifications are in [`docs/`](docs/). Start with [MVP.md](docs/MVP.md) and the [Implementation Plan](docs/ImplementationPlan.md), which also holds the decision register (§8).
+Stage 1 is planned as a closed beta (D-63); see [PROJECT_OVERVIEW.md §15](docs/PROJECT_OVERVIEW.md#15-conflicts-and-missing-decisions) for the open question about the public sign-up default.
+
+## Why StyleMe
+
+People know the occasion they are dressing for, but not how to put an outfit together: which colours and cuts suit them, what fabrics fit the occasion, what to search for, and how to stay within budget. StyleMe answers "what should I wear?" with complete looks and the reasons behind them, for everyday, work, festive, wedding, party, date, travel and formal occasions across Indian, fusion and western wear. Appearance details are optional, self-reported and deletable; there is no photo analysis.
+
+Full product description and intended behaviour of every section: [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
+
+## Features and current status
+
+Verified against the code on `main`. ✅ built · 🟡 partial · ⬜ placeholder ("Coming soon" page only) · ⛔ waits for a founder decision or approval.
+
+| Section                                                            | Status | Notes                                                                        |
+| ------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------- |
+| Sign-up, email verification, login, password reset, Google sign-in | ✅     | Account created only after the emailed 6-digit code is verified              |
+| Onboarding, Home, profile completeness                             | ✅     | Set up now or **Skip for now**; "Complete your profile" on Home              |
+| Style profile and appearance signals (labelled Discover My Style)  | ✅     | Self-reported; signals can be switched off or cleared                        |
+| Settings, consent, account deletion                                | ✅     | Data export is not specified yet                                             |
+| Shared styling database, rules and engine                          | 🟡     | Tooling built; **content empty (0 palettes, 0 templates)**; engine not built |
+| Discover My Style — look recommendations                           | ⬜     | Needs the styling content and engine                                         |
+| My Colour Palette                                                  | ⬜     |                                                                              |
+| Outfit Categories                                                  | ⬜     | Requirement not yet written                                                  |
+| Saved Outfits and feedback                                         | ⬜     |                                                                              |
+| Shop My Look (shortlist of items you found, budget)                | ⬜     | Real retailer products ⛔ until a retailer authorises StyleMe                |
+| Design Studio, Style Assistant                                     | ⛔     | Deferred (D-76)                                                              |
+| Virtual Try-On                                                     | ⛔     | Future (D-48)                                                                |
+| Weather-aware styling                                              | ⛔     | Stage 2; provider not chosen (D-60)                                          |
+
+Build order and milestone status: [docs/DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT_ROADMAP.md).
+
+## Team
+
+| Member     | Primary ownership                                                                       |
+| ---------- | --------------------------------------------------------------------------------------- |
+| **Shreya** | Shared styling database, rules, matching/ranking engine and common contracts            |
+| **Johita** | Discover My Style and Outfit Categories                                                 |
+| **Ankita** | My Colour Palette, Saved Outfits and feedback                                           |
+| **Kedar**  | Shop My Look and Design Studio after approval; later Virtual Try-On subject to approval |
+
+Responsibilities, shared-file owners and how we coordinate: [docs/TEAM_TASK_ASSIGNMENTS.md](docs/TEAM_TASK_ASSIGNMENTS.md). Proposed issues: [docs/PROPOSED_ISSUES.md](docs/PROPOSED_ISSUES.md).
+
+## Tech stack
+
+| Layer   | Technology                                                                                                                                              |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web     | Next.js 16 (App Router), React 19, Tailwind CSS 4, Radix UI primitives, lucide-react icons; server-side API calls (BFF) with an HttpOnly session cookie |
+| API     | Node.js 24, Express 5, Mongoose 9 on MongoDB, Zod 4, argon2 password hashing, pino logging, nodemailer (SMTP)                                           |
+| Shared  | `packages/contracts` — Zod schemas and types used by web and API                                                                                        |
+| Tests   | Vitest 5, Testing Library and jsdom (web), Supertest and `mongodb-memory-server` (API)                                                                  |
+| Tooling | pnpm 10 workspaces, TypeScript 5.9, ESLint 10, Prettier 3, GitHub Actions CI, Docker (API image)                                                        |
 
 ## Repository
 
-| Path                 | Contents                                                     |
-| -------------------- | ------------------------------------------------------------ |
-| `apps/web`           | Next.js web app (session cookie, server-side API calls)      |
-| `apps/api`           | Express API, MongoDB models, operator scripts                |
-| `packages/contracts` | Zod schemas and types shared by web and API                  |
-| `docs/`              | Requirements, architecture, security, testing and deployment |
+| Path                 | Contents                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| `apps/web`           | Next.js web app (session cookie, server-side API calls)                                 |
+| `apps/api`           | Express API, MongoDB models, style knowledge base (`src/style-rules`), operator scripts |
+| `packages/contracts` | Zod schemas and types shared by web and API                                             |
+| `docs/`              | Requirements, architecture, security, testing, deployment and team documents            |
 
 ## Prerequisites
 
 - Node.js 24 LTS (`.nvmrc`) and pnpm 10 (`corepack enable`, or `npm i -g pnpm@10`)
 - A local MongoDB on `mongodb://127.0.0.1:27017` to run the app. The tests use `mongodb-memory-server` and need no database.
 
-## Local development
+## Local setup
 
 ```sh
+git clone https://github.com/kedar1330/ThinkTech.git
+cd ThinkTech
 pnpm install
 ```
 
-Create `apps/api/.env` and `apps/web/.env.local` from the names in [`.env.example`](.env.example). Generate each secret with:
+Create `apps/api/.env` and `apps/web/.env.local` from the names in [`.env.example`](.env.example). Both files are git-ignored; never commit them. Generate each secret with:
 
 ```sh
 node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
@@ -37,9 +88,21 @@ pnpm dev:api          # API on http://localhost:4000
 pnpm dev:web          # web app on http://localhost:3000
 ```
 
+### Database
+
+- **Collections and indexes** are created by Mongoose when the API starts.
+- **Migrations** run with `pnpm --filter @styleme/api migrate` before a new API version takes traffic (one so far: `001-auth-onboarding`).
+- **Admin account:** `pnpm --filter @styleme/api seed` (see below). It is the only seed command.
+- **Styling content** (palettes, templates, rules) is not seeded into MongoDB: it lives in `apps/api/src/style-rules/data/*.json`, is founder-approved, and is loaded and checked when the API starts. Check it with:
+
+```sh
+pnpm --filter @styleme/api style-rules lint        # validate and lint the styling data
+pnpm --filter @styleme/api style-rules coverage    # coverage report of approved records
+```
+
 ### Sign-up with email verification
 
-Anyone can sign up (`PUBLIC_SIGNUP_ENABLED=true`, the default). Signing up sends a 6-digit code to the email address; the account is created only when that code is entered on the verification page (in the same browser) within 5 minutes. Until then the sign-up waits in `pendingRegistrations` with a password hash and is removed automatically after 24 hours. After verifying, the user is signed in and continues to onboarding; they can then log out and log in with their email and password.
+Anyone can sign up (`PUBLIC_SIGNUP_ENABLED=true`, the default). Signing up sends a 6-digit code to the email address; the account is created only when that code is entered on the verification page (in the same browser) within 5 minutes. Until then the sign-up waits in `pendingRegistrations` with a password hash and is removed automatically after 24 hours. After verifying, the user is signed in and continues to onboarding — set up the style profile now or skip it — and can then log out and log in with their email and password.
 
 Limits (server-side): 3 wrong codes lock verification for 30 minutes; resend after 30 seconds, at most 6 codes per hour; 3 registrations per minute per IP. Each new code invalidates the previous one.
 
@@ -79,7 +142,29 @@ pnpm test
 pnpm build
 ```
 
-CI runs the same checks on every pull request and push to `main` ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+CI runs these, plus the style-rule linter, the coverage report and a Docker image build, on every pull request and push to `main` ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+
+## Working on an assigned issue
+
+1. Find your issue on GitHub (Issues → filter by assignee) and read its "Depends on" list.
+2. Agree any change to a shared file with its owner first ([TEAM_TASK_ASSIGNMENTS.md §2](docs/TEAM_TASK_ASSIGNMENTS.md#2-owners-of-shared-files)).
+3. Branch from the latest `main`: `feature/<issue>-<short-description>`.
+4. Implement with tests, run the checks above, and open a pull request that says `Closes #<issue>`.
+
+The full workflow, PR requirements and rules for shared files, migrations and secrets: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) §10–§14.
+
+## Documentation
+
+| Document                                                                                                    | What it covers                                                               |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [PROJECT_OVERVIEW](docs/PROJECT_OVERVIEW.md)                                                                | Every section's purpose, flow, states and verified status; open decisions    |
+| [DEVELOPMENT_ROADMAP](docs/DEVELOPMENT_ROADMAP.md)                                                          | Milestones, dependencies, approvals and parallel work                        |
+| [TEAM_TASK_ASSIGNMENTS](docs/TEAM_TASK_ASSIGNMENTS.md) · [PROPOSED_ISSUES](docs/PROPOSED_ISSUES.md)         | Who owns what; proposed issues for each member                               |
+| [CONTRIBUTING](docs/CONTRIBUTING.md)                                                                        | Workflow, Definition of Done, rules, styling-content review                  |
+| [MVP](docs/MVP.md) · [BRD](docs/BRD.md) · [FRD](docs/FRD.md) · [SRS](docs/SRS.md)                           | Scope, business and functional requirements, acceptance criteria             |
+| [ARCHITECTURE](docs/ARCHITECTURE.md) · [API](docs/API.md) · [DATABASE](docs/DATABASE.md) · [AI](docs/AI.md) | Technical design, endpoints, collections, the look engine and knowledge base |
+| [SECURITY](docs/SECURITY.md) · [TESTING](docs/TESTING.md) · [DEPLOYMENT](docs/DEPLOYMENT.md)                | Security and privacy, test strategy, environments                            |
+| [ImplementationPlan](docs/ImplementationPlan.md)                                                            | Detailed plan and the decision register (§8)                                 |
 
 ## Docker
 
