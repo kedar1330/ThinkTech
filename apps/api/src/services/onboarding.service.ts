@@ -27,6 +27,25 @@ export class OnboardingService {
     return { step: onboardingStep(updated!) };
   }
 
+  /**
+   * "Skip for now": finishes onboarding without a style profile (no department or city needed). The
+   * profile can be completed later. Each step is only set if it isn't already, so repeating the call
+   * changes nothing. Google sign-ups must still create a password first (route uses requirePasswordSet).
+   */
+  async skip(user: UserWithId): Promise<{ step: OnboardingStep }> {
+    const now = new Date();
+    await this.models.User.updateOne(
+      { _id: user._id, 'onboarding.styleProfileCompletedAt': null },
+      { $set: { 'onboarding.styleProfileCompletedAt': now, 'onboarding.skippedAt': now } },
+    );
+    await this.models.User.updateOne(
+      { _id: user._id, 'onboarding.appearanceCompletedAt': null },
+      { $set: { 'onboarding.appearanceCompletedAt': now } },
+    );
+    const updated = await this.models.User.findById(user._id).lean();
+    return { step: onboardingStep(updated!) };
+  }
+
   /** Appearance signals are optional: saving or skipping both complete this step. */
   async completeAppearance(user: UserWithId): Promise<{ step: OnboardingStep }> {
     if (!user.onboarding?.styleProfileCompletedAt) {

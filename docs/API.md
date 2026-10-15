@@ -76,6 +76,7 @@ Added 2026-10-12 (D-87 … D-94), all Stage 1 and implemented:
 | A18 | GET | `/v1/onboarding` | Current onboarding step |
 | A19 | POST | `/v1/onboarding/style-profile/complete` | Complete the style profile step |
 | A20 | POST | `/v1/onboarding/appearance/complete` | Complete (or skip) the appearance step |
+| A21 | POST | `/v1/onboarding/skip` | Skip the style profile for now (FR-ONB-05) |
 
 | 8 | GET | `/v1/profile` | Get the profile | 1 |
 | 9 | PUT | `/v1/profile` | Create or update the profile | 1 |
@@ -145,7 +146,7 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 
 **`POST /v1/account/deletion-otp`** — emails a code. **`DELETE /v1/account`** — `{ otp, confirm: true }` → `{ deleted: true }`. Deletes the user, sessions, codes and all their data immediately, after writing the tombstone (D-85); if the tombstone can't be written nothing is deleted (`SERVICE_UNAVAILABLE`).
 
-**`GET /v1/onboarding`** → `{ step }`. **`POST /v1/onboarding/style-profile/complete`** → `{ step }` (needs a saved profile with a department and a city). **`POST /v1/onboarding/appearance/complete`** → `{ step }` (needs the style profile step done; signals optional).
+**`GET /v1/onboarding`** → `{ step }`. **`POST /v1/onboarding/style-profile/complete`** → `{ step }` (needs a saved profile with a department and a city). **`POST /v1/onboarding/appearance/complete`** → `{ step }` (needs the style profile step done; signals optional). **`POST /v1/onboarding/skip`** → `{ step: "complete" }`: finishes onboarding without a profile, department or city and records `onboarding.skippedAt` (only when the style profile step was skipped). Idempotent; needs a StyleMe password (`PASSWORD_SETUP_REQUIRED`).
 
 ### 3.2 Profile (`profile.ts`)
 

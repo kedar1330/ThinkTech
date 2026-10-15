@@ -1,7 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { COLORS, DEPARTMENTS, cityLabel, type ProfileResponse } from '@styleme/contracts';
+import {
+  COLORS,
+  DEPARTMENTS,
+  cityLabel,
+  departmentScope,
+  profileCompleteness,
+  type ProfileResponse,
+} from '@styleme/contracts';
+import { ProfileCompletenessCard } from '@/components/app/ProfileCompleteness';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,23 +21,38 @@ import { FEATURES, featureHref } from '@/lib/features';
 export const metadata: Metadata = { title: 'Home' };
 
 /** Personalized Home: what StyleMe knows about the user's style today, and what is coming next. */
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string; skipped?: string }>;
+}) {
   const { user, accessToken } = await requireOnboarded();
-  const { welcome } = await searchParams;
+  const { welcome, skipped } = await searchParams;
   const profile = await apiRequest<ProfileResponse>('/v1/profile', { token: accessToken });
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
   const department = DEPARTMENTS.find((d) => d.id === profile.department)?.label;
+  // Without a department, features give general results across all departments (FR-ONB-05).
+  const scope = departmentScope(profile);
+  const completeness = profileCompleteness(profile, user);
   const liked = COLORS.filter((c) => profile.likedColors.includes(c.id));
   const upcoming = FEATURES.filter((f) => !f.href);
 
   return (
     <div className="space-y-10">
       {welcome && <Alert tone="success">Welcome to StyleMe, {firstName}! Your style profile is set up.</Alert>}
+      {skipped && (
+        <Alert tone="info">
+          Welcome to StyleMe, {firstName}! You skipped the style profile for now. Everything still works — add your
+          details whenever you like for more personal suggestions.
+        </Alert>
+      )}
       <section className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">Personalized home</p>
         <h1 className="font-display text-4xl text-primary">Hello, {firstName}</h1>
         <p className="text-muted-foreground">Here is your style at a glance.</p>
       </section>
+
+      <ProfileCompletenessCard completeness={completeness} />
 
       <section className="grid gap-5 lg:grid-cols-3">
         <Card className="min-w-0 space-y-4 lg:col-span-2">
@@ -42,7 +65,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-muted-foreground">Department</dt>
-              <dd className="font-medium">{department ?? 'Not set'}</dd>
+              <dd className="font-medium">
+                {department ?? 'Not set'}
+                {!scope.filterApplied && (
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    Showing all departments — no department filter applied
+                  </span>
+                )}
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">City</dt>

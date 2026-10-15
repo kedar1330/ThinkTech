@@ -135,6 +135,7 @@ export function authRoutes(
   r.get('/onboarding', auth, c.onboardingStatus);
   r.post('/onboarding/style-profile/complete', ...withPassword, c.completeStyleProfile);
   r.post('/onboarding/appearance/complete', ...withPassword, c.completeAppearance);
+  r.post('/onboarding/skip', ...withPassword, c.skipOnboarding);
 
   return r;
 }

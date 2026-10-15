@@ -99,4 +99,5 @@ export class AuthController {
     sendData(res, await this.onboarding.completeStyleProfile(requireAuth(req).user));
   completeAppearance: RequestHandler = async (req, res) =>
     sendData(res, await this.onboarding.completeAppearance(requireAuth(req).user));
+  skipOnboarding: RequestHandler = async (req, res) => sendData(res, await this.onboarding.skip(requireAuth(req).user));
 }

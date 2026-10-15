@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Heart,
   House,
+  ListChecks,
   LogOut,
   Menu,
   MessageCircle,
@@ -146,7 +147,16 @@ const INLINE_ITEM =
  * don't fit the measured space move into "More"; below 640px a hamburger opens a drawer with every item.
  * Account actions live in the profile menu.
  */
-export function TopNav({ userName, userEmail }: { userName: string; userEmail: string }) {
+export function TopNav({
+  userName,
+  userEmail,
+  profileIncomplete = false,
+}: {
+  userName: string;
+  userEmail: string;
+  /** Adds a dot on the avatar and a "Complete your profile" item to the account menus. */
+  profileIncomplete?: boolean;
+}) {
   const pathname = usePathname();
 
   // --- Inline items and "More" ---------------------------------------------------------------------
@@ -370,6 +380,7 @@ export function TopNav({ userName, userEmail }: { userName: string; userEmail: s
               type="button"
               aria-expanded={profileOpen}
               aria-controls="profile-menu"
+              aria-label={`Account menu for ${userName}${profileIncomplete ? ' (profile incomplete)' : ''}`}
               onClick={() => setProfileOpen((o) => !o)}
               className={cn(
                 'flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-1 transition-colors hover:bg-primary-foreground/10 xl:pr-3',
@@ -378,12 +389,19 @@ export function TopNav({ userName, userEmail }: { userName: string; userEmail: s
             >
               <span
                 aria-hidden
-                className="flex size-9 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground"
+                className="relative flex size-9 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground"
               >
                 {initials(userName)}
+                {profileIncomplete && (
+                  <span
+                    data-testid="profile-incomplete-dot"
+                    className="absolute -right-0.5 -top-0.5 size-3 rounded-full bg-primary-foreground ring-2 ring-primary"
+                  />
+                )}
               </span>
-              <span className="hidden max-w-40 truncate text-sm xl:inline">{userName}</span>
-              <span className="sr-only xl:hidden">Account menu for {userName}</span>
+              <span aria-hidden className="hidden max-w-40 truncate text-sm xl:inline">
+                {userName}
+              </span>
               <ChevronDown aria-hidden className="hidden size-4 opacity-80 xl:block" />
             </button>
             {profileOpen && (
@@ -396,6 +414,16 @@ export function TopNav({ userName, userEmail }: { userName: string; userEmail: s
                   <p className="break-all text-xs text-muted-foreground">{userEmail}</p>
                 </div>
                 <ul className="space-y-0.5 pt-2">
+                  {profileIncomplete && (
+                    <li>
+                      <Link
+                        href="/profile#style-profile"
+                        className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-plum transition-colors hover:bg-surface-muted"
+                      >
+                        <ListChecks aria-hidden className="size-[18px]" /> Complete your profile
+                      </Link>
+                    </li>
+                  )}
                   <li>
                     <Link
                       href="/settings"
@@ -476,6 +504,14 @@ export function TopNav({ userName, userEmail }: { userName: string; userEmail: s
             </nav>
             <div className="shrink-0 space-y-0.5 border-t border-primary-foreground/15 px-3 py-3">
               <p className="truncate px-3 pb-1 text-xs text-primary-foreground/70">Signed in as {userName}</p>
+              {profileIncomplete && (
+                <Link
+                  href="/profile#style-profile"
+                  className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-accent hover:bg-primary-foreground/8"
+                >
+                  <ListChecks aria-hidden className="size-[18px]" /> Complete your profile
+                </Link>
+              )}
               <Link
                 href="/settings"
                 aria-current={settingsActive ? 'page' : undefined}
