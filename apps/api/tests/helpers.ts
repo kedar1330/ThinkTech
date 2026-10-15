@@ -211,6 +211,33 @@ export async function login(app: Express, email: string, password = PASSWORD, re
   return res.body.data.accessToken as string;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Captured log lines joined for "this value is never logged" assertions, without the random request
+ * IDs that pino-http adds as `req.id` (a UUID from `genReqId` in app.ts). Their hex digits and hyphens
+ * can spell short values such as "4-5" by chance. Only a UUID-shaped `req.id` is removed; every other
+ * field, and any line that isn't JSON, is kept as it is.
+ */
+export function logTextForPrivacyChecks(lines: readonly string[]): string {
+  return lines
+    .map((line) => {
+      let entry: unknown;
+      try {
+        entry = JSON.parse(line);
+      } catch {
+        return line;
+      }
+      if (!entry || typeof entry !== 'object' || !('req' in entry)) return line;
+      const req = (entry as { req: unknown }).req;
+      if (!req || typeof req !== 'object') return line;
+      const { id, ...rest } = req as Record<string, unknown>;
+      if (typeof id !== 'string' || !UUID.test(id)) return line;
+      return JSON.stringify({ ...(entry as Record<string, unknown>), req: rest });
+    })
+    .join('\n');
+}
+
 export function bearer(token: string) {
   return { Authorization: `Bearer ${token}` };
 }

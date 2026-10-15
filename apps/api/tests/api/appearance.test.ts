@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { bearer, login, registerUser, startTestEnv, type TestEnv } from '../helpers';
+import { bearer, login, logTextForPrivacyChecks, registerUser, startTestEnv, type TestEnv } from '../helpers';
 
 let env: TestEnv;
 beforeAll(async () => {
@@ -149,7 +149,8 @@ describe('self-reported appearance signals (FR-SIG, AC-04)', () => {
       .set(bearer(token))
       .send({ ...FULL, undertone: { value: 'olive' } });
     await request(app).get('/v1/appearance').set(bearer(token));
-    const logs = env.logLines.join('\n');
+    // Random request IDs are left out: a UUID can contain "4-5" by chance (see logTextForPrivacyChecks).
+    const logs = logTextForPrivacyChecks(env.logLines);
     expect(logs).toContain('/v1/appearance');
     for (const value of ['4-5', 'olive', 'balanced_defined_waist', 'monkRange']) expect(logs).not.toContain(value);
   });
