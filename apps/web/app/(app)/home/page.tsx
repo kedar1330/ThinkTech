@@ -31,8 +31,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <p className="text-muted-foreground">Here is your style at a glance.</p>
       </section>
 
-      <section className="grid gap-5 md:grid-cols-3">
-        <Card className="space-y-4 md:col-span-2">
+      <section className="grid gap-5 lg:grid-cols-3">
+        <Card className="min-w-0 space-y-4 lg:col-span-2">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-display text-2xl text-primary">Your style profile</h2>
             <Button asChild variant="outline" size="sm">

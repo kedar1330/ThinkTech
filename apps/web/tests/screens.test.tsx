@@ -154,11 +154,26 @@ describe('public navigation', () => {
   });
 });
 
-describe('app sidebar (dashboard)', () => {
-  it('lists the eight sections; unbuilt ones are labelled Coming soon', () => {
-    render(<AppShell userName="Asha">content</AppShell>);
-    const nav = screen.getAllByRole('navigation', { name: 'StyleMe' })[0]!;
-    expect(within(nav).getByRole('link', { name: 'Discover My Style' })).toHaveAttribute('href', '/profile');
+describe('app top navigation', () => {
+  beforeEach(() => {
+    nav.pathname = '/home';
+  });
+
+  it('keeps all nine sections reachable: the first in the bar, the rest under More (with Coming soon)', async () => {
+    const user = userEvent.setup();
+    render(
+      <AppShell userName="Asha Rao" userEmail="asha@example.com">
+        content
+      </AppShell>,
+    );
+    const bar = screen.getByRole('navigation', { name: 'Main' });
+    expect(within(bar).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    expect(within(bar).getByRole('link', { name: 'Discover My Style' })).toHaveAttribute('href', '/profile');
+
+    const more = within(bar).getByRole('button', { name: /More/ });
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    await user.click(more);
+    const menu = document.getElementById('nav-more')!;
     for (const name of [
       'My Colour Palette',
       'Outfit Categories',
@@ -168,28 +183,70 @@ describe('app sidebar (dashboard)', () => {
       'Style Assistant',
       'Saved Outfits',
     ]) {
-      const link = within(nav).getByRole('link', { name: new RegExp(name) });
-      expect(link).toHaveTextContent('Coming soon');
+      expect(within(menu).getByRole('link', { name: new RegExp(name) })).toHaveTextContent('Coming soon');
     }
-    expect(within(nav).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    await user.keyboard('{Escape}');
+    expect(document.getElementById('nav-more')).toBeNull();
+    expect(more).toHaveFocus();
   });
 
-  it('collapses to icons (remembered) and opens a mobile drawer from the hamburger', async () => {
-    const user = userEvent.setup();
-    render(<AppShell userName="Asha">content</AppShell>);
-    const collapse = screen.getByRole('button', { name: 'Collapse sidebar' });
-    await user.click(collapse);
-    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toHaveAttribute('aria-expanded', 'false');
-    expect(window.localStorage.getItem('styleme.sidebar-collapsed')).toBe('1');
-    // Collapsed links keep accessible names (screen-reader text) and a tooltip.
-    expect(screen.getAllByRole('link', { name: /Virtual Try-On \(coming soon\)/ }).length).toBeGreaterThan(0);
+  it('marks More as active when the current page is inside it', () => {
+    nav.pathname = '/features/design-studio';
+    render(
+      <AppShell userName="Asha" userEmail="asha@example.com">
+        content
+      </AppShell>,
+    );
+    expect(screen.getByRole('button', { name: /More/ }).className).toContain('text-accent');
+  });
 
-    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+  it('profile menu: name, email, Settings and Log out; closes on Escape and on an outside click', async () => {
+    const user = userEvent.setup();
+    render(
+      <AppShell userName="Asha Rao" userEmail="asha@example.com">
+        content
+      </AppShell>,
+    );
+    const button = screen.getByRole('button', { name: /Account menu for Asha Rao/ });
+    await user.click(button);
+    const menu = document.getElementById('profile-menu')!;
+    expect(menu).toHaveTextContent('asha@example.com');
+    expect(within(menu).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings');
+    expect(within(menu).getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(document.getElementById('profile-menu')).toBeNull();
+    expect(button).toHaveFocus();
+    await user.click(button);
+    await user.click(screen.getByText('content'));
+    expect(document.getElementById('profile-menu')).toBeNull();
+  });
+
+  it('mobile drawer: all nine sections, focus moves in, background scroll locks, Escape closes', async () => {
+    const user = userEvent.setup();
+    render(
+      <AppShell userName="Asha" userEmail="asha@example.com">
+        content
+      </AppShell>,
+    );
+    const open = screen.getByRole('button', { name: 'Open menu' });
+    await user.click(open);
     const drawer = screen.getByRole('dialog', { name: 'Menu' });
-    expect(within(drawer).getByRole('link', { name: 'Discover My Style' })).toBeInTheDocument();
+    expect(
+      within(drawer)
+        .getAllByRole('link')
+        .filter((a) => a.getAttribute('href') !== '/settings'),
+    ).toHaveLength(
+      // nine sections + the logo
+      10,
+    );
+    expect(within(drawer).getByRole('link', { name: /Saved Outfits/ })).toHaveTextContent('Coming soon');
+    expect(within(drawer).getByRole('button', { name: 'Close menu' })).toHaveFocus();
+    expect(document.body.style.overflow).toBe('hidden');
     expect(within(drawer).getByRole('button', { name: 'Log out' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull();
+    expect(document.body.style.overflow).toBe('');
+    expect(open).toHaveFocus();
   });
 });
 
