@@ -1,6 +1,8 @@
 # Contributing to StyleMe
 
 > Part of the StyleMe documentation baseline. Plan: [ImplementationPlan.md](ImplementationPlan.md). Decisions: [ImplementationPlan.md](ImplementationPlan.md) §8.
+>
+> **New to the team?** Read the [README](../README.md), [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) and [TEAM_TASK_ASSIGNMENTS.md](TEAM_TASK_ASSIGNMENTS.md), then follow the step-by-step workflow in §10.
 
 ---
 
@@ -21,10 +23,10 @@ Feature branches never deploy to production. Once staging exists (after the host
 
 ```
 Issue → feature/* or fix/* branch → contracts first → implementation → tests → local check
-→ pull request → CI (typecheck, lint, style-rule linter, tests, E2E smoke, build) → review → merge
+→ pull request → CI (typecheck, lint, format check, style-rule linter and coverage report, tests, build, Docker image build) → review → merge
 ```
 
-Commit messages follow Conventional Commits.
+Commit messages follow Conventional Commits. The CI steps are in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). The Playwright E2E smoke flow is planned (#7) and is not part of CI yet.
 
 ---
 
@@ -120,8 +122,87 @@ Issues follow the milestones in [ImplementationPlan.md](ImplementationPlan.md) �
 
 Update the relevant document in `docs/` with every feature: [BRD](BRD.md) · [MVP](MVP.md) · [FRD](FRD.md) · [SRS](SRS.md) · [ARCHITECTURE](ARCHITECTURE.md) · [DATABASE](DATABASE.md) · [API](API.md) · [AI](AI.md) · [SECURITY](SECURITY.md) · [TESTING](TESTING.md) · [DEPLOYMENT](DEPLOYMENT.md) · [ImplementationPlan](ImplementationPlan.md).
 
+Team documents: [PROJECT_OVERVIEW](PROJECT_OVERVIEW.md) (features and verified status) · [DEVELOPMENT_ROADMAP](DEVELOPMENT_ROADMAP.md) · [TEAM_TASK_ASSIGNMENTS](TEAM_TASK_ASSIGNMENTS.md) · [PROPOSED_ISSUES](PROPOSED_ISSUES.md). When your PR changes a feature's status, update its row in PROJECT_OVERVIEW and DEVELOPMENT_ROADMAP in the same PR.
+
 ---
 
 ## 9. Decisions
 
 Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-21, D-62, D-65, D-77, D-78, D-79, D-80.
+
+---
+
+## 10. Team Workflow, Step by Step
+
+The team: **Shreya** (shared styling foundation and engine), **Johita** (Discover My Style, Outfit Categories), **Ankita** (My Colour Palette, Saved Outfits, feedback), **Kedar** (Shop My Look; Design Studio and Virtual Try-On only after approval). Details: [TEAM_TASK_ASSIGNMENTS.md](TEAM_TASK_ASSIGNMENTS.md).
+
+1. **Clone and install.** Node.js 24 (`.nvmrc`) and pnpm 10 (`corepack enable`), then:
+   ```sh
+   git clone https://github.com/kedar1330/ThinkTech.git
+   cd ThinkTech
+   pnpm install
+   ```
+2. **Configure local environment variables.** Create `apps/api/.env` and `apps/web/.env.local` from the names in [`.env.example`](../.env.example) (see the [README](../README.md#local-setup)). Generate your own secrets; never copy someone else's. Without `SMTP_URL`, emails go to `apps/api/.dev-outbox/` and codes are printed in the API terminal.
+3. **Run the app and the tests.**
+   ```sh
+   pnpm dev:api        # http://localhost:4000 (needs a local MongoDB)
+   pnpm dev:web        # http://localhost:3000
+   pnpm test           # all packages; the API tests use an in-memory MongoDB
+   ```
+4. **Pick your assigned issue** on GitHub (filter by assignee). If your task has no issue yet, ask for one — see the proposals in [PROPOSED_ISSUES.md](PROPOSED_ISSUES.md). One issue, one branch, one pull request.
+5. **Check dependencies and interfaces.** Read the issue's "Depends on" list and the roadmap ([DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md)). If you need a shared contract, model or file you don't own (§12), agree the change with its owner in the issue **before** coding.
+6. **Branch from the latest `main`.**
+   ```sh
+   git switch main && git pull
+   git switch -c feature/<issue-number>-<short-description>     # e.g. feature/13-saved-outfits
+   ```
+7. **Implement one coherent change, with tests.** Contracts first (`packages/contracts`), then the API, then the UI. Follow the Definition of Done (§3) and the rules in §5. Don't fix unrelated things in the same branch — open a separate issue.
+8. **Run the required checks and inspect your diff.** All of these must pass before you open a pull request:
+   ```sh
+   pnpm typecheck
+   pnpm lint
+   pnpm format:check
+   pnpm --filter @styleme/api style-rules lint      # if you touched style-rules
+   pnpm test
+   pnpm build
+   git status
+   git diff                                         # only the files your issue needs
+   ```
+9. **Commit** with a Conventional Commit message that says what changed, e.g. `feat: save and list outfits (#13)`. Stage files by name, not `git add .`.
+10. **Open a pull request into `main`** that references the issue (`Closes #13`), summarises the change, lists the checks you ran and their results, and states anything untested.
+11. **Review and merge.** At least one other member reviews; the owners of any shared files you changed approve; CI passes. Merge only after all three. Never merge your own PR without a review, and never force-push to `main`.
+
+## 11. Branches, Issues and Pull Requests
+
+| Item | Convention |
+|---|---|
+| Branch | `feature/<issue>-<short-description>` or `fix/<issue>-<short-description>` from `main` (D-21) |
+| Commit | Conventional Commits: `feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `chore:`; mention the issue number |
+| Issue link | `Closes #<n>` in the PR description when it completes the issue; `Refs #<n>` for part of it |
+| PR size | One issue; small enough to review in one sitting. Split large work into stacked PRs agreed with the reviewer |
+| PR description | Summary, linked issue, screenshots for UI changes (mobile and desktop), checks run with results, known limitations |
+| Before merge | CI green, at least one approving review, owners of shared files approved, no unresolved comments |
+| History | Never rewrite or force-push shared branches (`main` or a branch someone else uses) |
+
+## 12. Shared Files, Migrations, Seeds and Generated Files
+
+* **Shared files have one owner** ([TEAM_TASK_ASSIGNMENTS.md](TEAM_TASK_ASSIGNMENTS.md) §2). Changes go through a PR the owner reviews. Highest-conflict files: `packages/contracts/src/index.ts`, `apps/api/src/models/index.ts`, `apps/api/src/app.ts`, `apps/web/lib/features.ts`, `pnpm-lock.yaml`.
+* **New user-owned collections** are added to `USER_OWNED_COLLECTIONS` (account deletion and tombstone replay) in the same PR (§5).
+* **Migrations** (`apps/api/scripts/migrations/`, owner Shreya): one migration per PR, numbered in order, idempotent and backward-compatible (D-79). Agree the number with the owner so two PRs don't both add `002-*`. Run with `pnpm --filter @styleme/api migrate`.
+* **Styling content** (`apps/api/src/style-rules/data/*.json`, owner Shreya): any member may draft records; only the founder approves (§6). Drafts fail `style-rules lint` by design until approved.
+* **Seeds.** `pnpm --filter @styleme/api seed` creates only the admin account (D-95). There is no styling-data seed command: styling content is the JSON files above, loaded when the API starts. Test fixtures stay in `apps/api/tests/fixtures/` (§5).
+* **Dependencies.** Add a package only when needed, with `pnpm-lock.yaml` updated by `pnpm install`. Lockfile conflicts: take `main`'s lockfile, then run `pnpm install` again — never hand-edit it.
+* **Generated and local files are never committed:** `.next/`, `dist/`, `node_modules/`, `.dev-outbox/`, `.env` and `.env.*` (except `.env.example`), screenshots and test output.
+
+## 13. Secrets and Personal Data
+
+* Never commit `.env` files, SMTP or App Passwords, API keys, tokens or real users' data. `.gitignore` covers `.env` and `.env.*`; check `git status` anyway.
+* Use example values in docs and tests (`you@example.com`, `<16-char-app-password>`).
+* Never paste secrets into issues, PRs, chat or screenshots. If one leaks, rotate it immediately and tell the team.
+
+## 14. Conflicts and Coordination
+
+* Fetch `main` often and rebase your branch on it **before** opening a PR: `git fetch origin && git rebase origin/main`. Rebase only your own branch that nobody else uses.
+* If a conflict touches another member's file, resolve it together — never by discarding their change.
+* If two PRs change the same shared file, the owner's PR merges first; the other rebases.
+* Interface disagreements are settled in the issue before code, and recorded in the contract PR.
