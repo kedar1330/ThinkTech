@@ -26,6 +26,7 @@ import {
   STYLES,
   UNDERTONES,
   UNDERTONE_AFFINITIES,
+  WEAR_TYPES,
   COLOR_FAMILIES,
   categorySchema,
   colorIdSchema,
@@ -38,6 +39,7 @@ const VOCABULARIES = {
   DEPARTMENTS,
   OCCASIONS,
   STYLES,
+  WEAR_TYPES,
   SLOT_TYPES,
   CATEGORY_GROUPS,
   CATEGORIES,
@@ -66,6 +68,7 @@ const STABLE_IDS: Record<keyof typeof VOCABULARIES, string[]> = {
   DEPARTMENTS: ['women', 'men', 'any'],
   OCCASIONS: ['everyday', 'work', 'festive', 'wedding', 'party', 'date', 'travel', 'formal'],
   STYLES: ['classic', 'minimal', 'casual', 'smart_casual', 'traditional', 'fusion', 'streetwear', 'boho'],
+  WEAR_TYPES: ['indian', 'fusion', 'western'],
   SLOT_TYPES: ['top', 'bottom', 'one_piece', 'layer', 'footwear', 'accessory'],
   CATEGORY_GROUPS: ['tops', 'bottoms', 'ethnicTops', 'ethnicSets', 'freeSize', 'shoes', 'dresses'],
   CATEGORIES: [

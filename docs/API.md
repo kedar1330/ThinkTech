@@ -181,7 +181,7 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 
 **`POST /v1/outfits/:id/save`** — sets `status: "saved"` and removes the expiry. Returns the look.
 
-**`POST /v1/outfits/:id/feedback`** — input `{ value: "love_it" | "not_for_me", reason?: <fixed list> }`. Returns `{ recorded: true }`.
+**`POST /v1/outfits/:id/feedback`** — input `{ value: "love_it" | "not_for_me", reason? }`. `reason` is allowed only with `not_for_me` and is one of `not_my_style`, `colours_not_for_me`, `too_formal`, `too_casual`, `not_comfortable`, `wrong_occasion` (FR-OUT-04; no free text). Returns `{ recorded: true }`.
 
 **`DELETE /v1/outfits/:id`** — deletes the look and detaches any shortlist items from it (the items remain until the user deletes them). Returns `{ deleted: true }`.
 
