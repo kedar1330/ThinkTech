@@ -4,7 +4,7 @@
 >
 > GitHub issues #1 … #18 were all closed on 2026-10-15 (marked completed) without new commits on `main`; statuses in this document come from the code, not from issue state.
 >
-> The intended behaviour follows the approved workflow (`StyleMe_all_pages.pdf`, 20 pages; referenced below as "PDF p<n>"). Where the PDF and a recorded decision differ, the decision applies until the founder changes it (§13).
+> The intended behaviour follows the approved workflow (`StyleMe_all_pages.pdf`, 20 pages; referenced below as "PDF page n"). Where the PDF and a recorded decision differ, the decision applies until the founder changes it (§13).
 
 **Status legend** — verified against the code on `main` at `781b59e`:
 
