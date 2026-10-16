@@ -149,12 +149,13 @@ No name, plain email, IP address, reason text or other personal data. The store 
 | `comfortPreferences[]` | comfort options from the vocabulary (e.g. stretch, loose fit, breathable) |
 | `fabricPreferences` | `{ liked[], avoided[] }` |
 | `preferredStyles[]`, `preferredOccasions[]` | enum values (D-09) |
+| `preferredWearTypes[]` | `indian` \| `fusion` \| `western`; optional soft ranking preference (D-96). A wear type chosen in a look request overrides it |
 | `budgetPreference` | optional per-look budget in whole ₹ (1 – 10,00,000). Stage 1: compared only with totals of user-entered prices; never filters generation |
 | `measurements` | optional, self-measured; collected only when product size charts exist (product layer). `{ chestCm, waistCm, hipCm, footLengthCm, updatedAt }` |
 | `weatherPreferences` | Stage 2: `{ enabled: false, city: { cityId, name } \| null }`; never coordinates |
 | `createdAt`, `updatedAt` | timestamps |
 
-**Allowed values (D-09).** Every enumerated field here and in `appearanceProfiles` (department, colour IDs, contrast, silhouettes, coverage, comfort, fabrics, styles, occasions, fit, undertone, Monk range, proportion descriptors) uses the shared vocabulary in `packages/contracts/src/style-vocabulary.ts`, which the style knowledge base uses too. Values are stored as strings, so adding a value needs no migration; IDs are never renamed or removed.
+**Allowed values (D-09).** Every enumerated field here and in `appearanceProfiles` (department, colour IDs, contrast, silhouettes, coverage, comfort, fabrics, styles, wear types, occasions, fit, undertone, Monk range, proportion descriptors) uses the shared vocabulary in `packages/contracts/src/style-vocabulary.ts`, which the style knowledge base uses too. Values are stored as strings, so adding a value needs no migration; IDs are never renamed or removed.
 
 Age range and height are **not collected** in Stage 1: no Stage 1 rule or feature uses them (FR-PROF-04). They are added only when a released rule or feature defines a purpose for them.
 
@@ -361,7 +362,7 @@ Rules:
 
 ## 6. Style Knowledge Base (repository files, not MongoDB)
 
-Palettes (`PAL-xxx`), styling/fit rules (`STY-xxx`), fabric rules (`FAB-xxx`) and outfit templates (`OUT-xxx`) live in `apps/api/src/style-rules/` (D-66). They are Zod-validated and linted at startup and in CI. Every record has `id`, `version`, `tags[]`, applicable contexts, user-adjustable preferences, `rationale`, `limitations`, `reviewStatus` (`draft` \| `reviewed` \| `approved` \| `retired`), `reviewedBy` and `reviewedAt`. Type-specific fields: [AI.md](AI.md) §4. Looks reference records by ID, and each template slot carries a `slotId` unique within its template (D-82). IDs use three digits or more (`PAL-001` …) so the library can grow past 100 records per type; the files are loaded once at startup and sized for at least 150 palettes and 150 templates (FR-STY-10).
+Palettes (`PAL-xxx`), styling/fit rules (`STY-xxx`), fabric rules (`FAB-xxx`) and outfit templates (`OUT-xxx`) live in `apps/api/src/style-rules/` (D-66). They are Zod-validated and linted at startup and in CI. Every record has `id`, `version`, `tags[]`, applicable contexts, user-adjustable preferences, `rationale`, `limitations`, `reviewStatus` (`draft` \| `reviewed` \| `approved` \| `retired`), `reviewedBy` and `reviewedAt`. Type-specific fields: [AI.md](AI.md) §4. Looks reference records by ID, and each template slot carries a `slotId` unique within its template (D-82). Templates carry a `wearType` (D-96); slots name garment types grouped into broad categories (D-97) and carry a `formality` (D-98). IDs use three digits or more (`PAL-001` …) so the library can grow past 100 records per type; the files are loaded once at startup and sized for at least 150 palettes and 150 templates (FR-STY-10).
 
 ---
 

@@ -4,7 +4,7 @@
 >
 > GitHub issues #1 … #18 were all closed on 2026-10-15 (marked completed) without new commits on `main`; statuses in this document come from the code, not from issue state.
 >
-> The intended behaviour follows the approved workflow (`StyleMe_all_pages.pdf`, 20 pages; referenced below as "PDF p<n>"). Where the PDF and a recorded decision differ, the decision applies until the founder changes it (§13).
+> The intended behaviour follows the approved workflow (`StyleMe_all_pages.pdf`, 20 pages; referenced below as "PDF page n"). Where the PDF and a recorded decision differ, the decision applies until the founder changes it (§13).
 
 **Status legend** — verified against the code on `main` at `781b59e`:
 
@@ -89,14 +89,15 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ## 5. Shared styling foundation (PDF p1, p9, p13) — 🟡 Partial (tooling only)
 
-**Purpose.** The single source of styling knowledge every feature uses: a colour vocabulary, palettes (cool, warm, neutral, olive or any undertone; low to high contrast), outfit templates by department, occasion and style, styling/fit and fabric rules, and the deterministic engine that combines them with the user's profile.
+**Purpose.** The single source of styling knowledge every feature uses: a colour vocabulary, palettes (cool, warm, neutral, olive or any undertone; low to high contrast), outfit templates by department, wear type, occasion and style, styling/fit and fabric rules, and the deterministic engine that combines them with the user's profile.
 
 | Part | Status | Where |
 |---|---|---|
 | Shared vocabulary: departments, occasions, styles, categories, 39 colours with swatch hex codes, fabrics, silhouettes, fits, coverage, undertones, Monk tones, proportions | ✅ | `packages/contracts/src/style-vocabulary.ts` |
-| Record schemas, loader, linter (contradictions, duplicates, unknown references, judgemental language), coverage report, scale test | ✅ | `apps/api/src/style-rules/`, `pnpm --filter @styleme/api style-rules lint|coverage` |
-| **Content: palettes, templates, rules** | ⬜ **0 records** | `apps/api/src/style-rules/data/*.json` — C0 seed (#9) and C1 release set (#10), founder-approved only (D-57, D-62) |
-| Look engine (`POST /v1/recommendations`, ranking, explanations, `outfits` model) | ⬜ | Not built (#11); contracts `outfit.ts` is an empty placeholder |
+| **Decided vocabulary changes (#30 audit, D-96 … D-100):** wear type, 8 broad categories with garment types, slot formality, colour and fabric growth, coverage extension | ⬜ Decided, not implemented | Separate vocabulary issue, before C0 (#32) |
+| Record schemas, loader, linter (contradictions, duplicates, unknown references, judgemental language), coverage report, scale test | ✅ | `apps/api/src/style-rules/`, `pnpm --filter @styleme/api style-rules lint\|coverage` |
+| **Content: palettes, templates, rules** | ⬜ **0 records** | `apps/api/src/style-rules/data/*.json` — C0 seed (#32) and C1 release set (#35), founder-approved only (D-57, D-62); earlier issues #9 and #10 were closed without content |
+| Look engine (`POST /v1/recommendations`, ranking, explanations, `outfits` model) | ⬜ | Not built (#33; earlier #11 closed without code); contracts `outfit.ts` is an empty placeholder (#31) |
 
 **Rules that never change:** soft effects only (prefer / deprioritise, never forbid); explanations describe effects, never judge a body or skin tone; only approved records load at runtime ([CONTRIBUTING.md](CONTRIBUTING.md) §6, [AI.md](AI.md) §4).
 
@@ -113,7 +114,7 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 | | |
 |---|---|
 | Required inputs | Occasion |
-| Optional inputs | Category, style, palette mode; profile preferences; appearance signals (only if switched on) |
+| Optional inputs | Category, style, wear type (Indian / fusion / western — a hard filter for that request, D-96), palette mode; profile preferences (including preferred wear types, a soft preference); appearance signals (only if switched on) |
 | Outputs / actions | Up to 5 looks, each slot with colour, fabric, silhouette and an explanation; 3–5 alternatives per slot when available (D-53); save; shop; request alternatives |
 | Empty / limited | `INSUFFICIENT_MATCHES` (never padded), `ALTERNATIVES_LIMITED`, `DEFAULTS_APPLIED`, `PREFERENCE_CONFLICT`; no department → general results labelled "no department filter applied" |
 | Loading / error | Skeleton while generating; API failure → retry message; no partial looks |
@@ -228,13 +229,13 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ## 15. Conflicts and missing decisions
 
-Recorded for founder review; nothing here has been changed in code or requirements.
+Recorded for founder review. Rows marked **Resolved** cite the decision that settled them; nothing else here has been changed in code or requirements.
 
 | # | Topic | PDF | Recorded decision / code | Needed |
 |---|---|---|---|---|
 | 1 | Who can register | — | D-63: invite-only closed beta until the legal review (D-74). Code since PR #25: `PUBLIC_SIGNUP_ENABLED` defaults to `true` | Confirm whether D-63 is revised or production must set `PUBLIC_SIGNUP_ENABLED=false` |
 | 2 | Photos and measurements | p1, p4, p11, p16, p18 | D-76, FR-SIZE-06, AI rule 16 | Stays deferred unless the founder decides otherwise |
-| 3 | Kids department | p1 | Vocabulary has women, men, any | Decide whether to add a department |
+| 3 | Kids department | p1 (unverified) | **Resolved (D-101):** no kids department in Stage 1 | A later addition needs a legal review (D-74), a kids size system and founder approval |
 | 4 | Retailer products | p1, p17 | D-43 … D-45 blocked; no scraping | Retailer permission in writing |
 | 5 | Design Studio, Style Assistant, Try-On in the roadmap | p13, p18–p20 | D-76, D-48 | Founder decisions |
 | 6 | Outfit Categories gallery | p16 | No FRD section | Write and approve the requirement |
