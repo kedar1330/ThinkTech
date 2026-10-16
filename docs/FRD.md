@@ -122,7 +122,7 @@ Revised 2026-10-12 by the founder's decisions D-87 … D-94 ([ImplementationPlan
 | ID | Requirement |
 |---|---|
 | FR-PROF-01 | After login the user sees a dashboard that links to every Stage 1 feature. |
-| FR-PROF-02 | The user can create and edit a profile (`GET`/`PUT /v1/profile`) with: `department` (women, men, any), sizes and fit per category (FR-SIZE), liked and disliked colours, contrast preference, silhouette preferences, coverage preferences, comfort preferences, liked and avoided fabrics, preferred styles and preferred occasions. Allowed values: D-09. |
+| FR-PROF-02 | The user can create and edit a profile (`GET`/`PUT /v1/profile`) with: `department` (women, men, any), sizes and fit per category (FR-SIZE), liked and disliked colours, contrast preference, silhouette preferences, coverage preferences, comfort preferences, liked and avoided fabrics, preferred styles, preferred wear types (`indian`, `fusion`, `western`; a soft preference, D-96) and preferred occasions. Allowed values: D-09. |
 | FR-PROF-03 | Every field except `department` is optional. Missing fields fall back to documented defaults (FR-LOOK-09). |
 | FR-PROF-04 | The profile form explains why each field is asked for and how it is used. Fields with no current use are not shown or stored (data minimisation). Age range and height are therefore not collected in Stage 1, because no Stage 1 rule or feature uses them. |
 | FR-PROF-05 | The user may set an optional budget per look (₹). In Stage 1 it is used only to compare against totals of prices the user entered (FR-BUD); it never filters generated looks, which carry no prices. |
@@ -149,12 +149,12 @@ Revised 2026-10-12 by the founder's decisions D-87 … D-94 ([ImplementationPlan
 | FR-STY-03 | A rule linter runs in CI and at startup. It rejects contradictory effects in the same context, duplicate records, duplicate `slotId`s within a template, references to unknown records or categories, and records without rationale or limitations. |
 | FR-STY-04 | Rules only *prefer* or *deprioritise*, with soft weights. They never forbid. |
 | FR-STY-05 | Rationale describes effects ("a V-neck creates a longer line"), never judgements, and never claims something is objectively unsuitable for a body shape or skin tone. |
-| FR-STY-06 | **Product requirement (D-57):** at least 100 palettes and at least 100 outfit templates (planning range 100–150), 8–12 categories and a comprehensive rule library (FR-STY-09), completed and approved before the Stage 2 release (content set C2). **Stage 1 release set (C1):** 12–20 palettes and about 20 templates covering the Stage 1 occasions and categories, with rules covering every FR-STY-09 area. A smaller development seed (C0) may be used to build the engine; it is temporary and never release scope ([ImplementationPlan.md](ImplementationPlan.md) §5.2). |
+| FR-STY-06 | **Product requirement (D-57):** at least 100 palettes and at least 100 outfit templates (planning range 100–150), 8–12 broad categories (garments are garment types within them, D-97) and a comprehensive rule library (FR-STY-09), completed and approved before the Stage 2 release (content set C2). **Stage 1 release set (C1):** 12–20 palettes and about 20 templates covering the Stage 1 occasions and categories, with rules covering every FR-STY-09 area. A smaller development seed (C0) may be used to build the engine; it is temporary and never release scope ([ImplementationPlan.md](ImplementationPlan.md) §5.2). |
 | FR-STY-07 | The founder reviews and approves all styling content ([CONTRIBUTING.md](CONTRIBUTING.md) §6, D-62). |
 | FR-STY-08 | The library grows where the evaluation set or user feedback shows gaps (occasions with too few looks, frequent overrides, "not for me" feedback), and only as fast as the founder can review. |
-| FR-STY-09 | **Rule coverage.** The rule library covers: **coordination** across a look's slots (colour compatibility using palette combinations and contrast, formality consistency, print and pattern mixing, proportion balance, footwear and accessory pairing); **occasions** and their dress expectations; **user preferences** (colours, contrast, silhouettes, coverage, comfort, fabrics, styles); **fit** per category; **sizes** (size notes per category; size never changed by styling rules); **budget** where it applies (shortlist totals in Stage 1; a hard constraint with the product layer); and **alternatives** that differ meaningfully (FR-LOOK-14). |
+| FR-STY-09 | **Rule coverage.** The rule library covers: **coordination** across a look's slots (colour compatibility using palette combinations and contrast, formality consistency (slot formality `casual` / `smart` / `formal` / `festive`, D-98), print and pattern mixing, proportion balance, footwear and accessory pairing); **occasions** and their dress expectations; **user preferences** (colours, contrast, silhouettes, coverage, comfort, fabrics, styles); **fit** per category; **sizes** (size notes per category; size never changed by styling rules); **budget** where it applies (shortlist totals in Stage 1; a hard constraint with the product layer); and **alternatives** that differ meaningfully (FR-LOOK-14). |
 | FR-STY-10 | **Scale.** Record schemas, IDs, loader, linter, in-memory indexes and generator support at least 150 palettes and 150 templates without code changes; content is added as data only. Performance at that size is tested (T-38). |
-| FR-STY-11 | **Coverage report.** CI produces a report of the approved library: palettes per undertone affinity and contrast level, templates per occasion × style × department, categories per slot, and rule coverage per FR-STY-09 area, listing empty or thin cells. It drives content planning and the C1 and C2 release gates. |
+| FR-STY-11 | **Coverage report.** CI produces a report of the approved library: palettes per undertone affinity and contrast level, templates per occasion × style × department, templates per category, per garment type and per wear type × department (D-100), categories per slot, and rule coverage per FR-STY-09 area, listing empty or thin cells. It drives content planning and the C1 and C2 release gates. |
 | FR-STY-12 | **Slot identity (D-82).** Every template slot has a stable, template-defined `slotId` (e.g. `top`, `accessory-1`, `accessory-2`), unique within the template and distinct from its `slot` category/type, so repeated slot types never collide. Generated and saved looks keep each slot's `slotId`. |
 
 ### 4.5 Look recommendations (FR-LOOK) — Stage 1
@@ -163,14 +163,14 @@ A **look** is a complete outfit suggestion made of slots (for example top, botto
 
 | ID | Requirement |
 |---|---|
-| FR-LOOK-01 | The user requests looks (`POST /v1/recommendations`) with an occasion (required), and optionally a style and `paletteMode` (`suggested` or `explore`). |
+| FR-LOOK-01 | The user requests looks (`POST /v1/recommendations`) with an occasion (required), and optionally a style, one or more wear types (`wearType`: `indian`, `fusion`, `western`; D-96) and `paletteMode` (`suggested` or `explore`). |
 | FR-LOOK-02 | The system loads the user's profile and, if enabled, their self-reported signals. |
 | FR-LOOK-03 | Code generates looks deterministically: compatible templates → palettes → styling and fabric rules → look specification per slot. No external AI is involved in generating or selecting looks. |
 | FR-LOOK-04 | The response contains up to 5 distinct looks. Each slot shows its look specification, colour swatches, a labelled style illustration where a cleared asset exists (FR-DATA-06), a size note (FR-SIZE-04) and a generic search phrase (FR-LOOK-15). |
 | FR-LOOK-05 | Each look has a "Why this works" explanation built from the rationale of the rules that were applied and the attributes that matched (FR-LOOK-12). |
 | FR-LOOK-06 | Disliked colours never appear. Liked colours are boosted. |
 | FR-LOOK-07 | With `paletteMode: explore`, any colour the user hasn't disliked can appear. |
-| FR-LOOK-08 | **Precedence:** (1) hard constraints the user set (disliked colours, avoided fabrics, minimum coverage, department, and — with the product layer only — budget); (2) explicit preferences (fit, contrast, silhouettes, liked colours and fabrics, styles); (3) approved rules; (4) self-reported signals, if enabled; (5) weather, in Stage 2. |
+| FR-LOOK-08 | **Precedence:** (1) hard constraints the user set (disliked colours, avoided fabrics, minimum coverage, department, wear types chosen in the request (D-96), and — with the product layer only — budget); (2) explicit preferences (fit, contrast, silhouettes, liked colours and fabrics, styles, preferred wear types from the profile — never overriding wear types chosen in the request); (3) approved rules; (4) self-reported signals, if enabled; (5) weather, in Stage 2. |
 | FR-LOOK-09 | **Missing information:** only the occasion is required. No style means any style; no colours means neutral-led palettes; no signals means signals aren't used; no sizes means the size note asks the user to add one. The response lists the defaults applied (`DEFAULTS_APPLIED`) and never blocks. |
 | FR-LOOK-10 | **Conflicting preferences** (e.g. a colour both liked and disliked) are shown to the user. Until they resolve it, the more restrictive choice applies and the explanation says so (`PREFERENCE_CONFLICT`). |
 | FR-LOOK-11 | **Too few matches:** only looks that satisfy the hard constraints are returned, even if that is 0–2. The response names the limiting constraint and suggests a relaxation (`INSUFFICIENT_MATCHES`). It is a successful response, not an error, and looks are never padded. |
@@ -207,15 +207,17 @@ A **look** is a complete outfit suggestion made of slots (for example top, botto
 
 **Size systems (default, D-54):**
 
-| Group | Categories | Size system |
+| Group | Garment types (D-97) | Size system |
 |---|---|---|
-| Tops | T-shirts, Shirts | Letter XS–3XL; shirts may also use collar size |
-| Bottoms | Jeans, Trousers | Waist in inches (e.g. 26–44); optional length |
-| Ethnic tops | Kurtas, Kurtis | Letter XS–3XL, or numeric where the retailer uses it |
+| Tops | T-shirts, Shirts; jackets/blazers, Nehru jackets/bandhgalas, shrugs/cardigans | Letter XS–3XL; shirts may also use collar size |
+| Bottoms | Jeans, Trousers, Churidars, Salwars, Palazzos; belts | Waist in inches (e.g. 26–44); optional length |
+| Ethnic tops | Kurtas, Kurtis, Sherwanis, Anarkalis | Letter XS–3XL, or numeric where the retailer uses it |
 | Ethnic sets | Lehengas | Letter or waist size; often semi-stitched |
-| Free size | Sarees, most accessories | No size |
-| Shoes | Shoes | UK/India size |
+| Free size | Sarees, dhotis, dupattas/stoles, jewellery, bags, watches, most accessories | No size |
+| Shoes | Shoes, juttis, kolhapuris, heels, sneakers, loafers, sandals, formal shoes | UK/India size |
 | Dresses | Dresses (Stage 2) | Letter XS–3XL |
+
+Each garment type carries its size group (D-97); the broad category it belongs to (tops, bottoms, ethnic tops, ethnic sets & drapes, layers, footwear, accessories; dresses in Stage 2) doesn't decide the size.
 
 | ID | Requirement | Stage |
 |---|---|---|

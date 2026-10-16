@@ -152,7 +152,7 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 
 **`GET /v1/profile`** — returns the profile, or `null` fields if not yet set.
 
-**`PUT /v1/profile`** — input: the profile fields in [DATABASE.md](DATABASE.md) §3.2. `department` is required; everything else is optional. `budgetPreference` (optional, ₹ > 0) is used only to compare with totals of user-entered prices in Stage 1. `measurements` is accepted only when the product layer with size charts is active. Fields not sent are unchanged; sending `null` (or an empty list) clears a field. Unknown fields — including `ageRange`, `height` and, in Stage 1, `measurements` — are rejected with `INVALID_REQUEST`. A colour may be both liked and disliked; the generator applies the more restrictive choice (FR-LOOK-10). Returns the saved profile. Before the first save, `GET` returns `department: null` with every list empty.
+**`PUT /v1/profile`** — input: the profile fields in [DATABASE.md](DATABASE.md) §3.2. `department` is required; everything else is optional. `budgetPreference` (optional, ₹ > 0) is used only to compare with totals of user-entered prices in Stage 1. `preferredWearTypes` (optional) is a soft ranking preference (D-96). `measurements` is accepted only when the product layer with size charts is active. Fields not sent are unchanged; sending `null` (or an empty list) clears a field. Unknown fields — including `ageRange`, `height` and, in Stage 1, `measurements` — are rejected with `INVALID_REQUEST`. A colour may be both liked and disliked; the generator applies the more restrictive choice (FR-LOOK-10). Returns the saved profile. Before the first save, `GET` returns `department: null` with every list empty.
 
 ### 3.3 Appearance (`appearance.ts`)
 
@@ -167,7 +167,7 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 ### 3.5 Recommendations and looks (`outfit.ts`)
 
 **`POST /v1/recommendations`**
-- **Input:** `{ occasion (required), style?, paletteMode?: "suggested" | "explore" }`. Product layer only: optional `budget` (generated looks carry no prices in Stage 1, so budget never filters generation there). Stage 2: optional `weather`.
+- **Input:** `{ occasion (required), style?, wearType?: ("indian" | "fusion" | "western")[], paletteMode?: "suggested" | "explore" }`. A `wearType` in the request is a hard filter for that request; without it, the profile's preferred wear types only rank results (D-96). Product layer only: optional `budget` (generated looks carry no prices in Stage 1, so budget never filters generation there). Stage 2: optional `weather`.
 - **Behaviour:** deterministic generation (FR-LOOK-03): templates → palettes → rules → look specifications → diversity check. With the product layer: eligibility, matching and ranking per slot (FR-MATCH). Optional AI wording last, if enabled (FR-LOOK-16).
 - **Output:** `{ recommendationId, looks[], defaultsApplied[], conflicts[], limitedBy? }`. Each look: `{ id, status: "suggested", templateId, paletteId, slots[], explanation, explanationRefs, combinationSignature, aiModel, priceSummary? (product layer only) }`. Each slot: `{ slotId, slot, lookSpec, swatches[], illustration? { url, licenceLabel }, searchPhrase, sizeNote, alternatives[], productMatch? (product layer only) }`. Shortlist items are attached later to saved looks and appear only in `GET /v1/outfits/:id`.
 - **Without the product layer**, `productMatch` is always absent and no price, retailer or availability appears anywhere in the response.
