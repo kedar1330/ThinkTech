@@ -60,6 +60,17 @@ export const STYLE_IDS = ids(STYLES);
 export const styleSchema = z.enum(STYLE_IDS);
 export type Style = z.infer<typeof styleSchema>;
 
+// Wear type (D-96): kept apart from `styles`. A wear type chosen in a look request is a hard filter;
+// preferred wear types in the profile only rank results and never override the request.
+export const WEAR_TYPES = [
+  { id: 'indian', label: 'Indian' },
+  { id: 'fusion', label: 'Fusion' },
+  { id: 'western', label: 'Western' },
+] as const;
+export const WEAR_TYPE_IDS = ids(WEAR_TYPES);
+export const wearTypeSchema = z.enum(WEAR_TYPE_IDS);
+export type WearType = z.infer<typeof wearTypeSchema>;
+
 // --- Slots, category groups and categories (FRD §4.8, D-54, D-82) --------------------------------
 
 // A slot's type. Several template slots may share a type (e.g. two accessories); each has its own slotId.
