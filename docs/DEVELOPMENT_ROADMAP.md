@@ -36,7 +36,7 @@ M9 Integration testing, privacy and security review, hosting (HC-1), closed beta
 | # | Milestone | Status and evidence | Owner | Implementation Plan |
 |---|---|---|---|---|
 | M1 | Account, onboarding, Home and profile foundation | ✅ Sign-up with email code (PR #25), top navigation (#26), Skip for now and profile completeness (#28); profile, appearance signals, settings, deletion and tombstones (S1.1–S1.3) | Kedar (maintains); profile contracts Shreya | S1.1, S1.2, S1.3 |
-| M2 | Shared styling data, rules, validation and engine | 🔄 Vocabulary, record schemas, loader, linter, coverage and scale test merged (#2, #3). **Content: 0 palettes, 0 templates, 0 rules.** Engine and `outfits` not built (#11) | Shreya | S1.4, content C0 (#9), C1 (#10) |
+| M2 | Shared styling data, rules, validation and engine | 🔄 Vocabulary, record schemas, loader, linter, coverage and scale test merged (#2, #3). **Content: C0 drafted for founder review (#32): 8 palettes, 8 templates, 14 rules; not yet approved.** Engine and `outfits` not built (#11) | Shreya | S1.4, content C0 (#9), C1 (#10) |
 | M3 | Discover My Style, My Colour Palette, Outfit Categories | ⏳ Placeholders only; the style-profile editor is live as "Discover My Style" | Johita (Discover, Categories), Ankita (Palette) | S1.4 results page, S1.5 (#12) |
 | M4 | Saved Outfits and feedback | ⏳ Not built | Ankita | S1.5 (#13) |
 | M5 | Shop My Look, initial version (shortlist and budget on user-entered prices) | ⏳ Not built | Kedar | S1.B (#8, #14) |

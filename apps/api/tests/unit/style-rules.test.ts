@@ -274,4 +274,12 @@ describe('coverage report (FR-STY-11)', () => {
     expect(markdown).toContain('# Style knowledge base coverage');
     expect(markdown).toContain('Approved records: 2 palettes · 3 templates');
   });
+
+  it('labels a report that includes drafts, so it is never mistaken for the approved library', () => {
+    const report = buildCoverageReport(loadStyleLibrary(smallLibrary(), { allowFixtures: true }));
+    const markdown = formatCoverageReport(report, { includesDrafts: true });
+    expect(markdown).toContain('awaiting founder approval');
+    expect(markdown).toContain('Records (approved and draft): 2 palettes · 3 templates');
+    expect(markdown).not.toContain('Approved records:');
+  });
 });

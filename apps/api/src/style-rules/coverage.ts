@@ -103,12 +103,23 @@ export function buildCoverageReport(library: StyleLibrary): CoverageReport {
   };
 }
 
+export interface FormatCoverageOptions {
+  /** The report was built from draft and reviewed records too (a content PR awaiting founder review). */
+  includesDrafts?: boolean;
+}
+
 /** Markdown rendering, for the CI job summary. */
-export function formatCoverageReport(report: CoverageReport): string {
+export function formatCoverageReport(report: CoverageReport, options: FormatCoverageOptions = {}): string {
   const lines: string[] = ['# Style knowledge base coverage (FR-STY-11)', ''];
   const c = report.counts;
+  if (options.includesDrafts) {
+    lines.push(
+      '> Includes draft and reviewed records awaiting founder approval. They are not loaded at runtime until approved.',
+      '',
+    );
+  }
   lines.push(
-    `Approved records: ${c.palettes} palettes · ${c.templates} templates · ${c.stylingRules} styling rules · ${c.fabricRules} fabric rules`,
+    `${options.includesDrafts ? 'Records (approved and draft)' : 'Approved records'}: ${c.palettes} palettes · ${c.templates} templates · ${c.stylingRules} styling rules · ${c.fabricRules} fabric rules`,
     '',
   );
 

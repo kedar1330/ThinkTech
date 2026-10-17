@@ -2,6 +2,9 @@
 //
 //   pnpm style-rules lint       Validate and lint src/style-rules/data; exits 1 on any issue.
 //   pnpm style-rules coverage   Print the coverage report of the approved library as Markdown.
+//   pnpm style-rules coverage --include-drafts
+//                               Same, counting draft and reviewed records too (for a content PR
+//                               awaiting founder review). Retired records are never counted.
 //
 // Drafts fail `lint` with NOT_APPROVED by design: only approved records may be merged (CONTRIBUTING.md §6).
 
@@ -11,6 +14,7 @@ import {
   buildCoverageReport,
   formatCoverageReport,
   lintLibrary,
+  type RecordSet,
 } from '../src/style-rules';
 
 const command = process.argv[2];
@@ -30,8 +34,21 @@ if (command === 'lint') {
   }
 } else if (command === 'coverage') {
   // The report covers the approved records whether or not the lint passes, so gaps are visible early.
-  process.stdout.write(formatCoverageReport(buildCoverageReport(new StyleLibrary(result.approved))) + '\n');
+  const includesDrafts = process.argv.slice(3).includes('--include-drafts');
+  const records = includesDrafts ? withoutRetired(result.valid) : result.approved;
+  process.stdout.write(formatCoverageReport(buildCoverageReport(new StyleLibrary(records)), { includesDrafts }) + '\n');
 } else {
-  process.stderr.write('Usage: pnpm style-rules <lint|coverage>\n');
+  process.stderr.write('Usage: pnpm style-rules <lint|coverage [--include-drafts]>\n');
   process.exitCode = 2;
+}
+
+function withoutRetired({ palettes, stylingRules, fabricRules, templates }: RecordSet): RecordSet {
+  const live = <T extends { reviewStatus: string }>(records: T[]) =>
+    records.filter((r) => r.reviewStatus !== 'retired');
+  return {
+    palettes: live(palettes),
+    stylingRules: live(stylingRules),
+    fabricRules: live(fabricRules),
+    templates: live(templates),
+  };
 }
