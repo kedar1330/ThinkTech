@@ -1,1 +1,163 @@
-[]
+[
+  {
+    "id": "STY-001",
+    "version": 1,
+    "tags": ["pattern-mixing", "focal-point"],
+    "userAdjustable": ["styles"],
+    "rationale": "Pairing one printed piece with solid pieces keeps the print as the focal point and makes the rest of the outfit easier to coordinate.",
+    "limitations": "Mixing prints can work well when their scales and colours are matched; this is a gentle default for casual looks, not a restriction on wearing more than one print.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "coordination",
+    "areas": ["coordination"],
+    "coordinationAspects": ["pattern_mixing"],
+    "appliesTo": { "occasions": ["everyday", "travel", "date"] },
+    "effect": { "prefer": [{ "attribute": "pattern", "value": "solid" }], "weight": 0.3 }
+  },
+  {
+    "id": "STY-002",
+    "version": 1,
+    "tags": ["kurta-kurti", "bottoms", "proportion"],
+    "userAdjustable": ["silhouettes", "fit"],
+    "rationale": "Straight or tapered trousers under a kurta or kurti keep a clean vertical line below the hem, so the length of the top stays the main shape of the outfit.",
+    "limitations": "Wide-leg and flared bottoms with a kurta are also common and balanced; this only gives a small lift to straight and tapered cuts, and a user's silhouette preferences come first.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "silhouette",
+    "areas": ["coordination"],
+    "coordinationAspects": ["proportion_balance"],
+    "appliesTo": { "categories": ["trousers"], "styles": ["traditional", "fusion"] },
+    "effect": {
+      "prefer": [
+        { "attribute": "silhouette", "value": "straight" },
+        { "attribute": "silhouette", "value": "tapered" }
+      ],
+      "weight": 0.3
+    }
+  },
+  {
+    "id": "STY-003",
+    "version": 1,
+    "tags": ["work", "formality", "necklines"],
+    "userAdjustable": ["occasions", "styles"],
+    "rationale": "Collared and mandarin necklines with solid or subtly patterned fabric read as more structured, which keeps the outfit at the same level of formality as most workplaces and formal events.",
+    "limitations": "Dress codes vary widely by workplace, city and industry; this is a general default and the user's own style and occasion choices take priority.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "occasion",
+    "areas": ["occasion", "coordination"],
+    "coordinationAspects": ["formality"],
+    "appliesTo": { "occasions": ["work", "formal"] },
+    "effect": {
+      "prefer": [
+        { "attribute": "neckline", "value": "collared" },
+        { "attribute": "neckline", "value": "mandarin" },
+        { "attribute": "pattern", "value": "solid" },
+        { "attribute": "pattern", "value": "stripes" }
+      ],
+      "weight": 0.5
+    }
+  },
+  {
+    "id": "STY-004",
+    "version": 1,
+    "tags": ["festive", "formality", "embellishment"],
+    "userAdjustable": ["occasions", "styles"],
+    "rationale": "Embroidered surfaces and metallic accents add texture and shine, which raises the formality of a look to match festive and wedding occasions.",
+    "limitations": "Many people prefer understated festive wear, and some families or communities have their own colour and embellishment customs; this is a soft preference that the user's choices override.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "occasion",
+    "areas": ["occasion", "coordination"],
+    "coordinationAspects": ["formality"],
+    "appliesTo": { "occasions": ["festive", "wedding"] },
+    "effect": {
+      "prefer": [
+        { "attribute": "pattern", "value": "embroidered" },
+        { "attribute": "colorFamily", "value": "metallic" }
+      ],
+      "weight": 0.5
+    }
+  },
+  {
+    "id": "STY-005",
+    "version": 1,
+    "tags": ["footwear", "accessories", "finishing"],
+    "userAdjustable": ["colors"],
+    "rationale": "Footwear and accessories in a neutral or metallic shade link back to the rest of the outfit without competing with the main colour, so the look reads as finished.",
+    "limitations": "A bright shoe or bag can be a deliberate focal point; this only gives a small lift to neutral and metallic options and does not stop accent colours being suggested.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "coordination",
+    "areas": ["coordination"],
+    "coordinationAspects": ["footwear_accessory"],
+    "appliesTo": { "categories": ["shoes", "accessory"] },
+    "effect": {
+      "prefer": [
+        { "attribute": "colorFamily", "value": "neutral" },
+        { "attribute": "colorFamily", "value": "metallic" }
+      ],
+      "weight": 0.3
+    }
+  },
+  {
+    "id": "STY-006",
+    "version": 1,
+    "tags": ["comfort", "everyday", "travel"],
+    "userAdjustable": ["fit", "comfort", "silhouettes"],
+    "rationale": "Regular and relaxed fits with straight or relaxed shapes allow easy movement through a long day or a journey.",
+    "limitations": "Fit is personal: a user's saved fit preference per category always takes priority over this default, and slim fits remain available.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "fit",
+    "areas": ["preference", "occasion", "fit"],
+    "appliesTo": { "occasions": ["everyday", "travel"] },
+    "effect": {
+      "prefer": [
+        { "attribute": "fit", "value": "regular" },
+        { "attribute": "fit", "value": "relaxed" },
+        { "attribute": "silhouette", "value": "straight" },
+        { "attribute": "silhouette", "value": "relaxed" }
+      ],
+      "weight": 0.4
+    }
+  },
+  {
+    "id": "STY-007",
+    "version": 1,
+    "tags": ["work", "contrast", "colour"],
+    "userAdjustable": ["contrast", "colors"],
+    "rationale": "A medium contrast between top and bottom looks polished but not stark, which suits a full working day and keeps attention on the person rather than the outfit.",
+    "limitations": "Many workplaces welcome strong colour; this is a gentle default, and a user's own contrast preference takes priority.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "combination",
+    "areas": ["coordination"],
+    "coordinationAspects": ["colour"],
+    "appliesTo": { "occasions": ["work"] },
+    "effect": { "prefer": [{ "attribute": "contrast", "value": "medium" }], "weight": 0.3 }
+  },
+  {
+    "id": "STY-008",
+    "version": 1,
+    "tags": ["evening", "contrast", "colour"],
+    "userAdjustable": ["contrast", "colors"],
+    "rationale": "Higher contrast between pieces, such as a light top with a deep bottom or a bright accent on a dark base, stands out under evening and indoor lighting.",
+    "limitations": "Low-contrast, tonal outfits are equally suitable for evenings; this is a gentle default, and a user's own contrast preference takes priority.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "combination",
+    "areas": ["coordination"],
+    "coordinationAspects": ["colour"],
+    "appliesTo": { "occasions": ["party", "date"] },
+    "effect": { "prefer": [{ "attribute": "contrast", "value": "high" }], "weight": 0.3 }
+  }
+]
