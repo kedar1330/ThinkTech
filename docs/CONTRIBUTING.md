@@ -76,10 +76,10 @@ A feature isn't complete just because the UI works. It needs: UI, API, validatio
 The founder reviews and approves all palettes, styling/fit rules, fabric rules, outfit templates and style illustrations. Content is produced in sets — C0 development seed (temporary), C1 Stage 1 release set, C2 full library of at least 100 palettes and 100 templates — following the batch process in [ImplementationPlan.md](ImplementationPlan.md) §5.2. Any contributor may draft records; only the founder approves.
 
 **Workflow:**
-1. **Draft:** create or change a record in `style-rules/` on a branch, with `reviewStatus: draft`, rationale, limitations and tags.
-2. **Automated checks:** schema validation and the linter (contradictions, duplicates, unknown references, missing rationale or limitations, inclusive-language check); licence check for illustrations; the coverage report (FR-STY-11) is updated.
-3. **Founder review:** against the checklist below. On approval, set `reviewStatus: approved`, `reviewedBy`, `reviewedAt`, and bump `version`.
-4. **Merge:** only approved, linter-clean records are used at runtime.
+1. **Draft:** create or change a record in `apps/api/style-rules-drafts/` on a branch, with `reviewStatus: draft`, rationale, limitations and tags. Drafts never go in `apps/api/src/style-rules/data/`, which is the shipped library loaded when the API starts.
+2. **Automated checks:** schema validation and the linter (contradictions, duplicates, unknown references, missing rationale or limitations, inclusive-language check) via `style-rules drafts`, which allows only `NOT_APPROVED`; licence check for illustrations; the coverage report (FR-STY-11, `coverage --include-drafts`) is updated.
+3. **Founder review:** against the checklist below. On approval, move the records into `apps/api/src/style-rules/data/` (a template together with the palettes and rules it references), set `reviewStatus: approved`, `reviewedBy`, `reviewedAt`, and bump `version`. Steps: [`apps/api/style-rules-drafts/README.md`](../apps/api/style-rules-drafts/README.md).
+4. **Merge:** `style-rules lint` must be clean; only approved, linter-clean records are used at runtime.
 
 **Checklist:**
 - [ ] The rationale describes an effect, never a judgement.
