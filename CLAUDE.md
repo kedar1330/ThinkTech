@@ -64,7 +64,7 @@ Prefer targeted tests while working; run the full suite once at the end.
 - **Fixtures** are synthetic, `isFixture: true`, live only in `apps/api/tests/fixtures/`, and never reach production.
 - **Secrets:** never commit `.env*` (except `.env.example`), and never use `NEXT_PUBLIC_` for secrets.
 - **Migrations:** backward-compatible and numbered in `apps/api/scripts/migrations/`; agree the number with the owner (Shreya).
-- **Styling content** (`apps/api/src/style-rules/data/*.json`) is founder-approved only; drafts use `reviewStatus: draft`.
+- **Styling content** (`apps/api/src/style-rules/data/*.json`) is founder-approved only. Drafts (`reviewStatus: draft`) live in `apps/api/style-rules-drafts/` and move into `data/` only after founder approval.
 - No new infrastructure (Redis, queues and so on) without a concrete need. External services only via `apps/api/src/integrations/`.
 
 ## Git workflow
