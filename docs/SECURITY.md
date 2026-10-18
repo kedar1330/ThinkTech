@@ -47,12 +47,29 @@ Browser → Next.js server (BFF, first-party HttpOnly session cookie) → Expres
 
 Registration — by email or Google — requires an invite while `PUBLIC_SIGNUP_ENABLED` is `false`. It stays `false` until every public-launch blocker in [ImplementationPlan.md](ImplementationPlan.md) §11 is met, including D-74 recorded complete.
 
+**Conflict (verified 2026-10-18):** since PR #25 the code defaults `PUBLIC_SIGNUP_ENABLED` to `true` (`apps/api/src/config/env.ts`), and the landing page's FAQ says anyone can sign up. Until the founder resolves this ([PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) §15 #1), any hosted environment must set `PUBLIC_SIGNUP_ENABLED=false` explicitly to honour D-63.
+
 ## 2. Authorization and Data Isolation
 
 - Every protected route runs authentication middleware before validation and the controller.
 - Every query on user-owned data (`sessions`, `profiles`, `appearanceProfiles`, `outfits`, `shortlistItems`, and later `designs`, `chatMessages`) is scoped to the authenticated user; ownership is checked in the service layer, not only in the UI. A request for another user's resource returns `NOT_FOUND`.
-- Roles: `user` and `admin` (D-73). There is no admin UI. Content, catalogue and retailer changes go through repository pull requests and server-side scripts with their own credentials.
+- Roles: `user` and `admin` (D-73). There is no admin UI. Content, catalogue and retailer changes go through repository pull requests and server-side scripts with their own credentials. *Specified 2026-10-18 (D-120): an admin panel with Super Admin and Content Admin roles — controls in §2.1.*
 - Shared product, retailer and evidence data are read-only through the API.
+- **Specified user-owned collections (D-115, D-116):** `savedItems`, `savedCollections`, `customPalettes`, `userFeedback` and `productReports` follow the same rules — every query scoped to the authenticated user, `NOT_FOUND` for anyone else's records, a saved item may reference only shared records or the user's own records (a request naming another user's custom palette or saved item is rejected), and all of them are deleted with the account and replayed after a restore. No sharing exists (D-118).
+
+### 2.1 Admin panel (specified, D-120)
+
+| Control | Rule |
+|---|---|
+| Who is an admin | `users.role = admin` **and** an active `adminAccounts` record; both checked by the API on every `/v1/admin/*` request. Admin registration is never public; the first Super Admin comes from the D-95 seed. A disabled admin or a changed role takes effect on the next request |
+| Permissions | Enforced server-side per route from `ADMIN_ROLE_PERMISSIONS` (`packages/contracts/src/admin.ts`). Content Admins never manage admins, users, audit logs, security settings or styling approval. No self-escalation; only a Super Admin changes roles, and the last active Super Admin can't be disabled |
+| Least privilege | Admin user screens show name, email, internal ID, account status and registration date only. Never measurements, full profiles, preferences, appearance signals, photos, try-on images, passwords or reset codes; no bulk export of personal data; no bulk user deletion |
+| Account actions | Suspension sets `isActive: false`, records `suspension`, increments `tokenVersion` and deletes the user's sessions — blocked by the API, not hidden by the UI. Deletion uses the existing deletion workflow (tombstone first, D-85) |
+| Sessions | Admin pages need a fresh session; no Remember Me on admin routes; MFA decided at HC-1 (D-121) |
+| Audit | Every admin write — success or failure — is recorded in `adminAuditLogs` with admin, action, target, sanitised field changes, time and request ID; never passwords, tokens, photos, user-media URLs, measurements or profile values. Readable by the Super Admin only; kept 1 year |
+| Analytics | Aggregates only (D-125); groups under 10 shown as "fewer than 10"; age-group counts (D-104, approved; once the field ships) only as aggregates, never per user |
+| Safety | Zod validation, pagination and request limits on every admin route; confirmation before destructive or bulk actions; archive instead of delete for referenced records; no settings console, environment variables, credentials or shell access in the UI |
+| Rate limits | Admin writes 60/min per admin; user-status changes 30/hour per admin (defaults, D-38 style) |
 
 ## 3. Secrets
 
@@ -108,9 +125,9 @@ Registration — by email or Google — requires an invite while `PUBLIC_SIGNUP_
 | Saved looks, feedback | History, library improvement | Stage 1 | No | Until the user deletes them; unsaved looks expire after 7 days |
 | Budget preference | Comparing totals of user-entered prices with the user's budget | Stage 1, optional | No | Until changed or account deletion |
 | Shortlist items, links and entered prices | User's own shopping notes; not verified by StyleMe | Stage 1, optional | No | Until the user deletes them or the account |
-| Measurements | Product size guidance | Only with product size charts (product layer) | No | Deletable at any time on their own |
+| Measurements | Body shape and fit (D-102, approved); size guidance only with product size charts | Stage 1 once My Profile is built, optional (§6.1) | No | Deletable at any time on their own |
 | City / rounded location | Weather | Stage 2, only if enabled | No (conditions only) | City deletable; coordinates never stored |
-| Personal photos | Photo analysis (D-76), try-on (D-48) | Not collected until approved, and then only with explicit, withdrawable consent | Not unless rule 16 is satisfied (consent alone is not enough) | Deleted after analysis unless the user chooses to keep them; withdrawing consent deletes kept photos and photo-derived estimates. Storage location and retention of kept photos: D-11, decided with photo analysis |
+| Personal photos | Photo analysis (D-103, approved), try-on (D-48) | Not collected until photo analysis ships after the privacy review; then only with explicit, withdrawable consent (§6.1) | Face photos never; full-body photos only to Gemini under D-122 (consent alone is not enough) | Deleted after analysis unless the user chooses to keep them; revoking retention deletes kept photos immediately; on consent revocation the user chooses to keep or delete photo-derived results (D-103, revises D-11) |
 | Product review evidence | Quality transparency | Product layer | Only as delimited data, if ever needed | While the product is active; no reviewer personal data |
 | Operational curation notes | Verification audit | Product layer | No | 30–60 days, provisional (D-49) |
 
@@ -118,6 +135,33 @@ Registration — by email or Google — requires an invite while `PUBLIC_SIGNUP_
 - **Notices:** a plain-language privacy notice at sign-up states each purpose and how to withdraw or delete. Optional data (signals, budget, shortlist items, and later measurements and location) has its own short explanation at the point of collection; the shortlist explanation states that StyleMe stores the user's entries as given and verifies nothing.
 - **Logs** never contain passwords, tokens, reset codes, measurements, appearance signals, photos, precise location or full request bodies (D-17).
 - **Legal context (not legal advice):** India's Digital Personal Data Protection Rules, 2025 were notified in November 2025 (secondary sources give 13 or 14 November). Rules 1, 2 and 17–21 applied on publication; consent-manager registration (Rule 4) one year after publication; most substantive obligations, including notice and consent (Rule 3), 18 months after publication, around 13–14 May 2027 (as reported by secondary sources checked on 2026-10-10); the exact dates and their applicability to StyleMe are for the legal review (D-74) to confirm against the Gazette text. Source previously cited: [Delhi IT memo](https://it.delhi.gov.in/sites/default/files/IT/generic_multiple_files/dpdp_om.pdf). These safeguards are designed with that in mind. Documentation alone doesn't guarantee compliance: a qualified legal review (D-74) is a dependency for public launch.
+
+### 6.1 My Profile photos, measurements and age group (D-102 … D-105, approved 2026-10-18; not built)
+
+The founder approved the My Profile requirements ([FRD.md](FRD.md) §4.3a) on 2026-10-18. These controls are required before any of it ships; until it ships, the rows above describe what is collected today (no photos, no measurements, no age).
+
+| Data | Purpose | Controls |
+|---|---|---|
+| Face photo; full-body photos (front/side/back) | Estimate skin tone and undertone; estimate body shape | Separate uploads; explicit consent per kind before the first analysis, revocable; camera/gallery permission requested only when the user acts; on-device processing where feasible, otherwise StyleMe's own servers with disclosure; **face photos never sent to an external AI provider (rule 16); full-body photos only to Gemini under D-122 (§6.2), after the privacy review**; EXIF/location stripped; private object storage, encrypted at rest, no public URLs, owner-only access through the API or short-lived signed URLs; user-chosen retention (keep, or delete after analysis); revoking retention deletes photos immediately; deletion removes object and metadata |
+| Photo-derived results (`appearanceAnalyses`) | Suggested values the user confirms or corrects | Deletable separately from photos; on consent revocation the user chooses keep or delete; confidence labels never imply certainty |
+| Body measurements | Body shape and fit-based recommendations | Manual entry only; optional; required only by fit-based features; deletable on their own; never logged or sent to external AI |
+| Age group | Aggregate statistics; age-appropriate experience | Optional; no date of birth; admins see aggregated counts only. **Under-18 users:** DPDP treats them as children — the legal review (D-74) must define parental consent and restrictions before this ships |
+| Data export (JSON, PDF) | User's right to a copy | Generated on request for the signed-in owner only; not cached; download link single-use |
+
+Logs never contain photos, image URLs or storage keys, measurements, age groups or analysis results (D-17). Account deletion must also delete the user's stored photo objects (DATABASE.md §3.7, §10).
+
+### 6.2 Feature specifications (D-109 … D-128)
+
+| Area | Controls |
+|---|---|
+| External AI for full-body photos (D-122, approved option b) | The founder approved it on 2026-10-18; no real photo is sent until the privacy review (D-74) covers it (mocks behind a disabled flag until then). Conditions: per-use consent naming the provider, full-body photo only, no identifiers or EXIF, a paid tier whose terms exclude training on content, no provider-side retention, Zod-validated output, user confirmation before use, and an always-available manual and measurement path. API keys server-side only |
+| Natural-language search (D-123) | Only the query text may go to an AI provider, and only if enabled; no profile data; queries are not stored or logged |
+| 2D try-on (D-119) | No photos, no camera access, no personal media stored; saved try-on looks are configurations only |
+| Illustrations and imagery (D-113) | Published only with verified rights (enforced by the model); no retailer, scraped or unclear-licence images; figures always clothed |
+| Saved items | Private by default; no sharing (D-118); product snapshots never shown as current prices; removing a saved item never deletes shared data |
+| Feedback and personalisation | Explicit, undoable, resettable; the user decides whether it is used (D-115); never sent to AI providers |
+| Product reports | Free text not collected beyond a fixed issue list; reports never change verified data without review |
+| Remembered filters | Stored only in the browser and URL; never in the profile (D-126) |
 
 ## 7. Data Honesty and Test-Data Separation
 
@@ -185,6 +229,12 @@ Registration — by email or Google — requires an invite while `PUBLIC_SIGNUP_
 
 **Product layer additions:** retailer links domain-restricted; permitted sources only; retailer content treated as untrusted; affiliate disclosure where links are tracked; retailer permissions recorded in `retailers.permissions`.
 
+**Feature-specification additions (before each feature ships):**
+- [ ] Every new user-owned collection scoped per user, in `USER_OWNED_COLLECTIONS`, deleted with the account and covered by replay (`catalogue-models.test.ts` covers the declared ones)
+- [ ] Admin routes: role + `adminAccounts` + permission checked server-side; Content Admin denied Super Admin routes; suspended users blocked on their next request; no private profile data in admin responses; audit log written for success and failure
+- [ ] Styling content can't be published without founder approval; assets can't be published without verified rights
+- [ ] No external AI call with personal data; the only exception is full-body photos to Gemini (D-122, approved), and only once the privacy review is recorded
+
 ## 12. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-04 … D-07, D-86 … D-94, D-17, D-20, D-37, D-38, D-44, D-46 … D-49, D-63, D-65, D-73, D-74, D-77 … D-86.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-04 … D-07, D-86 … D-94, D-17, D-20, D-37, D-38, D-44, D-46 … D-49, D-63, D-65, D-73, D-74, D-77 … D-86, D-102 … D-105, D-113, D-115, D-116, D-118 … D-126.

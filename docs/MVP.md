@@ -42,15 +42,26 @@ People in India who want personal fashion guidance (see [BRD.md](BRD.md) §1–�
 | Budget totals on user-entered prices, per saved look, labelled "not verified by StyleMe" | FR-BUD (Stage 1 rows) |
 | Data honesty labels; style illustrations only where licensed | FR-DATA |
 | Optional AI wording, off by default | FR-LOOK-16 |
+| **Feature specifications (D-109):** Discover My Style (style recommendations, details, colour step, hand-offs) | FR-DMS |
+| My Colour Palette: personalised ranking by tone and undertone first, filters, detail, saving, custom palettes, feedback | FR-PAL-04 … 30 |
+| Outfit Categories on a shared style catalogue with croquis illustrations, body-shape and goal suitability, search, compare | FR-OCAT, D-110 … D-114 |
+| Saved Outfits: one save system, collections, favourites, detail, duplicate and Save as New Look | FR-SAVE, D-116 |
+| Shop My Look screens and outfit assembly (real products only with the product layer) | FR-SHOP, D-124 |
+| 2D illustrative Virtual Try-On (no photos, no AI) | FR-VTO, D-119 |
+| Admin Panel (Super Admin; Content Admin designed) | FR-ADM, D-120 |
+| Cross-feature hand-offs with stable IDs and honest unavailable states | FR-CONN, D-127 |
 
 ### 3.2 Not in Stage 1
 
 - **Product layer (Stage 3, needs authorisation):** verified products, retailer integrations, retailer-sourced prices, stock, ratings, reviews, quality evidence, matching, comparison, size charts and measurements (FR-PROD, FR-MATCH, FR-QUAL, FR-SIZE-05 … 07, verified-price FR-BUD rows).
 - **Full styling library C2 (Stage 2 release requirement):** at least 100 palettes and at least 100 outfit templates, 8–12 categories, comprehensive rules (D-57). Stage 1 ships with C1; C2 is planned and produced from the start ([ImplementationPlan.md](ImplementationPlan.md) §5.2).
 - Weather (Stage 2).
-- Photo-based appearance analysis, 3D avatar, Design Studio, sketch-to-design, chatbot and tailor PDF (D-76).
-- Virtual try-on (D-48).
+- 3D avatar, Design Studio, sketch-to-design, chatbot and tailor PDF (D-76). Photo-based appearance analysis is approved (D-103) but is released only after the privacy review; Gemini for full-body photos is approved under D-122 with the same gate.
+- Photo-based or generative virtual try-on (D-48). The 2D illustrative try-on is in scope (D-119).
+- Sharing of palettes, saved items or collections (D-118).
 - Cart, checkout and payments (never).
+
+**Proposed changes (pending founder decision, [FRD.md](FRD.md) §4.1b and §4.3a):** My Profile with manual body measurements, optional age group, face and full-body photo analysis with consent (D-102 … D-104), data export (D-105) and a redesigned Home (D-106). If approved, the measurement and photo-analysis items above move into scope; until then this list stands.
 
 ---
 
@@ -135,6 +146,19 @@ Each criterion is checked by the tests named in brackets ([TESTING.md](TESTING.m
 | AC-W2 | Provider failure never blocks recommendations; manual entry is offered (W-03, W-06) |
 | AC-W3 | Device coordinates are rounded and never stored, logged or sent to AI (W-05) |
 
+### 5.6 Feature specifications (D-109 … D-128)
+
+| ID | Criterion |
+|---|---|
+| AC-F1 | Discover My Style: catalogue browsing with correct illustrations, rule-based explainable recommendations, filters, details, saving, colour step and every supported hand-off work end to end (FR-DMS-17) |
+| AC-F2 | Outfit Categories: overview, 3 – 5 suitable recommendations, tiles, search, filters, sort, compare and detail pages work; "Recommended" never contains a style that fails the user's requirements; no-match responses name the criteria (FR-OCAT-26, D-114) |
+| AC-F3 | My Colour Palette: ranked by tone and undertone first when known, general and labelled otherwise; save, unsave, customise as a copy, create from HEX; the curated palette never changes (FR-PAL-30) |
+| AC-F4 | Saved Outfits: saved items persist across sessions; duplicates detected; customising never overwrites; removing never deletes shared data; collections isolated per account (FR-SAVE-18) |
+| AC-F5 | Shop My Look: within the data available, browse, filter, assemble, total, replace, save and open valid links; without an authorised source an honest unavailable state and no placeholder products (FR-SHOP-18) |
+| AC-F6 | 2D Virtual Try-On: select a model, combine supported garments, recolour, correct, reset, and save and reopen the same configuration without broken layers; no photo or external call (FR-VTO-15) |
+| AC-F7 | Admin Panel: role and permission checks enforced by the API; no private profile data in admin responses; styling content and assets can't be published without approval and rights; every action audited (FR-ADM) |
+| AC-F8 | Every FR-CONN-08 journey passes end to end at 375×812 and 1280×800; no advertised action is simulated |
+
 ### 5.5 Stage 2 full styling library (release requirement, D-57)
 
 | ID | Criterion |
@@ -152,7 +176,8 @@ Each criterion is checked by the tests named in brackets ([TESTING.md](TESTING.m
 | User-provided | Profile, sizes, signals, budget | "Your …" |
 | User-provided, not verified | Shortlist items, prices the user enters, and totals of those prices | "Added by you — not verified by StyleMe", "Price entered by you — not verified by StyleMe", "Total of prices you entered — not verified by StyleMe; not a checkout price" |
 | Verified | None in Stage 1 (product layer, Stage 3) | — |
-| Derived | Looks, explanations, size notes | "Suggested for you", "Why this works" |
+| Derived | Looks, explanations, size notes, style and palette suitability | "Suggested for you", "Why this works", "Based on your profile / your preferences / general colour harmony" |
+| Illustrative | Croquis, technical drawings, 2D try-on previews | "Style illustration — not a product"; "Illustrative 2D preview — not an exact representation of fit" |
 | Estimated | None in Stage 1 | — |
 | Unavailable | Any missing value | "Not available" |
 
@@ -168,6 +193,6 @@ The MVP (Stage 1) is done when content set C1 is approved, every closed-beta cri
 
 ## 8. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-07, D-46, D-86 … D-94, D-52, D-53, D-55, D-57, D-62, D-63, D-65, D-67, D-68, D-74, D-76 … D-86.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-07, D-46, D-86 … D-94, D-52, D-53, D-55, D-57, D-62, D-63, D-65, D-67, D-68, D-74, D-76 … D-86, D-109 … D-128.
 
 **D-77 is approved (Option B).** D-48 and D-76 stay pending and are raised only when needed; D-81 (hosting) is decided at the hosting checkpoint; D-74 (legal review) blocks public launch only.

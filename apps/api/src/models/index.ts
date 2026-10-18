@@ -1,4 +1,23 @@
 import { Schema, type Connection, type InferSchemaType, type Model } from 'mongoose';
+import {
+  catalogueCategorySchema,
+  clothingStyleSchema,
+  fabricRuleSchema,
+  garmentAttributeSchema,
+  illustrationSchema,
+  outfitTemplateSchema,
+  paletteSchema,
+  stylingRuleSchema,
+  usageDailyStatSchema,
+} from './catalogue';
+import {
+  adminAccountSchema,
+  adminAuditLogSchema,
+  customPaletteSchema,
+  savedCollectionSchema,
+  savedItemSchema,
+  userFeedbackSchema,
+} from './user-collections';
 
 // Stage 1 account collections (DATABASE.md §3.1 – §3.1d). Collection names are explicit so they
 // match the documentation and the tombstone replay list.
@@ -59,6 +78,14 @@ const userSchema = new Schema(
         { _id: false },
       ),
       default: () => ({}),
+    },
+    // SPECIFIED (D-120, D-125); nothing writes these yet. Day of the last authenticated request (updated at
+    // most once a day) for aggregate "active users" counts, and who suspended the account through the
+    // admin panel. `default: undefined` leaves existing documents unchanged.
+    lastActiveAt: { type: Date, default: undefined },
+    suspension: {
+      type: new Schema({ suspendedAt: Date, suspendedBy: Schema.Types.ObjectId, reasonCode: String }, { _id: false }),
+      default: undefined,
     },
   },
   { timestamps: true },
@@ -179,11 +206,86 @@ const appearanceProfileSchema = new Schema(
     bodyProportions: { type: appearanceAttributeSchema, default: null },
     // Signals are used only while this is on (FR-SIG-03).
     useInRecommendations: { type: Boolean, default: true, required: true },
-    // Photo-analysis estimates only (deferred, D-76).
+    // Photo-analysis estimates only (D-103, approved, not built).
     analysisVersion: { type: String, default: null },
+    // Approved (D-103), not built: no endpoint writes these yet. Consent per photo kind,
+    // asked before the first analysis and revocable; `noticeVersion` is the disclosure the user saw.
+    photoConsent: {
+      type: new Schema(
+        {
+          face: {
+            type: new Schema(
+              { noticeVersion: String, grantedAt: Date, revokedAt: { type: Date, default: null } },
+              { _id: false },
+            ),
+            default: undefined,
+          },
+          body: {
+            type: new Schema(
+              { noticeVersion: String, grantedAt: Date, revokedAt: { type: Date, default: null } },
+              { _id: false },
+            ),
+            default: undefined,
+          },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
+    // Keep photos until deleted, or delete them automatically after analysis (user's choice).
+    photoRetention: { type: String, enum: ['keep', 'delete_after_analysis'], default: undefined },
   },
   { timestamps: true },
 );
+
+// Approved, not built (DATABASE.md §3.7, D-103): metadata of private profile photos. The image itself lives in
+// private object storage under `storageKey`; it is never public and never returned to clients. Two
+// separate uploads: `face` (skin tone and undertone) and `body` (front/side/back, body shape). Before any
+// upload endpoint ships, account deletion must also delete the stored objects, not only this metadata.
+const userPhotoSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true },
+    kind: { type: String, enum: ['face', 'body'], required: true },
+    angle: { type: String, enum: ['front', 'side', 'back'], default: null },
+    storageKey: { type: String, required: true, unique: true },
+    contentType: { type: String, enum: ['image/jpeg', 'image/png', 'image/webp'], required: true },
+    bytes: { type: Number, required: true },
+    retention: { type: String, enum: ['keep', 'delete_after_analysis'], required: true },
+    uploadedAt: { type: Date, required: true },
+    analyzedAt: { type: Date, default: null },
+    // Set for `delete_after_analysis`; a deletion job removes the object and this document together.
+    deleteAfter: { type: Date, default: null },
+  },
+  { timestamps: true },
+);
+userPhotoSchema.index({ userId: 1, kind: 1, uploadedAt: -1 });
+userPhotoSchema.index({ deleteAfter: 1 }, { partialFilterExpression: { deleteAfter: { $type: 'date' } } });
+
+// Approved, not built (DATABASE.md §3.8, D-103): history of appearance analyses. The value in use stays in
+// `appearanceProfiles`; a result is applied there only after the user confirms or corrects it.
+// Deleting a photo does not delete results derived from it (they are deleted separately).
+const appearanceAnalysisSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true },
+    kind: { type: String, enum: ['skin_tone', 'body_shape'], required: true },
+    source: { type: String, enum: ['photo', 'measurements', 'photo_and_measurements'], required: true },
+    photoIds: { type: [Schema.Types.ObjectId], default: [] },
+    result: { type: Schema.Types.Mixed, required: true },
+    // High / medium / low for photo-only results; null otherwise (never presented as certain).
+    confidence: { type: String, enum: ['high', 'medium', 'low'], default: null },
+    status: {
+      type: String,
+      enum: ['pending_review', 'confirmed', 'corrected', 'superseded'],
+      default: 'pending_review',
+      required: true,
+    },
+    analysisVersion: { type: String, required: true },
+    reviewedAt: { type: Date, default: null },
+  },
+  { timestamps: true },
+);
+appearanceAnalysisSchema.index({ userId: 1, kind: 1, createdAt: -1 });
+appearanceAnalysisSchema.index({ userId: 1, source: 1 });
 
 // Style profile (DATABASE.md §3.2), one per user. Nested values are validated by the Zod contract
 // (`updateProfileRequestSchema`) before they reach the database. No age range, height or measurements
@@ -204,6 +306,29 @@ const profileSchema = new Schema(
     preferredStyles: { type: [String], default: [] },
     preferredOccasions: { type: [String], default: [] },
     budgetPreference: { type: Number, default: null },
+    // My Profile fields (DATABASE.md §3.2, D-102 … D-104, approved 2026-10-18, not built). The profile
+    // contract does not accept them yet and responses never include them; `default: undefined` keeps
+    // existing documents unchanged, so no migration is needed.
+    ageGroup: { type: String, enum: ['under_18', '18_24', '25_34', '35_44', '45_plus'], default: undefined },
+    // Body measurements, entered manually, stored in cm (`{ displayUnit, valuesCm, updatedAt }`).
+    measurements: { type: Schema.Types.Mixed, default: undefined },
+    // Manual body-shape choice (a proportion descriptor or "not_sure") when no analysis is used.
+    bodyShapeChoice: { type: String, default: undefined },
+    defaultFit: { type: String, default: undefined },
+    categoryBudgets: { type: Schema.Types.Mixed, default: undefined },
+    customOccasions: { type: [String], default: undefined },
+    // Last-updated date per My Profile section (`{ basic_info: Date, … }`).
+    sectionUpdatedAt: { type: Schema.Types.Mixed, default: undefined },
+    // SPECIFIED feature fields (DATABASE.md §3.2, D-111, D-115); the profile contract does not accept them
+    // yet. Styling goals (Outfit Categories), preferred and avoided clothing styles (CST IDs), and the
+    // user's personalisation controls: pause, whether feedback is used, and the last reset.
+    stylingGoals: { type: [String], default: undefined },
+    preferredStyleIds: { type: [String], default: undefined },
+    avoidedStyleIds: { type: [String], default: undefined },
+    personalization: {
+      type: new Schema({ paused: Boolean, useFeedback: Boolean, resetAt: Date }, { _id: false }),
+      default: undefined,
+    },
   },
   { timestamps: true, minimize: false },
 );
@@ -216,6 +341,23 @@ export type SessionDoc = InferSchemaType<typeof sessionSchema>;
 export type TombstoneDoc = InferSchemaType<typeof tombstoneSchema>;
 export type AppearanceProfileDoc = InferSchemaType<typeof appearanceProfileSchema>;
 export type ProfileDoc = InferSchemaType<typeof profileSchema>;
+export type UserPhotoDoc = InferSchemaType<typeof userPhotoSchema>;
+export type AppearanceAnalysisDoc = InferSchemaType<typeof appearanceAnalysisSchema>;
+export type CatalogueCategoryDoc = InferSchemaType<typeof catalogueCategorySchema>;
+export type GarmentAttributeDoc = InferSchemaType<typeof garmentAttributeSchema>;
+export type ClothingStyleDoc = InferSchemaType<typeof clothingStyleSchema>;
+export type PaletteDoc = InferSchemaType<typeof paletteSchema>;
+export type OutfitTemplateDoc = InferSchemaType<typeof outfitTemplateSchema>;
+export type StylingRuleDoc = InferSchemaType<typeof stylingRuleSchema>;
+export type FabricRuleDoc = InferSchemaType<typeof fabricRuleSchema>;
+export type IllustrationDoc = InferSchemaType<typeof illustrationSchema>;
+export type UsageDailyStatDoc = InferSchemaType<typeof usageDailyStatSchema>;
+export type SavedItemDoc = InferSchemaType<typeof savedItemSchema>;
+export type SavedCollectionDoc = InferSchemaType<typeof savedCollectionSchema>;
+export type CustomPaletteDoc = InferSchemaType<typeof customPaletteSchema>;
+export type UserFeedbackDoc = InferSchemaType<typeof userFeedbackSchema>;
+export type AdminAccountDoc = InferSchemaType<typeof adminAccountSchema>;
+export type AdminAuditLogDoc = InferSchemaType<typeof adminAuditLogSchema>;
 
 export interface Models {
   User: Model<UserDoc>;
@@ -226,6 +368,24 @@ export interface Models {
   Tombstone: Model<TombstoneDoc>;
   AppearanceProfile: Model<AppearanceProfileDoc>;
   Profile: Model<ProfileDoc>;
+  UserPhoto: Model<UserPhotoDoc>;
+  AppearanceAnalysis: Model<AppearanceAnalysisDoc>;
+  // Specified 2026-10-18 (D-110 … D-125); declared only — no endpoint uses them yet.
+  CatalogueCategory: Model<CatalogueCategoryDoc>;
+  GarmentAttribute: Model<GarmentAttributeDoc>;
+  ClothingStyle: Model<ClothingStyleDoc>;
+  Palette: Model<PaletteDoc>;
+  OutfitTemplate: Model<OutfitTemplateDoc>;
+  StylingRule: Model<StylingRuleDoc>;
+  FabricRule: Model<FabricRuleDoc>;
+  Illustration: Model<IllustrationDoc>;
+  UsageDailyStat: Model<UsageDailyStatDoc>;
+  SavedItem: Model<SavedItemDoc>;
+  SavedCollection: Model<SavedCollectionDoc>;
+  CustomPalette: Model<CustomPaletteDoc>;
+  UserFeedback: Model<UserFeedbackDoc>;
+  AdminAccount: Model<AdminAccountDoc>;
+  AdminAuditLog: Model<AdminAuditLogDoc>;
 }
 
 export function registerModels(main: Connection, tombstones: Connection): Models {
@@ -238,6 +398,23 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     Tombstone: tombstones.model('DeletionTombstone', tombstoneSchema, 'deletionTombstones'),
     AppearanceProfile: main.model('AppearanceProfile', appearanceProfileSchema, 'appearanceProfiles'),
     Profile: main.model('Profile', profileSchema, 'profiles'),
+    UserPhoto: main.model('UserPhoto', userPhotoSchema, 'userPhotos'),
+    AppearanceAnalysis: main.model('AppearanceAnalysis', appearanceAnalysisSchema, 'appearanceAnalyses'),
+    CatalogueCategory: main.model('CatalogueCategory', catalogueCategorySchema, 'catalogueCategories'),
+    GarmentAttribute: main.model('GarmentAttribute', garmentAttributeSchema, 'garmentAttributes'),
+    ClothingStyle: main.model('ClothingStyle', clothingStyleSchema, 'clothingStyles'),
+    Palette: main.model('Palette', paletteSchema, 'palettes'),
+    OutfitTemplate: main.model('OutfitTemplate', outfitTemplateSchema, 'outfitTemplates'),
+    StylingRule: main.model('StylingRule', stylingRuleSchema, 'stylingRules'),
+    FabricRule: main.model('FabricRule', fabricRuleSchema, 'fabricRules'),
+    Illustration: main.model('Illustration', illustrationSchema, 'illustrations'),
+    UsageDailyStat: main.model('UsageDailyStat', usageDailyStatSchema, 'usageDailyStats'),
+    SavedItem: main.model('SavedItem', savedItemSchema, 'savedItems'),
+    SavedCollection: main.model('SavedCollection', savedCollectionSchema, 'savedCollections'),
+    CustomPalette: main.model('CustomPalette', customPaletteSchema, 'customPalettes'),
+    UserFeedback: main.model('UserFeedback', userFeedbackSchema, 'userFeedback'),
+    AdminAccount: main.model('AdminAccount', adminAccountSchema, 'adminAccounts'),
+    AdminAuditLog: main.model('AdminAuditLog', adminAuditLogSchema, 'adminAuditLogs'),
   };
 }
 
@@ -254,6 +431,18 @@ export const USER_OWNED_COLLECTIONS = [
   'passwordResetTokens',
   'profiles',
   'appearanceProfiles',
+  // My Profile collections (D-103, approved, not built). Photo objects in private storage are deleted separately.
+  'userPhotos',
+  'appearanceAnalyses',
   'outfits',
   'shortlistItems',
+  // Specified feature collections (D-115, D-116, D-120; DATABASE.md §3.10 – §3.14, §4b). `adminAccounts`
+  // goes with the admin's user account; `adminAuditLogs` is a security record keyed by `adminId` and ages
+  // out by TTL. `productReports` is created with the product layer.
+  'savedItems',
+  'savedCollections',
+  'customPalettes',
+  'userFeedback',
+  'productReports',
+  'adminAccounts',
 ] as const;

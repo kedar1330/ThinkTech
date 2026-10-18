@@ -153,6 +153,7 @@ Summary only; full detail in [SECURITY.md](SECURITY.md).
 | NFR-SCL-03 | The API is stateless; no files on the API host's filesystem. |
 | NFR-SCL-04 | Redis and BullMQ are added only for a concrete need. |
 | NFR-SCL-05 | A modular monorepo; no microservices, Kubernetes, separate Python service or database per module. |
+| NFR-SCL-06 | *Specified (D-110).* The shared catalogue (styles, palettes, templates, rules, illustrations) is served from in-memory indexes built from published MongoDB records, so request cost depends on the matching subset, not catalogue size; list endpoints paginate and load progressively (12 – 20 palettes, 3 – 5 recommended styles first). |
 
 ### 4.6 Maintainability
 
@@ -163,7 +164,7 @@ Summary only; full detail in [SECURITY.md](SECURITY.md).
 | NFR-MNT-03 | External services only through `apps/api/src/integrations/`. |
 | NFR-MNT-04 | TypeScript throughout; typecheck, lint and the style-rule linter pass in CI. |
 | NFR-MNT-05 | Endpoints versioned under `/v1`. |
-| NFR-MNT-06 | The style knowledge base is versioned in the repository and changed only through reviewed pull requests. |
+| NFR-MNT-06 | The style knowledge base is versioned in the repository and changed only through reviewed pull requests. *Revised by D-110 / D-120: once the admin panel edits the MongoDB catalogue, every change is validated by the same schemas and linter, versioned, audited, and published only after founder approval.* |
 | NFR-MNT-07 | Database changes use versioned, backward-compatible migrations (D-79). |
 
 ### 4.7 Usability
@@ -176,6 +177,7 @@ Summary only; full detail in [SECURITY.md](SECURITY.md).
 | NFR-USE-04 | When information is missing or uncertain (size, product, weather), the UI says so and lets the user decide. |
 | NFR-USE-05 | Each optional data field explains why it is asked for. |
 | NFR-USE-06 | Affiliate relationships are disclosed next to tracked links (D-46). Quality verdicts show confidence, reasons and warnings (product layer). |
+| NFR-USE-07 | *Specified (D-109).* Feature pages are responsive on desktop, tablet and mobile (collapsible filters, touch-friendly cards), keep the top navigation visible, use skeletons, per-section Retry and honest empty states, respect reduced motion, give every image meaningful alt text and every swatch a text label, and never communicate suitability by colour alone. |
 
 ### 4.8 Deployment and operations
 
@@ -241,4 +243,4 @@ UI + API + validation + database + error handling + authorization + tests + docu
 
 ## 8. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-13, D-17, D-38, D-43 … D-51, D-60, D-68, D-69, D-74, D-57, D-63, D-77, D-78, D-79, D-80, D-81.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-13, D-17, D-38, D-43 … D-51, D-60, D-68, D-69, D-74, D-57, D-63, D-77, D-78, D-79, D-80, D-81, D-109, D-110, D-120.

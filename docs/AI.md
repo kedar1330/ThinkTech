@@ -15,9 +15,13 @@ StyleMe's core is **deterministic**. Look generation, selection, ranking, explan
 | Budget totals on user-entered prices | None | 1 |
 | Eligibility, verified-price budgets, quality verdicts, look match | None | Product layer |
 | Weather-aware ranking | None (deterministic comfort bands) | 2 |
-| Photo-based appearance analysis | Vision estimation, processed on StyleMe's own infrastructure or in the browser | Deferred (D-76) |
+| Photo-based appearance analysis | Vision estimation: face photos in the browser or on StyleMe's own infrastructure; full-body photos may use Gemini (D-122) | 1, behind release gates (D-103) |
 | Chatbot, sketch interpretation, design generation | Required by those features | Deferred (D-76) |
-| Virtual try-on | Generative image model; not approved | Future (D-48) |
+| Style suitability (Discover My Style, Outfit Categories) and palette ranking | None — catalogue records × approved suitability rules (§10) | 1 (D-109 … D-114) |
+| Natural-language style search | Deterministic parser; optional AI turns the query text only into filters (off by default) | 1 (D-123) |
+| Full-body photo analysis with Gemini | Body-shape estimate from one consented full-body photo; user confirms or corrects | 1, approved (D-122 = b); no real photo sent before the privacy review |
+| 2D illustrative virtual try-on | None — SVG layers rendered in the browser | 1 (D-119) |
+| Photo-based or generative virtual try-on | Generative image model; not approved | Future (D-48) |
 
 **Providers.** Stage 1 needs **no** AI provider. The optional wording step uses at most one provider, Gemini (D-12); its fallback is the deterministic template text, not a second provider. Gemini with a Groq fallback is a documented option for the AI-required deferred features only. No provider is enabled before its current pricing, limits and data-use terms are checked and recorded (NFR-COST-03); for example, Google's free tier uses submitted content to improve its products and the paid tier does not ([DEPLOYMENT.md](DEPLOYMENT.md) §9.1).
 
@@ -108,6 +112,8 @@ Records live in `apps/api/src/style-rules/`, are Zod-validated and linted at sta
 
 The C0 development seed (≥ 6 palettes, ≥ 6 templates) is a temporary input for building the engine, not a release target ([ImplementationPlan.md](ImplementationPlan.md) §5.2). Counts are not claims that any combination suits everyone.
 
+**Implementation status (verified 2026-10-18).** The schemas, loader, linter, coverage report and scale test above are implemented. Not yet implemented: the template `wearType` field and slot garment types and `formality` (D-96 … D-98, issue #63 — the C0 drafts use `wear-*` and `formality-*` tags in the meantime) and the D-100 coverage dimensions. Content: `main` has no records; open PR #68 holds the C0 drafts (8 palettes, 8 templates, 8 styling rules, 6 fabric rules), none approved. The generator (§3) is not built (issue #33). Details: [SPECS.md](SPECS.md) §7–§8.
+
 ---
 
 ## 5. Optional AI Wording Step (Stage 1, D-67)
@@ -138,11 +144,14 @@ The onboarding "Appearance" step (D-94) collects these self-reported signals onl
 
 ---
 
+**Change approved 2026-10-18 (D-103):** the My Profile requirements keep confidence labels (High / Medium / Low) for photo-only results and require user review before any result is used — consistent with the rules above — but on consent revocation they let the user **choose to keep or delete** existing photo-derived results instead of clearing them automatically (the last bullet). Measurements are always entered by the user and never estimated from photos; a measurement-based body-shape result is "measurement-informed", never certain. Results history lives in `appearanceAnalyses` ([DATABASE.md](DATABASE.md) §3.8). Face photos are processed on device or on StyleMe's own servers (rule 16); full-body photos may be analysed by Gemini under D-122 (§10.4).
+
+**Design (moved from §7 when D-103 was approved):** MediaPipe face and pose landmarks, processed in the browser where possible or on StyleMe's own servers. Skin-tone and undertone estimates use derived colour values; body-shape class from landmark ratios (or Gemini for full-body photos, D-122). All carry confidence; uncertain undertone is `not_sure`/Unknown. Conditions before release: explicit, withdrawable consent; quality validation; deletion after analysis unless the user keeps photos; AI rule 16; privacy review.
+
 ## 7. Deferred AI Features (D-76)
 
 | Feature | AI design | Conditions before starting |
 |---|---|---|
-| Photo-based appearance analysis | MediaPipe face and pose landmarks, processed in the browser where possible or on StyleMe's own servers. Skin-tone and undertone estimates use derived colour values; body-shape class from landmark ratios. All carry confidence; uncertain undertone is `not_sure`/Unknown | Explicit, withdrawable consent; quality validation; deletion after analysis; AI rule 16; privacy review |
 | Fashion chatbot | Gemini (Groq fallback) with minimised context; product facts only from stored verified data | No photos, measurements or appearance signals in prompts; AI failure → clear error |
 | Sketch-to-design | AI vision interprets a sketch into a Zod-validated garment specification; the user confirms before generation | A sketch is not a personal photo; provider for design generation still to be chosen (D-32) |
 | Retailer text in prompts | Product titles, descriptions and review excerpts are untrusted data, passed as delimited data and never as instructions | Applies to any feature that sends retailer text to AI |
@@ -163,6 +172,41 @@ Self-hosted processing is a possible option to evaluate then. It is not approved
 
 ---
 
+**2D illustrative try-on (D-119)** is not covered by this section: it uses no photos and no AI (§10.5).
+
+---
+
+## 10. Feature Specifications: Catalogue Matching (D-109 … D-128)
+
+### 10.1 Style suitability (Discover My Style, Outfit Categories)
+
+Deterministic, like look generation. Inputs: the user's request (garment, attribute, goal, occasion), confirmed body shape (D-112), measurements and proportions where provided (preferred over a body-shape label when sufficient), fit, comfort and coverage, preferred and avoided styles, wear types, and — while personalisation allows — explicit feedback and saves (D-115).
+
+1. **Candidates:** published `clothingStyles` in the requested department, category and attribute; avoided styles and hard constraints (coverage minimums) applied.
+2. **Suitability:** each candidate's linked `STY` rules are evaluated against the user's factors. A rule matches on body shape, measured proportion ratios, goals, fit or comfort and contributes a soft weight with its `benefit` and `tradeOff` text. Measurement ratios use versioned thresholds that are calibrated and founder-reviewed before release; photo-only estimates count only after the user confirms them.
+3. **Recommended set (D-114):** only styles whose suitability passes the threshold appear in "Recommended for you" (3 – 5). If none pass, the response names the criteria that would need to change and returns the closest suitable alternatives — never an unsuitable style presented as a match. Browsing returns every published style, ranked the same way, with nothing hidden.
+4. **Ranking order (FR-DMS-04):** request and goal → proportions and measurements → fit and comfort → preferences and department → occasion; feedback and saves are small adjustments that never override explicit preferences. Weights live in one configuration shared by every feature.
+5. **Diversity:** equally suitable styles are mixed across attributes, and styles shown in the last few results for the same context are moved down when alternatives exist.
+6. **Explanation:** built only from the matched rule IDs and profile fields (rule 17), worded as benefits and trade-offs; it says whether it used profile details, preferences or only general guidance.
+
+### 10.2 Palette ranking (My Colour Palette)
+
+Order: skin tone and undertone suitability first (palette `undertoneAffinity`, optional Monk range), then colour harmony, favourite colours, avoided colours (never shown), style and clothing preferences, occasion and garment category, explicit feedback and saves, seasonal or cultural context. Without tone or undertone the list is general and labelled so. Personalised combinations are derived only from approved palettes and the colour vocabulary.
+
+### 10.3 Natural-language search (D-123)
+
+A deterministic phrase map (e.g. "legs look longer" → goal `longer_line`, attributes high rise, straight or wide leg, cropped tops) handles the core. Optional AI may interpret the query text only — no profile, photos or measurements — into filters that are validated against the vocabulary; failure or invalid output falls back to the parser. Off by default until the evaluation shows a benefit.
+
+### 10.4 Photo analysis with an external provider (D-122, approved)
+
+The Outfit Categories requirements ask for Gemini-based full-body analysis. Rule 16 allows that only with a founder decision, a privacy review and user consent for that specific processing. The founder approved option (b) on 2026-10-18, for **full-body photos only** (face photos, measurements and appearance signals never go to Gemini). Until the privacy review (D-74) is recorded, body shape comes from manual selection, measurements (deterministic ratio rules) or on-device analysis (D-103), and the integration module runs only against mocks behind a disabled flag. The module lives in `src/integrations/ai/`, sends one consented full-body image with no identifiers and with EXIF and other metadata stripped, uses a paid tier whose terms exclude training on content, stores nothing at the provider, validates the output with Zod, shows confidence, and requires the user to confirm or correct the result before it is used.
+
+### 10.5 2D virtual try-on (D-119)
+
+No AI and no personal images. The browser composes SVG layers in a fixed order (body, inner, tops, bottoms, outerwear, accessories, with garment-specific exceptions) on a clothed model variant chosen from the profile's body shape; compatibility comes from garment metadata; recolouring changes only regions marked recolourable. "Suggest a look" picks compatible published catalogue items with the shared ranking — never generated garments.
+
+---
+
 ## 9. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-12, D-13, D-19, D-32, D-48, D-52, D-57, D-59, D-62, D-67, D-76.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-12, D-13, D-19, D-32, D-48, D-52, D-57, D-59, D-62, D-67, D-76, D-103, D-109 … D-128.

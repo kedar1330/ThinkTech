@@ -34,10 +34,28 @@
 | `retailers` | Retailer registry, access level and disclosure | Shared | Product layer |
 | `products` | Verified real product listings | Shared | Product layer |
 | `reviewEvidence` | Curated quality evidence | Shared | Product layer |
+| `userPhotos` | Metadata of private face and full-body photos; files in private object storage (§3.7) | Per user | Approved (D-103) — model declared, unused |
+| `appearanceAnalyses` | History of photo- and measurement-based analyses (§3.8) | Per user | Approved (D-103) — model declared, unused |
+| `notifications`, `userActivity` | Home notification bell and recent activity (§3.9) | Per user | Approved (D-106) — not created |
+| `savedItems` | One save system for every feature: styles, outfits, designs, shopping looks, products, try-on looks, palettes (§3.10) | Per user | 1 (D-116) — model declared, unused |
+| `savedCollections` | User-named collections of saved items (§3.11) | Per user | 1 (D-116) — model declared, unused |
+| `customPalettes` | Personal palettes, created or customised from a curated one (§3.12) | Per user | 1 (D-109) — model declared, unused |
+| `userFeedback` | Explicit likes and "not for me" on styles, palettes, templates, products, saved items (§3.13) | Per user | 1 (D-115) — model declared, unused |
+| `productReports` | "Report an issue" on a product (§3.14) | Per user | Product layer (D-124) — not created |
+| `catalogueCategories`, `garmentAttributes`, `clothingStyles` | Shared clothing-style catalogue: hierarchy, attribute values, reusable styles (§4a) | Shared | 1 (D-110, D-111) — models declared, unused |
+| `palettes`, `outfitTemplates`, `stylingRules`, `fabricRules` | The knowledge base in MongoDB (§4a.4) | Shared | 1 (D-110) — models declared, unused |
+| `illustrations` | Croquis, technical flats, try-on layers and models, imagery, with rights (§4a.5) | Shared | 1 (D-113) — model declared, unused |
+| `adminAccounts`, `adminAuditLogs` | Admin roles and the admin audit log (§4b) | Admin / system | 1 (D-120) — models declared, unused |
+| `usageDailyStats` | Aggregate daily counters for the admin dashboard; no user ID (§4b.3) | System | 1 (D-125) — model declared, unused |
+| `productImportRuns` | Results of product imports and syncs (§4.6) | System | Product layer — not created |
 | `designs`, `chatMessages` | Design Studio, chatbot | Per user | Deferred (D-76) |
-| try-on results | Try-on | Per user | Future (D-48) |
+| try-on results | Photo-based or generative try-on | Per user | Future (D-48). The 2D try-on stores only configurations in `savedItems` (D-119, D-128) |
 
-The style knowledge base (palettes, rules, templates) is **not** stored in MongoDB. It lives as versioned files in `apps/api/src/style-rules/` (§6).
+**Where the styling knowledge lives (D-110).** The runtime source of truth for palettes, templates, rules, clothing styles, categories, attributes and illustrations is the set of shared MongoDB collections in §4a. The JSON files in `apps/api/src/style-rules/data/` remain the founder-review and seed format until the admin panel edits the catalogue; an import script loads approved records into MongoDB, validated by the same Zod schemas and linter (§6).
+
+**Implemented on `main` (verified 2026-10-18):** `users`, `betaInvites`, `pendingRegistrations`, `authChallenges`, `sessions`, `profiles`, `appearanceProfiles`, `deletionTombstones` (separate connection) and `migrations`. **Declared but unused (approved, D-103):** `userPhotos`, `appearanceAnalyses` — both already in `USER_OWNED_COLLECTIONS`. **Not yet created:** `outfits` and `shortlistItems` (both already listed in `USER_OWNED_COLLECTIONS`, so deletion and replay will cover them), `aiCache`, and every product-layer and deferred collection. Their shapes are fixed by the merged contracts in `packages/contracts/src/{outfit,product}.ts`.
+
+**Declared on 2026-10-18 for the feature specifications (D-109 … D-128), not yet used by any endpoint, script or engine:** `catalogueCategories`, `garmentAttributes`, `clothingStyles`, `palettes`, `outfitTemplates`, `stylingRules`, `fabricRules`, `illustrations`, `usageDailyStats` (`apps/api/src/models/catalogue.ts`); `savedItems`, `savedCollections`, `customPalettes`, `userFeedback`, `adminAccounts`, `adminAuditLogs` (`apps/api/src/models/user-collections.ts`). Their enums come from `packages/contracts/src/{catalogue,saved-items,admin}.ts`. All new user-owned collections are already in `USER_OWNED_COLLECTIONS`, so account deletion and tombstone replay cover them (tested in `apps/api/tests/api/catalogue-models.test.ts`). The optional fields added to `users` and `profiles` default to `undefined`, so existing documents are unchanged and **no migration is needed**.
 
 ---
 
@@ -61,6 +79,8 @@ The style knowledge base (palettes, rules, templates) is **not** stored in Mongo
 | `isActive` | boolean; set only by admin scripts. When `false`, login fails and existing tokens are rejected (FR-AUTH-08) |
 | `tokenVersion` | integer; incremented to revoke all API tokens — on password change or reset, when Google linking discards a pre-registered password, or by admin script (D-05, D-07, D-83, D-88) |
 | `passwordChangedAt` | timestamp of the last password change or reset, or `null` |
+| `lastActiveAt` | **Specified (D-125):** date of the last authenticated request, updated at most once a day; used only for aggregate "active users" counts. Not set yet |
+| `suspension` | **Specified (D-120):** `{ suspendedAt, suspendedBy, reasonCode }` when a Super Admin suspended the account through the admin panel (alongside `isActive: false`); removed on reactivation. Not set yet |
 | `createdAt`, `updatedAt` | timestamps |
 
 ### 3.1a `betaInvites`
@@ -132,7 +152,7 @@ No name, plain email, IP address, reason text or other personal data. The store 
 
 **Account deletion order:** (1) write the tombstone — if this fails, return `SERVICE_UNAVAILABLE` and delete nothing; (2) delete all of the user's data from the live database, the `users` record last; (3) if step 2 fails partway, the tombstone remains, and the reconciliation script replays all tombstones against the live database. Replay is idempotent.
 
-**Replay list:** `users` (by `_id`), `sessions`, `profiles`, `appearanceProfiles`, `outfits` (including feedback), `shortlistItems`, `authChallenges` and the legacy `passwordResetTokens` (by `userId`), and `betaInvites` (by matching `emailHmac`). Any new user-owned collection must be added to the replay list and its verification before it ships.
+**Replay list:** `users` (by `_id`), `sessions`, `profiles`, `appearanceProfiles`, `userPhotos` and `appearanceAnalyses` (approved, not yet written; their stored photo objects must also be deleted once uploads exist), `outfits` (including feedback), `shortlistItems`, `savedItems`, `savedCollections`, `customPalettes`, `userFeedback`, `productReports`, `adminAccounts`, `authChallenges` and the legacy `passwordResetTokens` (by `userId`), and `betaInvites` (by matching `emailHmac`). Any new user-owned collection must be added to the replay list and its verification before it ships.
 
 ### 3.2 `profiles` (one per user)
 
@@ -149,15 +169,26 @@ No name, plain email, IP address, reason text or other personal data. The store 
 | `comfortPreferences[]` | comfort options from the vocabulary (e.g. stretch, loose fit, breathable) |
 | `fabricPreferences` | `{ liked[], avoided[] }` |
 | `preferredStyles[]`, `preferredOccasions[]` | enum values (D-09) |
-| `preferredWearTypes[]` | `indian` \| `fusion` \| `western`; optional soft ranking preference (D-96). A wear type chosen in a look request overrides it |
+| `preferredWearTypes[]` | `indian` \| `fusion` \| `western`; optional soft ranking preference (D-96). A wear type chosen in a look request overrides it. **Planned (#63): not yet in `profileSchema` or the profile contract** |
 | `budgetPreference` | optional per-look budget in whole ₹ (1 – 10,00,000). Stage 1: compared only with totals of user-entered prices; never filters generation |
-| `measurements` | optional, self-measured; collected only when product size charts exist (product layer). `{ chestCm, waistCm, hipCm, footLengthCm, updatedAt }` |
+| `measurements` | optional, self-measured; collected only when product size charts exist (product layer). `{ chestCm, waistCm, hipCm, footLengthCm, updatedAt }`. **Approved replacement (D-102), declared, not yet written:** `{ displayUnit: cm \| in, valuesCm: { height, shoulderWidth, chestBust, waist, hipsSeat, highHip, neck, armLength, upperArm, wrist, inseam, outseam, thigh, knee, calf, torsoLength, underbust }, updatedAt }` — manual entry only, stored in cm, each value range-checked (`bodyMeasurementsSchema` in `packages/contracts/src/my-profile.ts`). Deletable on its own |
+| `ageGroup` | **Approved (D-104; ships after the D-74 legal review), declared, not yet written:** optional `under_18` \| `18_24` \| `25_34` \| `35_44` \| `45_plus`; no date of birth. Reported to admins only as aggregated counts |
+| `bodyShapeChoice` | **Approved (D-102), declared, not yet written:** a proportion descriptor (D-09) or `not_sure`, chosen manually on the body-shape cards when no analysis is used |
+| `defaultFit` | **Approved (D-102), declared, not yet written:** default fit applied where `fitPreferences` has no value for a category; adds `oversized` to the fit options (vocabulary change, D-62) |
+| `categoryBudgets` | **Approved (D-102), declared, not yet written:** `{ <size group>: ₹ }`, e.g. `{ tops: 1500, bottoms: 2000 }`; `budgetPreference` stays the default per look. Temporary budget changes while exploring are not stored |
+| `customOccasions[]` | **Approved (D-102), declared, not yet written:** up to 10 plain-text labels (≤ 40 characters); shown to the user only, never read by the engine or logged |
+| `sectionUpdatedAt` | **Approved (D-102), declared, not yet written:** `{ basic_info?, skin_tone?, body_shape?, measurements?, style_fit?, colours?, occasions?, budget? }` dates for "Last updated" per My Profile section |
+| `stylingGoals[]` | **Specified (D-111, FR-OCAT-11):** styling goals from `STYLING_GOALS` (e.g. `taller_silhouette`, `define_waist`, `explore_freely`); soft ranking inputs |
+| `preferredStyleIds[]`, `avoidedStyleIds[]` | **Specified (FR-OCAT-16):** clothing-style IDs (`CST-…`) the user explicitly prefers or avoids; avoided styles are deprioritised in recommendations, never hidden from browsing |
+| `personalization` | **Specified (D-115):** `{ paused, useFeedback, resetAt }` — pause personalisation, decide whether feedback affects ranking, and the time of the last reset (feedback older than `resetAt` is ignored) |
 | `weatherPreferences` | Stage 2: `{ enabled: false, city: { cityId, name } \| null }`; never coordinates |
 | `createdAt`, `updatedAt` | timestamps |
 
 **Allowed values (D-09).** Every enumerated field here and in `appearanceProfiles` (department, colour IDs, contrast, silhouettes, coverage, comfort, fabrics, styles, wear types, occasions, fit, undertone, Monk range, proportion descriptors) uses the shared vocabulary in `packages/contracts/src/style-vocabulary.ts`, which the style knowledge base uses too. Values are stored as strings, so adding a value needs no migration; IDs are never renamed or removed.
 
 Age range and height are **not collected** in Stage 1: no Stage 1 rule or feature uses them (FR-PROF-04). They are added only when a released rule or feature defines a purpose for them.
+
+**My Profile (D-102 … D-104, approved 2026-10-18; not built).** The request's `user_profiles` collection is this existing `profiles` collection — no second profile collection is created. The proposed fields above are already declared in `profileSchema` (`apps/api/src/models/index.ts`) with `default: undefined`, so existing documents are unchanged and **no migration is needed**. `PUT /v1/profile` still rejects them and `GET /v1/profile` never returns them (tested in `apps/api/tests/api/profile.test.ts`). Name and city stay on `users` (one place each); clothing preference is `department`; section completion is computed on read (`profileCompleteness()`), never stored.
 
 ### 3.3 `appearanceProfiles` (one per user, D-72)
 
@@ -172,6 +203,133 @@ Age range and height are **not collected** in Stage 1: no Stage 1 rule or featur
 | `createdAt`, `updatedAt` | timestamps |
 
 In Stage 1 every attribute has `source: "self_reported"`. Any attribute can be cleared (set to `null`).
+
+**Approved fields (D-103; declared in the model, not written by any endpoint yet):**
+
+| Field | Type / rule |
+|---|---|
+| `photoConsent` | `{ face?: { noticeVersion, grantedAt, revokedAt }, body?: { … } }` — consent per photo kind, asked before the first analysis; revoking stops future analysis |
+| `photoRetention` | `keep` \| `delete_after_analysis` — the user's choice for newly uploaded photos |
+
+With photo analysis, `skinTone`, `undertone` and `bodyProportions` hold the value **confirmed or corrected by the user** (`source: photo_estimate` or `user_corrected`, §5); the estimates and their history live in `appearanceAnalyses` (§3.8).
+
+### 3.7 `userPhotos` — approved (D-103), declared, unused
+
+Metadata of private profile photos. The image file itself is stored in **private object storage** (provider D-107) under `storageKey`; it is never public, never hotlinked and never returned to clients — the API streams it to its owner or issues a short-lived signed URL. Model declared in `apps/api/src/models/index.ts`; no endpoint uses it yet.
+
+| Field | Type / rule |
+|---|---|
+| `userId` | reference → `users` |
+| `kind` | `face` (skin tone and undertone) \| `body` (body shape) — two separate uploads |
+| `angle` | `front` \| `side` \| `back` for body photos; `null` for face photos |
+| `storageKey` | unique object key, e.g. `users/<userId>/<random>`; never contains the name or email |
+| `contentType`, `bytes` | `image/jpeg` \| `image/png` \| `image/webp`; ≤ 8 MB. EXIF/location metadata is stripped before storage |
+| `retention` | `keep` \| `delete_after_analysis` |
+| `uploadedAt`, `analyzedAt` | timestamps |
+| `deleteAfter` | set for `delete_after_analysis`; a deletion job removes the stored object **and** this document together (no TTL index, which would orphan the object) |
+
+Deleting a photo deletes the object and this document; it does **not** delete results derived from it (§3.8).
+
+### 3.8 `appearanceAnalyses` — approved (D-103), declared, unused
+
+History of skin-tone and body-shape analyses. Declared in the model; no endpoint uses it yet.
+
+| Field | Type / rule |
+|---|---|
+| `userId` | reference → `users` |
+| `kind` | `skin_tone` \| `body_shape` |
+| `source` | `photo` \| `measurements` \| `photo_and_measurements` (measurements are always typed by the user) |
+| `photoIds[]` | references → `userPhotos` (may point to photos since deleted) |
+| `result` | the estimate, in the vocabulary of the matching `appearanceProfiles` attribute |
+| `confidence` | `high` \| `medium` \| `low` for photo-only results; `null` otherwise — never shown as certainty |
+| `status` | `pending_review` → `confirmed` \| `corrected`; older results become `superseded` |
+| `analysisVersion` | version of the analysis method |
+| `reviewedAt`, `createdAt`, `updatedAt` | timestamps |
+
+Users can delete photo-derived results (`source` `photo` or `photo_and_measurements`) separately from photos and measurements. When consent is revoked they choose to keep or delete them.
+
+### 3.9 Home dashboard data — approved (D-106), not created
+
+Home has **no collection of its own**. It reads `profiles`, `appearanceProfiles` (summary only), palettes and templates (knowledge base), `outfits`, future `designs` and profile completeness. Only persistent user actions would be stored, in two new user-owned collections that are **not created yet**:
+
+| Collection | Purpose | Fields (proposed) |
+|---|---|---|
+| `notifications` | Notification bell | `userId`, `type` (account security, profile update, feature availability, privacy notice), `title`, `body`, `link`, `readAt`, `createdAt`, TTL on `expiresAt` |
+| `userActivity` | Recently visited features and continue links | `userId`, `feature` (slug), `target` (optional ID), `visitedAt`; capped to the latest ~20 per user, TTL 90 days |
+
+The theme preference (light / dark / system) is a browser setting, not stored on the server. Recommendations are generated by the engine; a cache or `recommendations` collection is added only if measured performance requires it. Both collections must be added to `USER_OWNED_COLLECTIONS` when created.
+
+### 3.10 `savedItems` — one save system for every feature (D-116)
+
+Model declared in `apps/api/src/models/user-collections.ts`; no endpoint uses it yet.
+
+| Field | Type / rule |
+|---|---|
+| `userId` | reference → `users` |
+| `itemType` | `clothing_style` \| `outfit` \| `design` \| `shopping_look` \| `product` \| `tryon_look` \| `palette` (`SAVED_ITEM_TYPES`) |
+| `sourceFeature` | the feature it was saved from (`STYLEME_FEATURES`), used to reopen it |
+| `ref` | `{ kind, id }` — `clothing_style` (`CST-…`), `outfit_template` (`OUT-…`), `look` (`outfits._id`), `catalogue_palette` (`PAL-…`), `custom_palette`, `product`, `design` or `tryon_config` (no separate record). Shared records are referenced, never copied |
+| `identityKey` | hash of the reference plus the user's customisation; unique per user, so saving the same thing twice finds the existing item while a deliberate variation gets a new key |
+| `name`, `notes` | user-editable; name ≤ 80 characters (default generated), notes ≤ 500 |
+| `isFavourite` | Favourites is a status, not a copy |
+| `collectionIds[]` | references → `savedCollections` (an item may be in up to 20) |
+| `customization` | type-specific choices validated by Zod: colours per garment, selected components, design settings, try-on configuration `{ modelVariantId, garments: [{ styleId, layer, colourHex }] }` |
+| `snapshot` | the permitted minimum to keep the item understandable if its source is retired: names, attributes, swatches, illustration IDs; for products the price **as captured** with its capture time (always shown as historical, never as current) |
+| `recommendationContext` | the original "why this was recommended" (explanation, rule IDs, matched attributes) when the item came from a recommendation |
+| `origin` | `{ paletteId, customPaletteId, templateId, designId, clothingStyleIds[] }` — the inspiration, so it can be reopened |
+| `facets` | `{ occasions[], categories[], styles[], colorIds[] }` copied at save time for filters |
+| `coverIllustrationId` | the chosen cover (only from the item's own images) |
+| `derivedFromId` | set by Duplicate or Save as New Look |
+| `createdAt`, `updatedAt` | "recently saved" / "recently updated" |
+
+Limits (defaults, `SAVED_LIMITS`): 1,000 items and 50 collections per user. Deleting a saved item never deletes the shared record or a separately stored design.
+
+### 3.11 `savedCollections` (D-116)
+
+| Field | Type / rule |
+|---|---|
+| `userId` | reference → `users` |
+| `name` | ≤ 40 characters; `nameKey` (lower-cased) unique per user |
+| `createdAt`, `updatedAt` | timestamps |
+
+Membership lives on `savedItems.collectionIds`, so renaming keeps items and an item can be in several collections without duplication. Deleting a collection removes its ID from the items (the items stay in All Saved, or are removed if the user chooses).
+
+### 3.12 `customPalettes` (D-109, FR-PAL-20, -21)
+
+| Field | Type / rule |
+|---|---|
+| `userId` | reference → `users` |
+| `name` | ≤ 60 characters |
+| `colours[]` | 2 – 12 entries in display order: `{ hex: "#RRGGBB" (upper case), name?, role: primary \| secondary \| accent \| neutral }` |
+| `basedOnPaletteId` | the curated palette it was customised from, or `null` when created from scratch; the curated palette is never changed |
+| `createdAt`, `updatedAt` | timestamps |
+
+Creating a custom palette also creates its `savedItems` entry (`ref.kind: custom_palette`), so it appears in My Saved Palettes and can join collections. At most 100 per user.
+
+### 3.13 `userFeedback` (D-115)
+
+| Field | Type / rule |
+|---|---|
+| `userId` | reference → `users` |
+| `targetType`, `targetId` | `clothing_style` \| `catalogue_palette` \| `outfit_template` \| `product` \| `saved_item` and its ID; unique together per user (one current reaction) |
+| `value` | `like` \| `not_for_me` |
+| `reasons[]` | optional, fixed list (`USER_FEEDBACK_REASONS`): fit, comfort, style, occasion, colour, price, too bright, I dislike these colours. No free text |
+| `feature` | where it was given |
+| `createdAt`, `updatedAt` | timestamps |
+
+Undo deletes the document. Ranking reads feedback only while `profiles.personalization.useFeedback` is not `false` and only feedback newer than `personalization.resetAt`; it is a soft signal that never overrides explicit preferences, and one "not for me" never hides a record from browsing. Looks keep their own `outfits.feedback` (FR-OUT-04).
+
+### 3.14 `productReports` — product layer (D-124)
+
+| Field | Type / rule |
+|---|---|
+| `userId` | reference → `users` |
+| `productId` | reference → `products` |
+| `issue` | `broken_link` \| `wrong_price` \| `wrong_image` \| `unavailable_size` \| `other` |
+| `status` | `open` \| `confirmed` \| `dismissed`, set by an admin (`reviewedBy`, `reviewedAt`) |
+| `createdAt` | timestamp |
+
+A report never changes verified product data by itself. Created with the product layer; already in `USER_OWNED_COLLECTIONS`.
 
 ### 3.4 `outfits` (looks)
 
@@ -290,6 +448,142 @@ Only verified real listings. Required fields:
 
 `freshness` (fresh / stale / expired) is derived in code from `priceVerifiedAt` and the source method (D-50). It is not stored.
 
+**Shop My Look additions (D-124, specified 2026-10-18):**
+
+| Field | Type / rule |
+|---|---|
+| `variantGroupId` | groups colour and size variants of one product when the source supports it; each variant keeps its own `productUrl`, `price` and `availability`, so the selected variant always maps to the right link and price |
+| `seller` | seller name as the source provides it, or `null` |
+| `attributes` | `{ neckline?, sleeve?, length?, fit?, silhouette?, rise?, legShape?, pattern? }` from the source or curator tags, in vocabulary IDs — used to match catalogue styles and designs; never guessed |
+| `sizeGroup` | the size group (`tops`, `bottoms`, `dresses`, `shoes` …) the user's category size is compared with |
+| `status` | `draft` \| `published` \| `archived` (admin panel); only `published`, `active` products are served |
+| `lastVerifiedAt` | the most recent of the price, availability and link checks |
+
+### 4.6 `productImportRuns` (product layer)
+
+| Field | Type / rule |
+|---|---|
+| `retailerId`, `sourceMethod` | the source being imported or synced |
+| `startedAt`, `finishedAt` | timestamps |
+| `status` | `running` \| `succeeded` \| `partial` \| `failed` |
+| `counts` | `{ received, accepted, rejected }` |
+| `errors[]` | `{ code, sourceRecordId }` — sanitised; no payloads |
+
+Shown on the admin Shop Products screen (FR-ADM-07); TTL 180 days.
+
+---
+
+## 4a. Shared Styling Catalogue (D-110 … D-113)
+
+One shared copy of every catalogue record, managed through the admin panel (D-120) and referenced by users only by stable ID. Models in `apps/api/src/models/catalogue.ts`; declared, not yet used. Every record carries the same **lifecycle fields**:
+
+| Field | Type / rule |
+|---|---|
+| `status` | `draft` \| `published` \| `archived`. Only `published` records reach users; archived ones stay readable by ID so saved items never break |
+| `version` | integer, incremented on every published change; changes are recorded in `adminAuditLogs` |
+| `review` | `{ status: draft \| reviewed \| approved, approvedBy, approvedAt }`. **Styling content cannot be published unless `review.status` is `approved`** (D-62, enforced by the model); only the Super Admin records approval |
+| `publishedAt`, `archivedAt` | timestamps ("recently added" sorts by `publishedAt`) |
+| `createdBy`, `updatedBy` | admin user IDs |
+
+### 4a.1 `catalogueCategories` — the hierarchy (D-111)
+
+| Field | Type / rule |
+|---|---|
+| `key` | unique kebab-case slug, e.g. `women-tops-necklines` |
+| `name`, `description` | display text |
+| `level` | `department` \| `group` \| `category` \| `subcategory` |
+| `department` | `women` \| `men` (a profile with department `any` sees both) |
+| `parentId`, `path[]` | parent node and the keys from the department down |
+| `sortOrder` | admin-arranged order |
+| `garmentTypes[]` | vocabulary garment types (D-97) the node groups |
+| `wearTypes[]`, `attributeIds[]`, `illustrationIds[]` | wear types, explorable attributes (e.g. necklines and sleeves for tops) and tile art |
+
+### 4a.2 `garmentAttributes` — attribute values (D-111)
+
+One document per attribute value, e.g. `{ attributeId: neckline, valueId: v_neck }` (unique pair). `valueId` is a vocabulary ID (D-09); the document adds `label`, `description`, `categoryIds[]` (where it applies), `illustrationIds[]` and `sortOrder`. Attributes whose value list doesn't exist in the vocabulary yet (`GARMENT_ATTRIBUTES` entries with `values: null` — collar, sleeve design, shoulder, hem, drape, rise, waistband, leg shape, skirt shape, waist placement, layering) can't be used until those values are approved and added.
+
+### 4a.3 `clothingStyles` — reusable styles (D-111, D-112)
+
+| Field | Type / rule |
+|---|---|
+| `styleId` | `CST-001` …, unique and stable; `slug` unique |
+| `name`, `description` | e.g. "V-neck" |
+| `department`, `categoryId` | `women` \| `men`; the category or subcategory node |
+| `definingAttribute` | `{ attributeId, valueId }` the style illustrates |
+| `attributes[]` | other structured attributes (category-specific) |
+| `wearTypes[]`, `occasions[]`, `styles[]`, `stylingGoals[]` | vocabulary IDs |
+| `suitabilityRuleIds[]` | `STY-…` rules linking the style to body shapes, proportions, goals, fit and comfort (one style, many shapes) |
+| `bodyShapes[]` | denormalised from the approved rules for filtering; the rules stay authoritative |
+| `explanation` | `{ summary, benefits[], tradeOffs[], stylingTips[], fitAndComfort, coverage }` |
+| `illustrations[]` | `{ illustrationId, role: primary \| view \| technical \| detail, view }` |
+| `relatedStyleIds[]`, `alternativeStyleIds[]` | similar and contrasting styles |
+| `tryOn` | `{ supported, layer: inner \| top \| bottom \| one_piece \| outer \| accessory, replaces[] }` (D-119) |
+| `tags[]` | search |
+
+Popularity ("most saved") is computed from `savedItems` by aggregation, not stored. Products are matched by attributes at query time; no product is attached by hand.
+
+### 4a.4 `palettes`, `outfitTemplates`, `stylingRules`, `fabricRules` (D-110)
+
+The existing knowledge-base record types (§6), stored one document per record:
+
+| Field | Type / rule |
+|---|---|
+| `recordId` | `PAL-…`, `OUT-…`, `STY-…`, `FAB-…`; unique |
+| `name`, `tags[]` | display and search |
+| `record` | the record body, **validated by the Zod schemas in `apps/api/src/style-rules/schemas.ts`** before every write — not re-declared in Mongoose |
+| `facets` | copies of the fields lists filter on. Palettes: `temperature`, `colorIds[]`, `colourFamilies[]`, `harmony`, `seasonal[]`, `moods[]`, `undertoneAffinity[]`, `occasions[]`, `styles[]`, `culturalContexts[]`. Templates: `department`, `wearType`, `occasions[]`, `styles[]`, `garmentTypes[]`, `clothingStyleIds[]`. Styling rules: `type`, `bodyShapes[]`, `stylingGoals[]`, `attributeIds[]`. Fabric rules: `fabric` |
+
+**Palette record extension (FR-PAL-11 … 17, added to the palette schema with the content work):** every colour gets a `role` (primary, secondary, accent, neutral), with its name and HEX from the colour vocabulary; plus `temperature`, `seasonal[]`, `harmony`, `moods[]`, `culturalContexts[]`, `garmentCombinations[]` (which colour goes where) and `outfitExamples[]` (Indian, fusion and western, with colour placement). **Styling-rule extension (FR-OCAT-04):** `appliesTo.bodyShapes[]`, `appliesTo.stylingGoals[]`, optional measurement-ratio conditions, and `benefit` / `tradeOff` text. Both are optional fields, so existing records stay valid.
+
+### 4a.5 `illustrations` (D-113)
+
+| Field | Type / rule |
+|---|---|
+| `assetId` | `ILL-001` …, unique |
+| `kind` | `croquis` \| `technical_flat` \| `body_shape_figure` \| `tryon_model` \| `tryon_layer` \| `palette_mood` \| `editorial_photo` |
+| `title`, `altText` | alt text is required |
+| `views[]` | `{ view: front \| back \| side \| detail, storage: static \| object_storage, path, format: svg \| webp \| png \| jpeg, width, height }`; at least one |
+| `depicts` | `{ departments[], clothingStyleIds[], bodyShape, skinToneRange }` — skin tone for representation only |
+| `figureClothing` | `plain_white_shirt_and_white_pants` (the default for every figure) or `styled_outfit`; figures are never unclothed |
+| `tryOn` | `{ layer, zIndex, recolourable, recolourRegions[], compatibleModelIds[] }` for try-on models and layers |
+| `rights` | `{ source: team_made \| commissioned \| cc0 \| cc_by \| licensed_in_writing \| code_generated \| ai_tool_permitted, creator, licence, licenceUrl, attribution, allowedUsage[], evidenceRef, verifiedBy, verifiedAt }`. **A record can't be published until `rights.verifiedAt` is set** (enforced by the model) |
+
+Files: static assets under the web app's public folder in the first release (`storage: static`), object storage later if needed (D-107). These are never user media.
+
+---
+
+## 4b. Admin Collections (D-120, D-125)
+
+### 4b.1 `adminAccounts`
+
+| Field | Type / rule |
+|---|---|
+| `userId` | reference → `users` (which must have `role: admin`), unique |
+| `role` | `super_admin` \| `content_admin` |
+| `status` | `active` \| `disabled` — disabled admins lose admin access on the next request |
+| `createdBy`, `lastLoginAt` | provenance and last admin sign-in |
+| `createdAt`, `updatedAt` | timestamps |
+
+No password or credential: admins log in with the normal account (D-95). The collection name follows the existing camelCase convention (the requirements' `admin_accounts`); likewise `user_profiles` in the requirements is the existing `profiles`. Listed in `USER_OWNED_COLLECTIONS`, so deleting the admin's account removes it.
+
+### 4b.2 `adminAuditLogs`
+
+| Field | Type / rule |
+|---|---|
+| `adminId` | the acting admin's user ID |
+| `action` | `CREATED`, `UPDATED`, `APPROVED`, `PUBLISHED`, `UNPUBLISHED`, `ARCHIVED`, `RESTORED`, `USER_SUSPENDED`, `USER_REACTIVATED`, `USER_DELETION_REQUESTED`, `ADMIN_ROLE_CHANGED`, `ADMIN_DISABLED`, `ADMIN_ENABLED`, `REPORT_REVIEWED` |
+| `targetType`, `targetId` | e.g. `clothing_style` / `CST-001`, `user` / an internal ID |
+| `status` | `success` \| `failure` |
+| `changes[]` | `{ field, from?, to? }` — field names, and values only for non-personal catalogue fields (`auditChangeSchema`); never passwords, tokens, photos, user-media URLs, measurements or profile values |
+| `requestId` | for troubleshooting |
+| `at`, `expiresAt` | time; TTL 1 year |
+
+A security record: it is **not** deleted with a user's account (it holds only an internal ID) and ages out by TTL. Readable only by the Super Admin.
+
+### 4b.3 `usageDailyStats`
+
+`{ day: "YYYY-MM-DD", feature, metric, count }`, unique per day, feature and metric — e.g. `discover_my_style / recommendations_served`, `outfit_categories / empty_results`, `virtual_try_on / unsupported_combination`. Incremented by the API; **no user ID or other personal data**. Groups under 10 are shown as "fewer than 10".
+
 ### 4.3 `reviewEvidence`
 
 | Field | Type / rule |
@@ -362,7 +656,7 @@ Rules:
 
 ## 6. Style Knowledge Base (repository files, not MongoDB)
 
-Palettes (`PAL-xxx`), styling/fit rules (`STY-xxx`), fabric rules (`FAB-xxx`) and outfit templates (`OUT-xxx`) live in `apps/api/src/style-rules/` (D-66). They are Zod-validated and linted at startup and in CI. Every record has `id`, `version`, `tags[]`, applicable contexts, user-adjustable preferences, `rationale`, `limitations`, `reviewStatus` (`draft` \| `reviewed` \| `approved` \| `retired`), `reviewedBy` and `reviewedAt`. Type-specific fields: [AI.md](AI.md) §4. Looks reference records by ID, and each template slot carries a `slotId` unique within its template (D-82). Templates carry a `wearType` (D-96); slots name garment types grouped into broad categories (D-97) and carry a `formality` (D-98). IDs use three digits or more (`PAL-001` …) so the library can grow past 100 records per type; the files are loaded once at startup and sized for at least 150 palettes and 150 templates (FR-STY-10).
+Palettes (`PAL-xxx`), styling/fit rules (`STY-xxx`), fabric rules (`FAB-xxx`) and outfit templates (`OUT-xxx`) live in `apps/api/src/style-rules/` (D-66). **From D-110 the runtime copy is in MongoDB (§4a.4):** these files remain the founder-review and seed format and are imported by stable ID and version; the same schemas and linter validate the import and every admin publish. They are Zod-validated and linted at startup and in CI. Every record has `id`, `version`, `tags[]`, applicable contexts, user-adjustable preferences, `rationale`, `limitations`, `reviewStatus` (`draft` \| `reviewed` \| `approved` \| `retired`), `reviewedBy` and `reviewedAt`. Type-specific fields: [AI.md](AI.md) §4. Looks reference records by ID, and each template slot carries a `slotId` unique within its template (D-82). Templates carry a `wearType` (D-96); slots name garment types grouped into broad categories (D-97) and carry a `formality` (D-98). IDs use three digits or more (`PAL-001` …) so the library can grow past 100 records per type; the files are loaded once at startup and sized for at least 150 palettes and 150 templates (FR-STY-10).
 
 ---
 
@@ -403,6 +697,23 @@ Safeguards (D-78):
 | `retailers` | `retailerId` (unique) |
 | `products` | `{ retailerId, retailerProductId }` (unique); `{ active, category, department }`; `priceVerifiedAt`; `availability.status`; `quality.verdict` |
 | `reviewEvidence` | `productId` |
+| `userPhotos` (approved, D-103) | `storageKey` (unique); `{ userId, kind, uploadedAt: -1 }`; `deleteAfter` (partial: only when set) |
+| `appearanceAnalyses` (approved, D-103) | `{ userId, kind, createdAt: -1 }`; `{ userId, source }` |
+| `notifications`, `userActivity` (approved, D-106; not created) | `{ userId, createdAt: -1 }` / `{ userId, visitedAt: -1 }`; TTL on `expiresAt` |
+| `savedItems` | `{ userId, identityKey }` (unique); `{ userId, itemType, createdAt: -1 }`; `{ userId, updatedAt: -1 }`; `{ userId, collectionIds }`; `{ userId, isFavourite }`; `{ userId, ref.kind, ref.id }` |
+| `savedCollections` | `{ userId, nameKey }` (unique) |
+| `customPalettes` | `{ userId, updatedAt: -1 }` |
+| `userFeedback` | `{ userId, targetType, targetId }` (unique); `{ userId, updatedAt: -1 }` |
+| `catalogueCategories` | `key` (unique); `{ parentId, sortOrder }`; `{ department, level, status }`; `path` |
+| `garmentAttributes` | `{ attributeId, valueId }` (unique); `{ categoryIds, attributeId, status }` |
+| `clothingStyles` | `styleId`, `slug` (unique); `{ department, categoryId, status }`; `{ status, bodyShapes }`; `{ status, definingAttribute }`; `{ status, publishedAt: -1 }`; text index on name, description, tags |
+| `palettes` | `recordId` (unique); `{ status, publishedAt: -1 }`; `{ status, facets.undertoneAffinity, facets.temperature }`; `{ status, facets.colourFamilies }`; `{ status, facets.occasions }`; text index on name, tags, colour IDs |
+| `outfitTemplates`, `stylingRules`, `fabricRules` | `recordId` (unique); `{ status, publishedAt: -1 }`; templates `{ status, facets.department, facets.occasions }`, `facets.clothingStyleIds`; rules `{ status, facets.type }`, `{ status, facets.bodyShapes }` |
+| `illustrations` | `assetId` (unique); `{ kind, status }`; `depicts.clothingStyleIds` |
+| `adminAccounts` | `userId` (unique); `{ role, status }` |
+| `adminAuditLogs` | `at: -1`; `{ adminId, at: -1 }`; `{ targetType, targetId, at: -1 }`; TTL on `expiresAt` |
+| `usageDailyStats` | `{ day, feature, metric }` (unique) |
+| `productReports`, `productImportRuns` (product layer) | `{ productId, status }`, `{ userId, createdAt: -1 }`; `{ retailerId, startedAt: -1 }`, TTL |
 
 ---
 
@@ -420,6 +731,22 @@ users 1─n sessions                (sessions.userId)
 retailers 1─n products            (products.retailerId)
 products 1─n reviewEvidence       (reviewEvidence.productId)
 outfits.templateId / paletteId ──► style-rules files (by ID)
+users 1─n userPhotos              (approved; userPhotos.storageKey ──► private object storage)
+users 1─n appearanceAnalyses      (approved; photoIds[] ──► userPhotos, may outlive the photo)
+appearanceAnalyses (confirmed) ──► appearanceProfiles attribute (value copied on confirmation)
+
+catalogueCategories 1─n catalogueCategories   (parentId; department → group → category → subcategory)
+catalogueCategories 1─n clothingStyles        (clothingStyles.categoryId)
+garmentAttributes  ◄── clothingStyles.definingAttribute / attributes[]  (by attributeId + valueId)
+clothingStyles n─n stylingRules               (suitabilityRuleIds[] ──► STY-…; one style, many body shapes)
+clothingStyles n─n illustrations              (illustrations[].illustrationId ──► ILL-…)
+outfitTemplates.facets.clothingStyleIds ──► clothingStyles
+users 1─n savedItems                          (savedItems.ref ──► CST / OUT / PAL / look / custom palette / product / design)
+savedItems n─n savedCollections               (savedItems.collectionIds[])
+users 1─n customPalettes                      (basedOnPaletteId ──► palettes, never modified)
+users 1─n userFeedback                        (targetType + targetId ──► catalogue record, product or saved item)
+users 1─1 adminAccounts                       (role: super_admin | content_admin)
+adminAccounts 1─n adminAuditLogs              (adminId)
 ```
 
 ---
@@ -435,6 +762,15 @@ outfits.templateId / paletteId ──► style-rules files (by ID)
 | Sessions | Until logout, password change or reset, account deletion, or expiry: 24 hours, or 30 days with Remember Me (TTL) |
 | Beta invites | Until the closed beta ends, then deleted within 30 days; deleted earlier on request or when the invitee deletes their account |
 | Measurements | Deletable at any time on their own |
+| Profile photos (approved, D-103) | Kept until the user deletes them or revokes retention (then deleted immediately), or deleted automatically after analysis if the user chose that. Deleting a photo removes the stored object and its `userPhotos` record; account deletion must delete every stored object for the user, not only the metadata |
+| Photo-derived analysis results (approved, D-103) | Until the user deletes them; not deleted with the photo; on consent revocation the user chooses keep or delete |
+| Notifications, recent activity (approved, D-106) | TTL (e.g. 90 days), and with the account |
+| Saved items, collections, custom palettes, explicit feedback | Until the user deletes them; all deleted with the account. Undo of a removal is a short client-side window, not a recycle bin |
+| Admin account records | While the admin role is held; deleted with the admin's user account |
+| Admin audit logs | 1 year (TTL); internal IDs only; not deleted with a user account (security record) |
+| Shared catalogue records | Indefinitely; retired content is archived, not deleted, while anything references it |
+| Aggregate usage counters | Indefinitely; no personal data |
+| Product reports | Until reviewed + 90 days, and with the account |
 | `aiCache` | 7 days (TTL); contains no personal data |
 | Products | While active; retired products' evidence is deleted within 30 days (D-49) |
 | Review evidence | While its product is active; excluded from assessments after 12 months; deleted within 30 days of product removal or on a valid takedown request (D-49) |
@@ -448,4 +784,4 @@ Migration `001-auth-onboarding` (2026-10-12) marks existing accounts verified fr
 
 ## 11. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-03, D-05, D-07, D-09, D-13, D-16, D-22, D-23, D-49, D-50, D-54, D-58, D-66, D-72, D-73, D-77, D-78, D-79, D-80, D-85, D-87 … D-94.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-03, D-05, D-07, D-09, D-13, D-16, D-22, D-23, D-49, D-50, D-54, D-58, D-66, D-72, D-73, D-77, D-78, D-79, D-80, D-85, D-87 … D-94, D-102 … D-108, D-110 … D-128.

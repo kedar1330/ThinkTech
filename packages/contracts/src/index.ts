@@ -9,3 +9,8 @@ export * from './common';
 export * from './outfit';
 export * from './palette';
 export * from './product';
+export * from './my-profile';
+export * from './photos';
+export * from './catalogue';
+export * from './saved-items';
+export * from './admin';

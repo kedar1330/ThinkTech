@@ -13,7 +13,8 @@
     "seed": "tsx --env-file=.env scripts/seed.ts",
     "reconcile": "tsx --env-file=.env scripts/reconcile-tombstones.ts",
     "style-rules": "tsx scripts/style-rules.ts",
-    "migrate": "tsx --env-file=.env scripts/migrate.ts"
+    "migrate": "tsx --env-file=.env scripts/migrate.ts",
+    "catalogue:import": "tsx --env-file=.env scripts/catalogue-import.ts"
   },
   "dependencies": {
     "@styleme/contracts": "workspace:*",

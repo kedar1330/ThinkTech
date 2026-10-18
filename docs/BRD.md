@@ -71,7 +71,8 @@ StyleMe is a personal styling platform that grows into a styling-and-shopping pl
 | **Product layer** (Stage 3) | Verified products, matching, verified-price budgets, quality evidence | An authorised source (D-43 … D-45); D-74; D-46 |
 | **Stage 2 — Expanded Styling** | The full styling library (100+ palettes, 100+ templates); optional weather | Founder content capacity; D-60 for weather |
 | **Stage 3 — Authorised Shopping** | Product layer release; more retailers | As for the product layer |
-| **Deferred / Future** | D-76 features; try-on (D-48) | Founder decisions |
+| **Feature specifications (D-109)** | Discover My Style, My Colour Palette, Outfit Categories (shared style catalogue with croquis illustrations), Saved Outfits, Shop My Look screens and outfit assembly, a 2D illustrative Virtual Try-On and an Admin Panel — built into Stage 1 | Founder approval of styling content and illustrations (D-62, D-113); product data as for the product layer |
+| **Deferred / Future** | D-76 features; photo-based or generative try-on (D-48) | Founder decisions |
 
 **Styling content requirement (D-57):** at least 100 colour palettes and at least 100 outfit templates (planning range 100–150), 8–12 categories and a comprehensive styling-rule library, complete before the Stage 2 release. Stage 1 releases with a smaller approved set (12–20 palettes, about 20 templates) as a closed beta. Product catalogue target (product layer): 500–1,000 human-reviewed listings.
 
@@ -166,4 +167,4 @@ Every retailer starts at D and moves up only when its access is confirmed. The p
 
 ## 9. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-43 … D-48, D-58, D-61, D-63, D-71, D-74, D-76, D-77, D-83, D-84, D-86 … D-94.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-43 … D-48, D-58, D-61, D-63, D-71, D-74, D-76, D-77, D-83, D-84, D-86 … D-94, D-109 … D-128.

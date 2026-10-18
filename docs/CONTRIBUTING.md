@@ -26,7 +26,7 @@ Issue → feature/* or fix/* branch → contracts first → implementation → t
 → pull request → CI (typecheck, lint, format check, style-rule linter and coverage report, tests, build, Docker image build) → review → merge
 ```
 
-Commit messages follow Conventional Commits. The CI steps are in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). The Playwright E2E smoke flow is planned (#7) and is not part of CI yet.
+Commit messages follow Conventional Commits. The CI steps are in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). The Playwright E2E smoke flow is planned (#36; earlier #7) and is not part of CI yet.
 
 ---
 
@@ -61,7 +61,7 @@ A feature isn't complete just because the UI works. It needs: UI, API, validatio
 - **Never fabricate** products, prices, availability, ratings, reviews, quality claims or confidence values — in code, seed data, UI copy or docs.
 - **Fixtures** are synthetic, marked `isFixture: true`, live in `apps/api/tests/fixtures/`, and are loaded only by test and seed scripts that refuse to run in production. Never put a fixture where a user could see it.
 - Never use affiliate status or commission in ranking or quality logic.
-- Never send personal photos, measurements, appearance signals or unnecessary personal data to an external AI provider (AI rule 16).
+- Never send personal photos, measurements, appearance signals or unnecessary personal data to an external AI provider (AI rule 16). The only authorised exception is full-body photos to Gemini under [ImplementationPlan.md](ImplementationPlan.md) D-122, and only after the privacy review is recorded; until then the code runs against mocks behind a disabled flag.
 - Get retailer data only through permitted methods. No scrapers.
 - External services only through `src/integrations/`.
 - Secrets server-side and per environment. Never commit `.env`; never use `NEXT_PUBLIC_` for secrets.
@@ -91,6 +91,8 @@ The founder reviews and approves all palettes, styling/fit rules, fabric rules, 
 - [ ] Fabric guidance is practical and never claims a fabric is always right.
 - [ ] Style illustrations: a recorded source and licence (D-65), and the "Style illustration — not a product" label.
 - [ ] Plain, inclusive language.
+
+**Catalogue in MongoDB (D-110, D-120).** The runtime catalogue — palettes, templates, rules, clothing styles, categories, attribute values and illustrations — lives in shared MongoDB collections. Until the admin panel edits it, the workflow above is unchanged: records are drafted and approved in `style-rules/data/*.json` and loaded by the import script. Once the admin panel is live, the same checklist applies in the record editor: anyone with catalogue access drafts; **only the Super Admin (the founder) records approval**; the database refuses to publish unapproved styling content or assets without verified rights; every change is versioned and audited. Additional checks for clothing styles and suitability rules: body-shape names use the approved list (D-112) and pass the inclusive-language check; explanations give benefits and trade-offs, never restrictions; every figure is clothed (plain white shirt and pants by default, D-113); new attribute values are added to the vocabulary first (D-111).
 
 **Corrections:** anyone can open an issue against a record ID (including from evaluation results or user feedback). A record producing harmful or judgemental output is set to `retired` immediately, then fixed. Other corrections follow the same workflow with a version bump. The library grows only as fast as the founder can review (FR-STY-08).
 
@@ -122,7 +124,7 @@ Issues follow the milestones in [ImplementationPlan.md](ImplementationPlan.md) �
 
 Update the relevant document in `docs/` with every feature: [BRD](BRD.md) · [MVP](MVP.md) · [FRD](FRD.md) · [SRS](SRS.md) · [ARCHITECTURE](ARCHITECTURE.md) · [DATABASE](DATABASE.md) · [API](API.md) · [AI](AI.md) · [SECURITY](SECURITY.md) · [TESTING](TESTING.md) · [DEPLOYMENT](DEPLOYMENT.md) · [ImplementationPlan](ImplementationPlan.md).
 
-Team documents: [PROJECT_OVERVIEW](PROJECT_OVERVIEW.md) (features and verified status) · [DEVELOPMENT_ROADMAP](DEVELOPMENT_ROADMAP.md) · [TEAM_TASK_ASSIGNMENTS](TEAM_TASK_ASSIGNMENTS.md) · [PROPOSED_ISSUES](PROPOSED_ISSUES.md). When your PR changes a feature's status, update its row in PROJECT_OVERVIEW and DEVELOPMENT_ROADMAP in the same PR.
+Team documents: [PROJECT_OVERVIEW](PROJECT_OVERVIEW.md) (features and verified status) · [DEVELOPMENT_ROADMAP](DEVELOPMENT_ROADMAP.md) · [TODO](TODO.md) (consolidated task list) · [TEAM_TASK_ASSIGNMENTS](TEAM_TASK_ASSIGNMENTS.md) · [PROPOSED_ISSUES](PROPOSED_ISSUES.md) (historical). Technical and design references: [SPECS](SPECS.md) · [UI_DESIGN](UI_DESIGN.md) · [CHANGELOG](CHANGELOG.md). When your PR changes a feature's status, update its row in PROJECT_OVERVIEW, DEVELOPMENT_ROADMAP and TODO in the same PR; add merged PRs to CHANGELOG; update UI_DESIGN when you add or change a page or UI-kit component.
 
 ---
 
@@ -149,7 +151,7 @@ The team: **Shreya** (shared styling foundation and engine), **Johita** (Discove
    pnpm dev:web        # http://localhost:3000
    pnpm test           # all packages; the API tests use an in-memory MongoDB
    ```
-4. **Pick your assigned issue** on GitHub (filter by assignee). If your task has no issue yet, ask for one — see the proposals in [PROPOSED_ISSUES.md](PROPOSED_ISSUES.md). One issue, one branch, one pull request.
+4. **Pick your assigned issue** on GitHub (filter by assignee); [TODO.md](TODO.md) lists every open issue with its dependencies and acceptance criteria. If your task has no issue yet, ask for one. One issue, one branch, one pull request.
 5. **Check dependencies and interfaces.** Read the issue's "Depends on" list and the roadmap ([DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md)). If you need a shared contract, model or file you don't own (§12), agree the change with its owner in the issue **before** coding.
 6. **Branch from the latest `main`.**
    ```sh
@@ -189,9 +191,10 @@ The team: **Shreya** (shared styling foundation and engine), **Johita** (Discove
 * **Shared files have one owner** ([TEAM_TASK_ASSIGNMENTS.md](TEAM_TASK_ASSIGNMENTS.md) §2). Changes go through a PR the owner reviews. Highest-conflict files: `packages/contracts/src/index.ts`, `apps/api/src/models/index.ts`, `apps/api/src/app.ts`, `apps/web/lib/features.ts`, `pnpm-lock.yaml`.
 * **New user-owned collections** are added to `USER_OWNED_COLLECTIONS` (account deletion and tombstone replay) in the same PR (§5).
 * **Migrations** (`apps/api/scripts/migrations/`, owner Shreya): one migration per PR, numbered in order, idempotent and backward-compatible (D-79). Agree the number with the owner so two PRs don't both add `002-*`. Run with `pnpm --filter @styleme/api migrate`.
-* **Styling content** (`apps/api/src/style-rules/data/*.json`, owner Shreya): any member may draft records; only the founder approves (§6). Drafts fail `style-rules lint` by design until approved.
+* **Styling content** (`apps/api/src/style-rules/data/*.json`, owner Shreya): any member may draft records; only the founder approves (§6). Drafts fail `style-rules lint` by design until approved — and because the API lints the library at startup, **the API does not start on a branch that contains draft records** (`api_start_failed … NOT_APPROVED`), and the test "the shipped library … is linter-clean" fails. Review drafts with `pnpm --filter @styleme/api style-rules lint` and `… coverage`; run the app from `main` or another branch meanwhile ([TODO.md](TODO.md) TD-DOC-04).
 * **Seeds.** `pnpm --filter @styleme/api seed` creates only the admin account (D-95). There is no styling-data seed command: styling content is the JSON files above, loaded when the API starts. Test fixtures stay in `apps/api/tests/fixtures/` (§5).
 * **Dependencies.** Add a package only when needed, with `pnpm-lock.yaml` updated by `pnpm install`. Lockfile conflicts: take `main`'s lockfile, then run `pnpm install` again — never hand-edit it.
+* **Line endings on Windows.** With `core.autocrlf=true`, files are checked out with CRLF and `pnpm format:check` reports every file even though the repository content is correctly formatted (`npx prettier --check --end-of-line auto .` passes). CI runs on Linux and is unaffected ([TODO.md](TODO.md) TD-DOC-06).
 * **Generated and local files are never committed:** `.next/`, `dist/`, `node_modules/`, `.dev-outbox/`, `.env` and `.env.*` (except `.env.example`), screenshots and test output.
 
 ## 13. Secrets and Personal Data
