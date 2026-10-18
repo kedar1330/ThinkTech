@@ -1,6 +1,8 @@
 # StyleMe — Proposed GitHub Issues
 
-> **Proposal for team and founder review. None of these issues has been created or assigned on GitHub.** Owners follow [TEAM_TASK_ASSIGNMENTS.md](TEAM_TASK_ASSIGNMENTS.md); order follows [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md). Where an earlier issue described the same work, it is named so its description can be reused. GitHub issues #1 … #18 were all closed on 2026-10-15 (marked completed) without new commits on `main`; statuses come from the code, not from issue state.
+> **Historical (updated 2026-10-18).** These proposals were turned into GitHub issues #30 … #61 on 2026-10-16/17 (more were added later: #63, #65, #66). The issue text on GitHub is now the working specification, and current status lives in [TODO.md](TODO.md) — each TODO row names the proposal ID it came from, and [TEAM_TASK_ASSIGNMENTS.md](TEAM_TASK_ASSIGNMENTS.md) §6 maps every proposal to its issue. This file is kept unchanged below for traceability.
+>
+> *Original note:* Proposal for team and founder review. None of these issues has been created or assigned on GitHub. Owners follow [TEAM_TASK_ASSIGNMENTS.md](TEAM_TASK_ASSIGNMENTS.md); order follows [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md). Where an earlier issue described the same work, it is named so its description can be reused. GitHub issues #1 … #18 were all closed on 2026-10-15 (marked completed) without new commits on `main`; statuses come from the code, not from issue state.
 
 **Start:** 🟢 can start now · 🟡 starts now but integration waits for the named dependency · 🔴 waits for the dependency or approval.
 

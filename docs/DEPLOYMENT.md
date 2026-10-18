@@ -80,6 +80,8 @@ Never use `NEXT_PUBLIC_` for secrets (D-40). `.env.example` lists names only.
 
 ---
 
+**Photo storage (D-103 approved 2026-10-18; provider D-107 at HC-1):** photo uploads need a private object-storage bucket per environment (encrypted, no public access, short-lived signed URLs) and its credentials as API-only secrets, chosen at HC-1. No variable for it exists in `env.ts` yet; it is added in the PR that builds the storage integration. Gemini for full-body photos (D-122) reuses the AI provider key (server-side only) and stays disabled by a flag until the privacy review is recorded.
+
 ## 4. Build and Runtime
 
 - **Monorepo rule:** `apps/web` and `apps/api` both depend on `packages/contracts`, so every build runs from the repository root.
@@ -170,6 +172,8 @@ Checkout → Setup Node/pnpm → Install → Typecheck → Lint → Style-rule l
 
 Nothing in this section is done until the founder decides at HC-1. At that point the implementer presents the options below with **current** limits and prices, checked on the providers' sites at that time (NFR-COST-03). Prices are not recorded here because they change.
 
+**Open issues (2026-10-18):** HC-1 is tracked in #60 and closed-beta readiness in #61. Issue #66 proposes a free demo deployment (Vercel, Render Free, MongoDB Atlas M0, Brevo SMTP) for a pitch; it is labelled needs-founder-approval and conflicts with D-75 ("There is no demo release") and D-81 (hosting postponed). Nothing in #66 is approved, and the free-tier constraints in §9.1 apply to it ([PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) §15 #10).
+
 ### 9.1 Known plan constraints (checked 2026-10-10; re-check at HC-1)
 
 These facts were checked on the providers' own pages because they affect requirements already in these documents. They are not a recommendation, and plans change.
@@ -208,6 +212,21 @@ These facts were checked on the providers' own pages because they affect require
 6. Set up the uptime check and email alerts.
 7. Verify: `/health` green in both environments, the fixture startup check passes in production, E2E smoke passes against staging.
 8. Record the decision, plans and costs in D-81.
+
+### 9.3a Bringing an Atlas database live (after HC-1 only)
+
+Steps for step 2 above, per environment (staging first, then production). Nothing here is done before the founder decides HC-1.
+
+1. **Cluster:** in the founder-owned Atlas organisation, create one project per environment and a cluster on the tier chosen at HC-1, in a region close to the Render API region.
+2. **Main database user:** `readWrite` on the `styleme` database only, with a generated password. **Tombstone store (D-85):** a separate deployment (not the main cluster's backup scope) with its own user, which may only insert into `deletionTombstones` (a custom role with `insert` and `find`, no `update` or `remove`).
+3. **Network access (D-20):** allow only the Render service's outbound addresses. Never `0.0.0.0/0` in production.
+4. **Connection strings:** copy the `mongodb+srv://…/styleme?retryWrites=true&w=majority` URI into Render's environment as `MONGODB_URI`, and the tombstone URI as `TOMBSTONE_STORE_URI`. Never into `.env` files in git, chat or the web app.
+5. **Schema:** the API creates every collection and index on startup (`connectDatabase` runs `Model.init()`). Then run, from a machine allowed by step 3, with the environment's variables loaded:
+   - `pnpm --filter @styleme/api migrate` (applies the numbered migrations)
+   - `pnpm --filter @styleme/api catalogue:import` (approved styling content only; `--include-drafts` is refused in production)
+   - `pnpm --filter @styleme/api seed` (admin account, D-95; then remove `SEED_ADMIN_PASSWORD`)
+6. **Backups:** turn on Atlas backups if the tier has them, otherwise schedule `mongodump` (§6, D-79).
+7. **Verify:** `/health` is green, the startup fixture check passes, and a test sign-up and account deletion work in staging.
 
 ### 9.4 HC-2 — public-launch checkpoint (D-84)
 

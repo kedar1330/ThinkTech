@@ -12,23 +12,24 @@ Full product description and intended behaviour of every section: [docs/PROJECT_
 
 ## Features and current status
 
-Verified against the code on `main`. ✅ built · 🟡 partial · ⬜ placeholder ("Coming soon" page only) · ⛔ waits for a founder decision or approval.
+Verified against the code on `main` (`5b65b5c`, 2026-10-18). ✅ built · 🟡 partial · ⬜ placeholder ("Coming soon" page only) · ⛔ waits for a founder decision or approval.
 
-| Section                                                            | Status | Notes                                                                        |
-| ------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------- |
-| Sign-up, email verification, login, password reset, Google sign-in | ✅     | Account created only after the emailed 6-digit code is verified              |
-| Onboarding, Home, profile completeness                             | ✅     | Set up now or **Skip for now**; "Complete your profile" on Home              |
-| Style profile and appearance signals (labelled Discover My Style)  | ✅     | Self-reported; signals can be switched off or cleared                        |
-| Settings, consent, account deletion                                | ✅     | Data export is not specified yet                                             |
-| Shared styling database, rules and engine                          | 🟡     | Tooling built; **content empty (0 palettes, 0 templates)**; engine not built |
-| Discover My Style — look recommendations                           | ⬜     | Needs the styling content and engine                                         |
-| My Colour Palette                                                  | ⬜     |                                                                              |
-| Outfit Categories                                                  | ⬜     | Requirement not yet written                                                  |
-| Saved Outfits and feedback                                         | ⬜     |                                                                              |
-| Shop My Look (shortlist of items you found, budget)                | ⬜     | Real retailer products ⛔ until a retailer authorises StyleMe                |
-| Design Studio, Style Assistant                                     | ⛔     | Deferred (D-76)                                                              |
-| Virtual Try-On                                                     | ⛔     | Future (D-48)                                                                |
-| Weather-aware styling                                              | ⛔     | Stage 2; provider not chosen (D-60)                                          |
+| Section                                                                                               | Status | Notes                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Sign-up, email verification, login, password reset, Google sign-in                                    | ✅     | Account created only after the emailed 6-digit code is verified                                                                      |
+| Onboarding, Home, profile completeness                                                                | ✅     | Set up now or **Skip for now**; "Complete your profile" on Home                                                                      |
+| Style profile and appearance signals (labelled Discover My Style)                                     | ✅     | Self-reported; signals can be switched off or cleared                                                                                |
+| Settings, consent, account deletion                                                                   | ✅     | Data export approved (D-105), not built                                                                                              |
+| Shared styling database, rules and engine                                                             | 🟡     | Tooling and shared contracts built; **no content on `main`** (C0 drafts awaiting founder approval in PR #68); engine not built (#33) |
+| Discover My Style — look recommendations                                                              | ⬜     | Needs the styling content and engine                                                                                                 |
+| My Colour Palette                                                                                     | ⬜     |                                                                                                                                      |
+| Outfit Categories                                                                                     | ⬜     | Specified 2026-10-18 (FRD §4.19, D-110 … D-114); not built                                                                           |
+| Saved Outfits and feedback                                                                            | ⬜     |                                                                                                                                      |
+| Shop My Look (shortlist of items you found, budget)                                                   | ⬜     | Real retailer products ⛔ until a retailer authorises StyleMe                                                                        |
+| Design Studio, Style Assistant                                                                        | ⛔     | Deferred (D-76)                                                                                                                      |
+| Virtual Try-On                                                                                        | ⬜     | 2D illustrative try-on approved (D-119), not built; photo-based try-on ⛔ (D-48)                                                     |
+| Weather-aware styling                                                                                 | ⛔     | Stage 2; provider not chosen (D-60)                                                                                                  |
+| My Profile redesign (measurements, face and body photo analysis, age group, export) and Home redesign | ⬜     | Approved 2026-10-18 (D-102 … D-106, [FRD §4.1b, §4.3a](docs/FRD.md)); dormant schema only; photo analysis after the privacy review   |
 
 Build order and milestone status: [docs/DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT_ROADMAP.md).
 
@@ -41,7 +42,7 @@ Build order and milestone status: [docs/DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT
 | **Ankita** | My Colour Palette, Saved Outfits and feedback                                           |
 | **Kedar**  | Shop My Look and Design Studio after approval; later Virtual Try-On subject to approval |
 
-Responsibilities, shared-file owners and how we coordinate: [docs/TEAM_TASK_ASSIGNMENTS.md](docs/TEAM_TASK_ASSIGNMENTS.md). Proposed issues: [docs/PROPOSED_ISSUES.md](docs/PROPOSED_ISSUES.md).
+Responsibilities, shared-file owners and how we coordinate: [docs/TEAM_TASK_ASSIGNMENTS.md](docs/TEAM_TASK_ASSIGNMENTS.md). Every open task with its issue, owner, dependencies and acceptance criteria: [docs/TODO.md](docs/TODO.md).
 
 ## Tech stack
 
@@ -155,16 +156,20 @@ The full workflow, PR requirements and rules for shared files, migrations and se
 
 ## Documentation
 
-| Document                                                                                                    | What it covers                                                               |
-| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [PROJECT_OVERVIEW](docs/PROJECT_OVERVIEW.md)                                                                | Every section's purpose, flow, states and verified status; open decisions    |
-| [DEVELOPMENT_ROADMAP](docs/DEVELOPMENT_ROADMAP.md)                                                          | Milestones, dependencies, approvals and parallel work                        |
-| [TEAM_TASK_ASSIGNMENTS](docs/TEAM_TASK_ASSIGNMENTS.md) · [PROPOSED_ISSUES](docs/PROPOSED_ISSUES.md)         | Who owns what; proposed issues for each member                               |
-| [CONTRIBUTING](docs/CONTRIBUTING.md)                                                                        | Workflow, Definition of Done, rules, styling-content review                  |
-| [MVP](docs/MVP.md) · [BRD](docs/BRD.md) · [FRD](docs/FRD.md) · [SRS](docs/SRS.md)                           | Scope, business and functional requirements, acceptance criteria             |
-| [ARCHITECTURE](docs/ARCHITECTURE.md) · [API](docs/API.md) · [DATABASE](docs/DATABASE.md) · [AI](docs/AI.md) | Technical design, endpoints, collections, the look engine and knowledge base |
-| [SECURITY](docs/SECURITY.md) · [TESTING](docs/TESTING.md) · [DEPLOYMENT](docs/DEPLOYMENT.md)                | Security and privacy, test strategy, environments                            |
-| [ImplementationPlan](docs/ImplementationPlan.md)                                                            | Detailed plan and the decision register (§8)                                 |
+| Document                                                                                                    | What it covers                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [PROJECT_OVERVIEW](docs/PROJECT_OVERVIEW.md)                                                                | Every section's purpose, flow, states and verified status; open decisions                                                                                                 |
+| [DEVELOPMENT_ROADMAP](docs/DEVELOPMENT_ROADMAP.md)                                                          | Milestones, dependencies, approvals and parallel work                                                                                                                     |
+| [TODO](docs/TODO.md)                                                                                        | Consolidated task list: stable IDs, issues, owners, dependencies, acceptance criteria                                                                                     |
+| [TEAM_TASK_ASSIGNMENTS](docs/TEAM_TASK_ASSIGNMENTS.md) · [PROPOSED_ISSUES](docs/PROPOSED_ISSUES.md)         | Who owns what; the original issue proposals (historical) mapped to GitHub issues                                                                                          |
+| [CHANGELOG](docs/CHANGELOG.md)                                                                              | Merged pull requests, newest first                                                                                                                                        |
+| [CONTRIBUTING](docs/CONTRIBUTING.md)                                                                        | Workflow, Definition of Done, rules, styling-content review                                                                                                               |
+| [MVP](docs/MVP.md) · [BRD](docs/BRD.md) · [FRD](docs/FRD.md) · [SRS](docs/SRS.md)                           | Scope, business and functional requirements, acceptance criteria                                                                                                          |
+| [SPECS](docs/SPECS.md)                                                                                      | Technical specification: verified stack and versions, conventions, module status, knowledge base and engine, technical acceptance, traceability, open technical decisions |
+| [UI_DESIGN](docs/UI_DESIGN.md)                                                                              | The current UI: design tokens, typography, layouts, navigation, components and every page, with source paths                                                              |
+| [ARCHITECTURE](docs/ARCHITECTURE.md) · [API](docs/API.md) · [DATABASE](docs/DATABASE.md) · [AI](docs/AI.md) | Technical design, endpoints, collections, the look engine and knowledge base                                                                                              |
+| [SECURITY](docs/SECURITY.md) · [TESTING](docs/TESTING.md) · [DEPLOYMENT](docs/DEPLOYMENT.md)                | Security and privacy, test strategy, environments                                                                                                                         |
+| [ImplementationPlan](docs/ImplementationPlan.md)                                                            | Detailed plan and the decision register (§8)                                                                                                                              |
 
 ## Docker
 

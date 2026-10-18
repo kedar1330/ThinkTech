@@ -39,7 +39,7 @@ Errors never expose stack traces, secrets, database details or internal errors. 
 
 ## 2. Endpoint Summary
 
-**Status:** the account, profile and appearance endpoints (#1–#11, #4a, A1–A20) are implemented; the rest are planned. "Stage 1" endpoints are planned for the closed beta; product-layer and Stage 2 endpoints are planned but gated; deferred and future endpoints are not approved for implementation.
+**Status (verified 2026-10-18 on `main` at `5b65b5c`):** the account, profile and appearance endpoints (#1–#11, #4a, A1–A21) and `/health` are **implemented**. #12–#21 have **merged Zod contracts** in `packages/contracts/src/{outfit,palette,product,common}.ts` (issue #31) but **no route, controller, service or model yet** (engine #33, saved looks #41/#42, shortlist #38). The rest are planned. "Stage 1" endpoints are planned for the closed beta; product-layer and Stage 2 endpoints are planned but gated; deferred and future endpoints are not approved for implementation.
 
 | # | Method | Path | Purpose | Stage |
 |---|---|---|---|---|
@@ -78,6 +78,10 @@ Added 2026-10-12 (D-87 … D-94), all Stage 1 and implemented:
 | A20 | POST | `/v1/onboarding/appearance/complete` | Complete (or skip) the appearance step |
 | A21 | POST | `/v1/onboarding/skip` | Skip the style profile for now (FR-ONB-05) |
 
+Remaining numbered endpoints (continuing the first table):
+
+| # | Method | Path | Purpose | Stage |
+|---|---|---|---|---|
 | 8 | GET | `/v1/profile` | Get the profile | 1 |
 | 9 | PUT | `/v1/profile` | Create or update the profile | 1 |
 | 10 | GET | `/v1/appearance` | Get appearance signals | 1 |
@@ -110,7 +114,9 @@ Added 2026-10-12 (D-87 … D-94), all Stage 1 and implemented:
 | 37 | GET | `/v1/tryon/:id` | Try-on result | Future (D-48) |
 | — | GET | `/health` | Health check | 1 |
 
-**Counts:** 38 numbered `/v1` endpoints plus `/health`, and 20 account endpoints added on 2026-10-12 (A1–A20). Stage 1: #1–#21, #4a and A1–A20, plus `/health`. Product layer (gated): 3. Stage 2 (gated on D-60): 2. Deferred (D-76): 9. Future, not approved (D-48): 2.
+**Feature specifications (D-109 … D-128):** the endpoints for Discover My Style, My Colour Palette, Outfit Categories, Saved Outfits, Shop My Look, the 2D Virtual Try-On and the Admin Panel are listed in §3.11 (F1 – F44). They are specified, not implemented; contracts are written per issue at the start of each milestone (D-03), on top of the enums already in `packages/contracts/src/{catalogue,saved-items,admin}.ts`.
+
+**Counts:** 38 numbered `/v1` endpoints plus `/health`, and 21 account endpoints added on 2026-10-12 and later (A1–A21; A21 with PR #28). Stage 1: #1–#21, #4a and A1–A21, plus `/health`. Product layer (gated): 3. Stage 2 (gated on D-60): 2. Deferred (D-76): 9. Future, not approved (D-48): 2.
 
 ---
 
@@ -152,7 +158,7 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 
 **`GET /v1/profile`** — returns the profile, or `null` fields if not yet set.
 
-**`PUT /v1/profile`** — input: the profile fields in [DATABASE.md](DATABASE.md) §3.2. `department` is required; everything else is optional. `budgetPreference` (optional, ₹ > 0) is used only to compare with totals of user-entered prices in Stage 1. `preferredWearTypes` (optional) is a soft ranking preference (D-96). `measurements` is accepted only when the product layer with size charts is active. Fields not sent are unchanged; sending `null` (or an empty list) clears a field. Unknown fields — including `ageRange`, `height` and, in Stage 1, `measurements` — are rejected with `INVALID_REQUEST`. A colour may be both liked and disliked; the generator applies the more restrictive choice (FR-LOOK-10). Returns the saved profile. Before the first save, `GET` returns `department: null` with every list empty.
+**`PUT /v1/profile`** — input: the profile fields in [DATABASE.md](DATABASE.md) §3.2. `department` is required; everything else is optional. `budgetPreference` (optional, ₹ > 0) is used only to compare with totals of user-entered prices in Stage 1. `preferredWearTypes` (optional) is a soft ranking preference (D-96) — **specified but not yet accepted**: `updateProfileRequestSchema` is strict and has no such field, so sending it today returns `INVALID_REQUEST` until #63 adds it. `measurements` is accepted only when the product layer with size charts is active. Fields not sent are unchanged; sending `null` (or an empty list) clears a field. Unknown fields — including `ageRange`, `height` and, in Stage 1, `measurements` — are rejected with `INVALID_REQUEST`. A colour may be both liked and disliked; the generator applies the more restrictive choice (FR-LOOK-10). Returns the saved profile. Before the first save, `GET` returns `department: null` with every list empty.
 
 ### 3.3 Appearance (`appearance.ts`)
 
@@ -160,7 +166,7 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 
 **`PUT /v1/appearance`** — input: any of `skinTone.value`, `undertone.value`, `bodyProportions.value` (or `null` to clear), and `useInRecommendations`. Stores the values as `source: "self_reported"`, `userConfirmed: true`, with no confidence. Fields not sent are unchanged; an empty body, unknown fields or a `confidence` are rejected with `INVALID_REQUEST`. Values come from the shared vocabulary (`monkRange` as `a-b`, span at most 2 tones). Returns the updated attributes. With no stored signals, `GET` returns all attributes `null` and `useInRecommendations: true`.
 
-### 3.4 Style (`style.ts`)
+### 3.4 Style (contract: `palette.ts`)
 
 **`GET /v1/style/palettes`** — query `view=suggested` (default) or `all`. Returns palettes `{ id, name, neutrals[], accents[], combinations[], rationale, limitations, suggestedBecause[] }`. `suggestedBecause` lists the preferences or enabled signals that ranked the palette; it is empty for `view=all`.
 
@@ -185,7 +191,7 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 
 **`DELETE /v1/outfits/:id`** — deletes the look and detaches any shortlist items from it (the items remain until the user deletes them). Returns `{ deleted: true }`.
 
-### 3.6 Shortlist (`shortlist.ts`) — Stage 1 (D-77 = B)
+### 3.6 Shortlist (contract: `product.ts`) — Stage 1 (D-77 = B)
 
 Everything here is the user's own entry and is returned with `priceBasis: "user_entered"` and `verifiedByStyleMe: false`.
 
@@ -235,6 +241,108 @@ These are specified only at the level needed for planning. Their full contracts 
 | `POST /v1/tailor/pdf` | PDF from a saved design |
 | `POST /v1/tryon`, `GET /v1/tryon/:id` | **Not approved.** The earlier design (user photo + `consent: true` → Leffa / Hugging Face / Qwen) is superseded by AI rule 16. Consent alone does not authorise sending a personal photo to an external provider. Requires D-48 |
 
+### 3.9a My Profile and Home — approved (D-102 … D-106, 2026-10-18), not implemented
+
+Approved by the founder on 2026-10-18; not implemented yet. Photo endpoints and the age group ship only after the privacy review and the D-74 legal review; full-body analysis may call Gemini only under D-122. Shapes come from `packages/contracts/src/my-profile.ts` and `photos.ts` (dormant). Every endpoint is authenticated, scoped to the user, uses the envelope and never logs bodies, measurements, photos or image URLs. Endpoints #27 and #28 above are the analysis endpoints of this proposal (no new ones are added for the same purpose).
+
+| # | Method | Path | Purpose | Contract / data |
+|---|---|---|---|---|
+| P1 | PATCH | `/v1/profile` | Save one My Profile section without resending `department` (FR-MYP-02); updates `sectionUpdatedAt` | Per-section schemas; `profiles` |
+| P2 | PUT / DELETE | `/v1/profile/measurements` | Save or delete body measurements (entered in cm or inches, stored in cm) | `bodyMeasurementsSchema`; `profiles.measurements` |
+| P3 | POST | `/v1/profile/reset` | Reset selected preference sections (basic information never) | `resetPreferencesRequestSchema` |
+| P4 | GET | `/v1/account/export?format=json\|pdf` | Download profile information and measurements (D-105) | `exportFormatSchema` |
+| P5 | PUT | `/v1/appearance/consent` | Grant or revoke photo-analysis consent per kind; on revoke, keep or delete results | `photoConsentRequestSchema`; `appearanceProfiles.photoConsent` |
+| P6 | POST | `/v1/photos` | Upload a face or body photo (multipart, ≤ 8 MB, JPEG/PNG/WebP; EXIF stripped) to private object storage | `userPhotoSchema`; `userPhotos` |
+| P7 | GET | `/v1/photos`, `/v1/photos/:id/file` | List the user's photo metadata; stream one image to its owner (no public URL) | `userPhotos` |
+| P8 | DELETE | `/v1/photos/:id`, `/v1/photos?kind=` | Delete photos (object + metadata); derived results are kept | `userPhotos` |
+| #27 | POST | `/v1/appearance/analyze` | Analyse consented photos and/or measurements → result with confidence, `pending_review` (on-device results are posted as results, not photos) | `appearanceAnalyses` |
+| #28 | PUT | `/v1/appearance/confirm` | Confirm or correct a result; copies it into `appearanceProfiles` | `appearanceAnalyses`, `appearanceProfiles` |
+| P9 | GET / DELETE | `/v1/appearance/analyses` | History; delete photo-derived results separately | `appearanceAnalyses` |
+| P10 | PUT | `/v1/appearance/retention` | Keep photos, or delete after analysis; revoking retention deletes stored photos now | `photoRetentionSchema` |
+| P11 | GET | `/v1/search?q=` | Global search over features, templates, palettes, the user's saved outfits and designs (products only when authorised) (FR-HOME-04) | — |
+| P12 | GET / POST | `/v1/notifications`, `/v1/notifications/:id/read` | Notification bell: list with unread count; mark read (FR-HOME-05) | `notifications` (not created) |
+| P13 | GET / POST | `/v1/activity` | Recently visited features and continue links (FR-HOME-12) | `userActivity` (not created) |
+
+Home itself needs no endpoint of its own: the web server composes it from the profile, palettes, recommendations, outfits and the endpoints above, loading each section independently so one failure shows a retry for that section only (FR-HOME-15).
+
+### 3.11 Feature endpoints — SPECIFIED 2026-10-18 (D-109 … D-128)
+
+Every endpoint is authenticated (all feature pages require login), uses the envelope, validates with Zod, is scoped to the user where data is user-owned, paginates lists (D-18) and never logs bodies, photos, measurements or image URLs. Catalogue reads return only `published` records; an archived record is still returned **by ID** with `status: "archived"` so saved items keep working.
+
+**Shared catalogue — Discover My Style, Outfit Categories, Try-On (FR-DMS, FR-OCAT, FR-VTO)**
+
+| # | Method | Path | Purpose |
+|---|---|---|---|
+| F1 | GET | `/v1/catalogue/categories?department=` | The hierarchy (department → group → category → subcategory) with tile art |
+| F2 | GET | `/v1/catalogue/styles` | Browse and filter styles: `department`, `categoryId`, `attribute`, `value`, `bodyShape`, `goal`, `fit`, `occasion`, `wearType`, `fabric`, `season`, `q` (text), `sort` (`best_match` \| `name` \| `recently_added` \| `most_saved` \| attribute), `page`, `limit` |
+| F3 | GET | `/v1/catalogue/styles/:styleId` | Style detail: attributes, illustrations and views, explanation, trade-offs, tips, related and alternative styles, supported actions |
+| F4 | GET | `/v1/catalogue/styles/compare?ids=` | Two or more styles side by side (FR-OCAT-23) |
+| F5 | POST | `/v1/catalogue/recommendations` | Personalised styles: input `{ department?, categoryId?, attributeIds?, goals?, occasion?, filters? }`; output 3 – 5 suitable styles (D-114) with `reasons[]` (rule IDs and matched profile fields), `personalisedFrom` (`profile` \| `preferences` \| `general`), `missingInputs[]`, and `limitedBy` + closest alternatives when nothing qualifies |
+| F6 | GET | `/v1/catalogue/search?q=` | Natural-language style search (D-123): `{ interpretedFilters, results[], interpretation: "parser" \| "ai" }` |
+| F7 | GET | `/v1/try-on/catalogue?modelVariantId=` | Model variants and the garments that have compatible layers for the chosen variant, with layer, z-order, recolourable regions and compatibility rules (D-119) |
+
+**My Colour Palette (FR-PAL-04 … 30)** — extends #12 `GET /v1/style/palettes`
+
+| # | Method | Path | Purpose |
+|---|---|---|---|
+| F8 | GET | `/v1/palettes` | Recommended (`view=recommended`, ranked by skin tone and undertone first) or all palettes; filters `colourFamily`, `temperature`, `occasion`, `style`, `suitability`, `saved`, `recentlyAdded`, `q`; Load more (12 – 20 per page). Each palette says whether it is personalised and from what |
+| F9 | GET | `/v1/palettes/:paletteId` | Detail: colours with name, HEX and role; explanation; garment combinations; Indian, fusion and western examples; occasions |
+| F10 | GET / POST | `/v1/custom-palettes` | List, or create from scratch or from a curated palette (`customPaletteSchema`); creates the matching saved item |
+| F11 | PUT / DELETE | `/v1/custom-palettes/:id` | Replace, add, remove, reorder colours and rename; delete |
+
+**Saved Outfits (FR-SAVE)** — also used by every Save control
+
+| # | Method | Path | Purpose |
+|---|---|---|---|
+| F12 | GET | `/v1/saved-items` | List with `section`, `itemType`, `occasion`, `category`, `style`, `colour`, `collectionId`, `favourite`, `q`, `sort` (`recently_saved` default), pagination; returns counts per section |
+| F13 | POST | `/v1/saved-items` | Save `{ itemType, sourceFeature, ref, name?, customization?, origin?, collectionIds? }`; a duplicate returns the existing item with `alreadySaved: true` (200) |
+| F14 | GET | `/v1/saved-items/status?refs=` | "Is it saved?" for a page of cards (updates every save indicator) |
+| F15 | GET | `/v1/saved-items/:id` | Detail with the latest shared data, or the snapshot plus `sourceStatus: "retired"`; products re-checked where the source allows (historical price labelled) |
+| F16 | PATCH | `/v1/saved-items/:id` | Rename, notes, favourite, cover, collections, or an explicit "update this item" customisation |
+| F17 | POST | `/v1/saved-items/:id/duplicate` | Duplicate, or Save as New Look with changed components (`derivedFromId`) |
+| F18 | DELETE | `/v1/saved-items/:id` | Unsave (the shared record is never touched); bulk `POST /v1/saved-items/bulk` `{ ids, action: move \| remove, collectionId? }` |
+| F19 | GET / POST | `/v1/collections` | List or create collections (name unique per user) |
+| F20 | PATCH / DELETE | `/v1/collections/:id` | Rename; delete with `keepItems: true \| false` |
+
+**Feedback and personalisation (D-115)**
+
+| # | Method | Path | Purpose |
+|---|---|---|---|
+| F21 | PUT | `/v1/feedback` | `{ targetType, targetId, value: like \| not_for_me, reasons?, feature }` — one current reaction per target |
+| F22 | DELETE | `/v1/feedback/:targetType/:targetId` | Undo |
+| F23 | PUT | `/v1/profile/personalization` | `{ paused?, useFeedback?, reset?: true }` — pause, include or exclude feedback, reset |
+
+**Shop My Look (FR-SHOP, D-124)** — the product reads are #22 – #24 (product layer)
+
+| # | Method | Path | Purpose |
+|---|---|---|---|
+| F24 | GET | `/v1/shop/search` | Products for a garment or look: `mode: item \| look`, inherited context (`styleId`, `paletteId`, `colours[]`, `templateId`, `designId`, `occasion`), filters (category, occasion, budget, size, colour, style, fit), `q`, `sort` (`best_match` \| `price_asc` \| `price_desc`). Without an authorised source: `200` with `available: false` and `PRODUCT_DATA_UNAVAILABLE`, plus styling alternatives — never placeholder products |
+| F25 | POST | `/v1/shop/outfit-total` | Totals for a temporary selection `{ items: [{ productId, variantId?, size }], budget?, itemBudgets? }` → `{ total, partial, missingPrices, shipping: known \| unknown, overBudgetBy?, suggestions[] }`. Nothing is stored |
+| F26 | POST | `/v1/products/:id/report` | Report an issue (`productReports`) |
+| F27 | PUT | `/v1/feedback` (F21) | "Not interested" uses the shared feedback endpoint (`targetType: product`) |
+
+**Admin Panel (FR-ADM, D-120)** — every route needs `role: admin`, an active `adminAccounts` record and the named permission; every write is audited
+
+| # | Method | Path | Permission |
+|---|---|---|---|
+| F28 | GET | `/v1/admin/me` | any admin — role and permissions for the UI |
+| F29 | GET | `/v1/admin/dashboard?from=&to=` | `dashboard.view` — aggregates only (D-125) |
+| F30 | GET | `/v1/admin/users?q=&status=` | `users.view_limited` — name, email, ID, status, registration date only |
+| F31 | GET | `/v1/admin/users/:id` | `users.view_limited` |
+| F32 | PATCH | `/v1/admin/users/:id/status` | `users.suspend` — `{ status: suspended \| active, reasonCode }`; suspension revokes all sessions |
+| F33 | POST | `/v1/admin/users/:id/deletion` | `users.request_deletion` — starts the existing deletion workflow (tombstone first, D-85) |
+| F34 | GET / POST | `/v1/admin/catalogue/:type` | `catalogue.edit` — `type`: `categories`, `attributes`, `styles`, `palettes`, `templates`, `rules`, `fabric-rules`, `illustrations`; create drafts |
+| F35 | PATCH | `/v1/admin/catalogue/:type/:id` | `catalogue.edit` — edit (new version) |
+| F36 | POST | `/v1/admin/catalogue/:type/:id/approve` | `catalogue.approve_styling` — founder approval of styling content (D-62) |
+| F37 | POST | `/v1/admin/catalogue/:type/:id/{publish,unpublish,archive}` | `catalogue.publish` — validation and linter run first; publishing needs approval (and verified rights for assets); archive refused while referenced unless a replacement is named |
+| F38 | POST | `/v1/admin/catalogue/:type/bulk` | `catalogue.publish` — `{ ids, action: publish \| archive }`, confirmed, each record validated |
+| F39 | GET / POST / PATCH | `/v1/admin/products`, `/v1/admin/products/:id` | `products.manage` — authorised product records only |
+| F40 | GET | `/v1/admin/products/import-runs`, `/v1/admin/product-reports` | `products.manage`, `reports.review` |
+| F41 | PATCH | `/v1/admin/product-reports/:id` | `reports.review` — confirm or dismiss |
+| F42 | GET | `/v1/admin/try-on` | `tryon.monitor` — aggregate usage, unsupported combinations, layer coverage (D-128) |
+| F43 | GET | `/v1/admin/audit-logs?adminId=&targetType=&from=&to=` | `audit.view` |
+| F44 | GET / POST / PATCH | `/v1/admin/admins`, `/v1/admin/admins/:id` | `admins.manage` — create (existing verified user only), change role, disable; no self-escalation |
+
 ### 3.10 Health
 
 **`GET /health`** — returns `{ status: "ok", version, time }` without authentication (D-69). Used by the hosting platform's health check. In maintenance mode (`MAINTENANCE_MODE=true`, used during a restore, D-85) it returns `{ status: "maintenance", version, time }`, and every `/v1` endpoint returns `SERVICE_UNAVAILABLE`.
@@ -273,6 +381,11 @@ These are specified only at the level needed for planning. Their full contracts 
 | `INTERNAL_ERROR` | 500 | Unexpected server error (no details exposed) |
 | `SERVICE_UNAVAILABLE` | 503 | A core dependency (e.g. the database) is unreachable |
 | `AI_UNAVAILABLE` | 503 | Only for deferred features that **require** AI (chatbot, sketch). Never for recommendations |
+| `ADMIN_FORBIDDEN` | 403 | *Specified (D-120).* Not an admin, admin record disabled, or the role lacks the permission |
+| `NOT_APPROVED` | 409 | *Specified (D-120).* Publishing styling content without recorded founder approval, or an asset without verified rights |
+| `RECORD_IN_USE` | 409 | *Specified (D-120).* Archiving or deleting a catalogue record that other records still reference, without a replacement |
+| `ACCOUNT_SUSPENDED` | 403 | *Specified (D-120).* Login or a request from a suspended account |
+| `LIMIT_REACHED` | 409 | *Specified (D-116).* Saved-item, collection or custom-palette limit reached |
 
 ### 4.2 Warning codes (in `warnings`; the request still succeeds)
 
@@ -295,12 +408,18 @@ These are specified only at the level needed for planning. Their full contracts 
 | `MAY_EXCEED_BUDGET_WITH_SHIPPING` | Known shipping would exceed the budget | Product layer |
 | `USER_ENTERED_PRICES` | The total uses only prices the user entered; not verified by StyleMe | 1 |
 | `WEATHER_UNAVAILABLE` | Weather couldn't be fetched; manual entry offered | Stage 2 |
+| `GENERAL_RESULTS` | *Specified.* Personalisation inputs missing; general results returned with `missingInputs[]` | 1 |
+| `NO_SUITABLE_MATCH` | *Specified (D-114).* No style or palette met every requirement; `limitedBy` names the criteria and closest alternatives are returned | 1 |
+| `PRODUCT_DATA_UNAVAILABLE` | *Specified (D-124).* No authorised product source is available; styling alternatives returned | 1 |
+| `PARTIAL_TOTAL` | *Specified.* An outfit total that misses prices for some items | Product layer |
+| `SOURCE_RETIRED` | *Specified.* A saved item's source was archived or removed; the snapshot is shown | 1 |
+| `ALREADY_SAVED` | *Specified.* The item was already saved; the existing one is returned | 1 |
 
 ---
 
 ## 5. Cross-Cutting Rules
 
-- **Authorization:** users read and change only their own data. Product, retailer and evidence data are read-only through the API and written only by server-side scripts.
+- **Authorization:** users read and change only their own data. Product, retailer and evidence data are read-only through the user API and written only by server-side scripts and, once built, by authorised admin routes (D-120). Admin routes check `role: admin`, an active `adminAccounts` record and the route's permission on every request; the UI hiding a control is never the protection.
 - **Rate limits (D-38, revised 2026-10-12):** per IP — login 5/min and 30/hour, register 3/min and 20/hour, Google 10/min, code and link checks 10/min and 30/hour, code sends 10/min and 30/hour, reset confirm 10/hour; per user — logout 30/min, account-security actions (password, email, phone, details) 30/hour, account deletion 5/hour, recommendations 20/min, feedback 60/min, shortlist writes 30/min. Per account or code, on top of these: 3 wrong passwords lock login for 30 minutes (D-90); 3 wrong codes lock that code for 30 minutes; resend cooldown 30 seconds and at most 6 sends (the first plus 5 resends) per hour (D-89).
 - **CORS:** only the web origin of each environment (D-37). Security headers via Helmet.
 - **Links:** every product URL returned must match its retailer's `domains[]`. User-entered URLs (shortlist) are https-only, never fetched, and labelled as not verified by StyleMe.
@@ -310,4 +429,4 @@ These are specified only at the level needed for planning. Their full contracts 
 
 ## 6. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-03, D-05, D-07, D-18, D-23, D-37, D-38, D-46, D-48, D-60, D-67, D-69, D-76, D-77, D-80, D-82 … D-84, D-86 … D-94.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-03, D-05, D-07, D-18, D-23, D-37, D-38, D-46, D-48, D-60, D-67, D-69, D-76, D-77, D-80, D-82 … D-84, D-86 … D-94, D-102 … D-106, D-109 … D-128.

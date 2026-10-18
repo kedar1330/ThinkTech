@@ -204,4 +204,55 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
     ).toBe(200);
     expect(await env.db.models.Profile.countDocuments()).toBe(0);
   });
+
+  it('proposed My Profile fields stay dormant: the API rejects them and never returns stored ones (D-102 … D-104)', async () => {
+    const { app, token } = await signedIn('ko@example.com');
+    for (const body of [
+      { department: 'women', ageGroup: '18_24' },
+      { department: 'women', categoryBudgets: { tops: 1000 } },
+      { department: 'women', customOccasions: ['Sangeet'] },
+    ]) {
+      expect((await request(app).put('/v1/profile').set(bearer(token)).send(body)).status, JSON.stringify(body)).toBe(
+        400,
+      );
+    }
+    await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women' });
+    await env.db.models.Profile.updateOne(
+      {},
+      { ageGroup: '25_34', measurements: { displayUnit: 'cm', valuesCm: { waist: 78 } }, customOccasions: ['x'] },
+    );
+    const res = await request(app).get('/v1/profile').set(bearer(token));
+    expect(JSON.stringify(res.body.data)).not.toMatch(/ageGroup|measurements|customOccasions|78/);
+  });
+
+  it('account deletion also removes proposed photo metadata and appearance analyses', async () => {
+    const { app, token, mail, email } = await signedIn('lo@example.com');
+    const me = await request(app).get('/v1/auth/me').set(bearer(token));
+    const userId = me.body.data.id as string;
+    const photo = await env.db.models.UserPhoto.create({
+      userId,
+      kind: 'face',
+      storageKey: `test/${userId}/face.jpg`,
+      contentType: 'image/jpeg',
+      bytes: 1000,
+      retention: 'keep',
+      uploadedAt: new Date(),
+    });
+    await env.db.models.AppearanceAnalysis.create({
+      userId,
+      kind: 'skin_tone',
+      source: 'photo',
+      photoIds: [photo._id],
+      result: { monkRange: '5-6' },
+      confidence: 'medium',
+      analysisVersion: 'test',
+    });
+    await request(app).post('/v1/account/deletion-otp').set(bearer(token));
+    await request(app)
+      .delete('/v1/account')
+      .set(bearer(token))
+      .send({ otp: mail.otp(email), confirm: true });
+    expect(await env.db.models.UserPhoto.countDocuments()).toBe(0);
+    expect(await env.db.models.AppearanceAnalysis.countDocuments()).toBe(0);
+  });
 });

@@ -1,6 +1,6 @@
 # StyleMe — Team Task Assignments
 
-> Who owns what in the four-member team, how members depend on each other, and how to work in parallel without conflicting edits. Feature behaviour: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md). Build order: [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md). Proposed issues with full detail: [PROPOSED_ISSUES.md](PROPOSED_ISSUES.md). Workflow: [CONTRIBUTING.md](CONTRIBUTING.md).
+> Who owns what in the four-member team, how members depend on each other, and how to work in parallel without conflicting edits. Feature behaviour: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md). Build order: [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md). Tasks, issues and status: [TODO.md](TODO.md) (the earlier proposals in [PROPOSED_ISSUES.md](PROPOSED_ISSUES.md) are now GitHub issues #30 … #61). Workflow: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Ownership means **primary responsibility**, not permission to build deferred features. Anything marked ⛔ waits for the named founder decision ([ImplementationPlan.md](ImplementationPlan.md) §4.5, §8).
 
@@ -11,7 +11,9 @@ Ownership means **primary responsibility**, not permission to build deferred fea
 | **Shreya** | Shared styling database, rules, matching/ranking engine and common contracts |
 | **Johita** | Discover My Style and Outfit Categories |
 | **Ankita** | My Colour Palette, Saved Outfits and feedback |
-| **Kedar** | Shop My Look and Design Studio after approval; later Virtual Try-On subject to approval |
+| **Kedar** | Shop My Look and Design Studio after approval; the 2D illustrative Virtual Try-On (approved, D-119); photo-based try-on subject to approval (D-48) |
+
+**Feature specifications of 2026-10-18 (D-109 … D-128)** follow these areas: Shreya — shared catalogue in MongoDB, import, suitability engine and the new contracts (`catalogue.ts`, `saved-items.ts`, `admin.ts`); Johita — Discover My Style and Outfit Categories as specified; Ankita — My Colour Palette (full) and the one save system for Saved Outfits; Kedar — Shop My Look (full) and the 2D Virtual Try-On. **Admin Panel and the illustration set have no owner yet** — to agree at the next kickoff ([TODO.md](TODO.md) §6b).
 
 ## 2. Owners of shared files
 
@@ -21,24 +23,25 @@ Every shared file has exactly one owner. Others change it only through a pull re
 |---|---|---|
 | Style vocabulary | `packages/contracts/src/style-vocabulary.ts` | Shreya |
 | Profile and appearance contracts | `packages/contracts/src/profile.ts`, `appearance.ts` | Shreya |
-| Styling, outfit and recommendation contracts (new) | `packages/contracts/src/outfit.ts` (empty placeholder today) and any new styling contract | Shreya |
+| Styling, outfit and recommendation contracts | `packages/contracts/src/outfit.ts`, `palette.ts`, `common.ts` (defined in #31, PR #64) and any new styling contract | Shreya |
 | Style knowledge base | `apps/api/src/style-rules/**` (schemas, loader, linter, coverage, `data/*.json`), `apps/api/scripts/style-rules.ts`, `apps/api/tests/fixtures/style-library.ts` | Shreya |
-| Database models and the deletion list | `apps/api/src/models/index.ts` (all collections, `USER_OWNED_COLLECTIONS`), `apps/api/scripts/migrations/` | Shreya |
+| Database models and the deletion list | `apps/api/src/models/index.ts` (all collections, `USER_OWNED_COLLECTIONS`), `models/catalogue.ts` and `models/user-collections.ts` (specified feature collections), `apps/api/scripts/migrations/` | Shreya |
+| Catalogue, saved-items and admin contracts | `packages/contracts/src/catalogue.ts`, `saved-items.ts`, `admin.ts` | Shreya |
 | Contracts index | `packages/contracts/src/index.ts` | Shreya |
 | Auth, account, onboarding, completeness | `packages/contracts/src/auth.ts`, `profile-completeness.ts`, `apps/api/src/services/{auth,account,onboarding,…}`, `apps/web/app/(auth)/**`, `apps/web/app/onboarding/**`, `/settings` | Kedar |
 | App shell and navigation | `apps/web/components/app/{AppShell,TopNav}.tsx`, `apps/web/lib/features.ts`, `apps/web/app/(app)/layout.tsx`, `apps/web/app/(app)/home/page.tsx` | Kedar |
 | API wiring | `apps/api/src/app.ts` (route registration), `apps/api/src/config/env.ts`, `.env.example` | Kedar |
 | CI and tooling | `.github/workflows/ci.yml`, root `package.json`, `eslint.config.js`, `.prettierrc.json`, `pnpm-lock.yaml` | Kedar |
-| Product and shortlist contracts (new) | `packages/contracts/src/product.ts` (empty placeholder), a new shortlist contract | Kedar |
-| Design contracts (after D-76) | `packages/contracts/src/design.ts` (empty placeholder) | Kedar |
-| Assistant contracts (after D-76) | `packages/contracts/src/chat.ts` (empty placeholder) | Shreya |
+| Product and shortlist contracts | `packages/contracts/src/product.ts` (Stage 1 shortlist and user-entered price summary, defined in #31; retailer products not yet) | Kedar |
+| Design contracts (after D-76) | `packages/contracts/src/design.ts` (reserved, intentionally empty and not exported) | Kedar |
+| Assistant contracts (after D-76) | `packages/contracts/src/chat.ts` (reserved, intentionally empty and not exported) | Shreya |
 | Decision register and approved requirements | `docs/ImplementationPlan.md` §8, approved FRD requirements | Founder (members propose changes) |
 
 **Feature switch in navigation.** Each member turns their own section from "Coming soon" into a live page by setting `href` on their entry in `apps/web/lib/features.ts`, in their feature PR (Kedar reviews).
 
 ## 3. How we coordinate
 
-1. **Contracts first.** Shreya publishes the request and response shapes (`packages/contracts`) for recommendations, outfits and palettes before the features that consume them integrate. Feature owners review the contract PR.
+1. **Contracts first.** Shreya publishes the request and response shapes (`packages/contracts`) for recommendations, outfits and palettes before the features that consume them integrate. Feature owners review the contract PR. *Done for Stage 1 shapes in #31 (PR #64, 2026-10-16).*
 2. **Build against fixtures until the real data lands.** The synthetic library (`buildFixtureLibrary()` in `apps/api/tests/fixtures/style-library.ts`) and test helpers let Johita and Ankita develop and test before founder-approved content exists. Fixtures never ship (CONTRIBUTING §5).
 3. **One issue, one branch, one PR.** Small PRs from `main`. If you need another member's unmerged work, wait or agree on a stacked PR; don't copy their files.
 4. **Integration checkpoints** at the end of each roadmap milestone ([DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) §4): every owner rebases on `main`, runs the full checks, and demonstrates the joint flow.
@@ -71,7 +74,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 
 **Out of scope.** Feature pages, saved-look UI, shopping, photo analysis, measurements, retailer data.
 
-**Proposed issues.** SH-1 … SH-6 in [PROPOSED_ISSUES.md](PROPOSED_ISSUES.md).
+**Issues.** #30 ✅, #31 ✅, #63 (closed but only `WEAR_TYPES` implemented), #32 (PR #68 open), #33, #34, #35, #55. Details: [TODO.md](TODO.md) §2.
 
 ### 4.2 Johita — Discover My Style and Outfit Categories
 
@@ -89,7 +92,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 **Interfaces.** Consumes `POST /v1/recommendations` and the outfit contracts (Shreya); calls save and feedback (Ankita) and shortlist (Kedar).
 
 **Can start now.** UI and component tests against the agreed contract shapes with fixture data; the Outfit Categories requirement draft.
-**Must wait.** Live integration waits for the engine (SH-4); real looks wait for approved content.
+**Must wait.** Live integration waits for the engine (#33); real looks wait for approved content (#32).
 
 **Tests.** Component tests for filters, results, alternatives and empty, loading and error states; integration test of request → results → save → shop; responsive checks at 320, 390, 768 and 1366 px.
 
@@ -97,7 +100,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 
 **Out of scope.** Engine rules, styling data, saved-look storage, shopping data, Design Studio.
 
-**Proposed issues.** JO-1 … JO-6.
+**Issues.** #44, #45, #46, #47, #48, #49, #53, #54. Details: [TODO.md](TODO.md) §3.
 
 ### 4.3 Ankita — My Colour Palette, Saved Outfits and Feedback
 
@@ -114,7 +117,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 **Interfaces.** Consumes palettes and outfit records (Shreya); provides save and feedback actions to Johita; provides saved looks to Kedar's shortlist.
 
 **Can start now.** Palette UI against the vocabulary's colours and hex codes plus fixture palettes; saved-look API design (contract proposal to Shreya).
-**Must wait.** Saving needs the `outfits` model (SH-4); personalised ranking needs SH-3 and SH-4.
+**Must wait.** Saving needs the `outfits` model (#33); personalised ranking needs approved palettes (#32) and the engine (#33).
 
 **Tests.** API tests: save, list, open and delete; another user's look returns not-found; feedback validation; deleting an account deletes saved looks and feedback (tombstone replay list). Component tests: palette cards, removal confirmation, empty collection.
 
@@ -122,7 +125,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 
 **Out of scope.** Palette data and ranking rules, recommendation generation, shopping.
 
-**Proposed issues.** AN-1 … AN-5.
+**Issues.** #39, #40, #41, #42, #50, #51, #52. Details: [TODO.md](TODO.md) §4.
 
 ### 4.4 Kedar — Shop My Look and Design Studio
 
@@ -140,7 +143,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 **Interfaces.** Consumes saved looks and slots (Ankita, Shreya); provides "shop this look" to Johita.
 
 **Can start now.** Budget engine (pure functions, no dependencies); shortlist items not attached to a look (D-80 allows unattached items).
-**Must wait.** Attaching items to look slots needs `outfits` (SH-4) and saved looks (AN-3). Real products, Design Studio and Try-On wait for their approvals.
+**Must wait.** Attaching items to look slots needs `outfits` (#33) and saved looks (#41). Real products, Design Studio and Try-On wait for their approvals.
 
 **Tests.** Budget unit tests (totals, over/under budget, INR limits); shortlist API tests (validation, https only, ownership, deletion with the account); component tests for labels and unavailable states.
 
@@ -148,7 +151,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 
 **Out of scope.** Scraping, real retailer integration before approval, checkout or payments, Design Studio and Try-On before approval.
 
-**Proposed issues.** KE-1 … KE-5.
+**Issues.** #36, #37, #38, #43, #56, #57, #58, #59, #60, #61, #65, #66. Details: [TODO.md](TODO.md) §5–§6.
 
 ## 5. Earlier GitHub issues and the new ownership
 
@@ -168,3 +171,44 @@ Issues #1 … #18 were assigned before this matrix and were **all closed on 2026
 | #6, #7, #16 | Ankita | Fixture safeguards, Playwright E2E, hardening | Not covered by the matrix — keep, revisit at milestone 9 |
 | #17 | Kedar | Hosting checkpoint HC-1 | Kedar — no change |
 | #18 | Shreya | Production closed-beta launch | Shreya — no change |
+
+## 6. Current GitHub issues (created 2026-10-16/17)
+
+The proposals SH-x, JO-x, AN-x and KE-x became these issues. Assignees are as on GitHub on 2026-10-18; status is verified against the code in [TODO.md](TODO.md).
+
+| Proposal | Issue(s) | Assignee |
+|---|---|---|
+| SH-1 audit | #30 ✅ | Shreya |
+| SH-5 contracts | #31 ✅ | Shreya |
+| (vocabulary decisions) | #63 (closed; Part 1 incomplete) | Shreya |
+| SH-2 C0 proposal | #32 (PR #68) | Shreya |
+| SH-4 engine | #33, #34 | Shreya |
+| SH-3 approved content / C1 | #35 | Shreya |
+| (optional AI wording) | #55 | Shreya |
+| SH-6 assistant and weather | — (no issue; deferred) | Shreya |
+| JO-1 request form | #45 | Johita |
+| (size notes) | #46 | Johita |
+| JO-2, JO-3 results and gallery | #47; requirement #44 | Johita |
+| JO-4 alternatives | #48 | Johita |
+| (regenerate) | #49 | Johita |
+| JO-6 tests | #53 | Johita |
+| (evaluation set, earlier #15) | #54 | Johita |
+| AN-1 palette browsing | #39 | Ankita |
+| AN-2 personalised palettes | #40 | Ankita |
+| AN-3 saved outfits | #41 | Ankita |
+| AN-4 feedback | #42 | Ankita |
+| (illustrations) | #50 | Ankita |
+| AN-5 tests | #51 | Ankita |
+| (fixture safeguards, earlier #6) | #52 | Ankita |
+| KE-1 budget engine and shortlist | #37, #38 | Kedar |
+| KE-3 shop integration | #43 | Kedar |
+| KE-2 retailer data | #57 | Kedar |
+| KE-4 Design Studio | #56 | Kedar |
+| KE-5 Virtual Try-On | #58; proposal #65 | Kedar |
+| (Playwright, earlier #7) | #36 | Kedar |
+| (hardening, earlier #16) | #59 | Kedar |
+| (HC-1, earlier #17) | #60 | Kedar |
+| (closed-beta readiness, earlier #18) | #61 | Kedar |
+| (demo deployment proposal) | #66 — conflicts with D-75; founder decision needed | Kedar |
+
+Two earlier open questions are now settled by these assignments: the evaluation set (earlier #15) stays with Johita (#54), and fixture safeguards (earlier #6) stay with Ankita (#52), while Playwright and hardening (earlier #7, #16) moved to Kedar (#36, #59) and closed-beta readiness (earlier #18) moved from Shreya to Kedar (#61).

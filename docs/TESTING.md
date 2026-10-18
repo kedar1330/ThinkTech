@@ -26,7 +26,9 @@ No accuracy, relevance or performance figure is claimed without an actual test r
 | End-to-end | Playwright, at 375×812 and 1280×800 viewports | `e2e/` |
 | Evaluation | Scripted runs over synthetic profiles + founder review | `apps/api/tests/evaluation` |
 
-All automated suites run in CI on every pull request and push to `main` (D-42). AI providers are stubbed in CI; no real keys are used (D-39).
+All automated suites run in CI on every pull request and push to `main` (D-42). AI providers are stubbed in CI; no real keys are used (D-39). **Not set up yet:** the Playwright `e2e/` suite (#36) and the `tests/evaluation` harness (#54); the rows above describe their planned locations.
+
+**Current suite (run 2026-10-18 on `feature/styling-foundation`, `c5e1621`):** contracts 4 files / 91 tests, all pass; API 15 files / 133 tests, 132 pass and 1 fails by design ("the shipped library in src/style-rules/data is linter-clean", because PR #68's C0 records are drafts; it passes on `main`, where the library is empty); web 8 files / 58 tests, all pass. `pnpm typecheck` and `pnpm lint` pass. On a Windows checkout with `core.autocrlf=true`, `pnpm format:check` reports CRLF line endings only; `prettier --check --end-of-line auto .` passes ([TODO.md](TODO.md) TD-DOC-06).
 
 ---
 
@@ -129,7 +131,7 @@ All automated suites run in CI on every pull request and push to `main` (D-42). 
 | T-56 | Onboarding: email path, Google path, resume after logout, other users' state | Steps complete only on the server's conditions; login returns the next step; no cross-user effect |
 | T-57 | Logs after register, verify, login, reset | No password, code, link token, access token or `Authorization` header |
 
-**Implemented automatically (2026-10-12):** T-01 … T-03, T-05, T-06, T-35, T-37, T-39 … T-42, T-44, T-45, T-46 (its steps across several tests), T-49 … T-57 in `apps/api/tests/api/*.test.ts` (in-memory MongoDB, recording email and SMS senders, a Google verifier that runs the production claim checks on test tokens — no real email, SMS or Google calls); T-43 at service level; T-47 and T-48 at configuration level in `apps/web/tests/security.test.ts`, with their browser-level checks still due in the Playwright suite. Component tests (Testing Library in jsdom, `apps/web/tests/components.test.tsx` and `screens.test.tsx`) cover the six-box code entry (focus movement, paste, Backspace and arrows, no automatic submission), password show/hide and checklist, the city combobox's keyboard operation, accessible error and success messages, the registration form (fields, consent defaults, Google gating, 24-hour draft without secrets), the login form, the public hamburger menu, the dashboard sidebar (Coming soon labels, collapse, mobile drawer) and the deletion confirmation dialog. Layout was checked with screenshots at 1280–1440 px and at 375 px (device emulation), with no horizontal overflow on any checked page; this is not yet automated.
+**Implemented automatically (2026-10-12):** T-01 … T-03, T-05, T-06, T-35, T-37, T-39 … T-42, T-44, T-45, T-46 (its steps across several tests), T-49 … T-57 in `apps/api/tests/api/*.test.ts` (in-memory MongoDB, recording email and SMS senders, a Google verifier that runs the production claim checks on test tokens — no real email, SMS or Google calls); T-43 at service level; T-47 and T-48 at configuration level in `apps/web/tests/security.test.ts`, with their browser-level checks still due in the Playwright suite. Component tests (Testing Library in jsdom, `apps/web/tests/components.test.tsx` and `screens.test.tsx`) cover the six-box code entry (focus movement, paste, Backspace and arrows, no automatic submission), password show/hide and checklist, the city combobox's keyboard operation, accessible error and success messages, the registration form (fields, consent defaults, Google gating, 24-hour draft without secrets), the login form, the public hamburger menu, the dashboard sidebar (Coming soon labels, collapse, mobile drawer) and the deletion confirmation dialog. *Update 2026-10-15:* the sidebar was replaced by the top navigation (PR #26), covered by `apps/web/tests/top-nav.test.ts` (overflow fitting, active state); profile completeness is covered by `profile-completeness.test.tsx` (PR #28); contract tests for looks, palettes, shortlist and price summaries are in `packages/contracts/tests/outfit.test.ts` (#31). Layout was checked with screenshots at 1280–1440 px and at 375 px (device emulation), with no horizontal overflow on any checked page; this is not yet automated.
 
 ---
 
@@ -214,12 +216,137 @@ All run on fixtures and mocked sources. No live retailer calls in CI.
 | W-07 | Wording | Never claims a fabric is "always" right |
 | W-08 | Date beyond the forecast range | Current conditions with a note, or manual entry |
 
+## 10a. My Profile and Home scenarios (D-102 … D-106, approved 2026-10-18)
+
+The founder approved these features on 2026-10-18; the scenarios are not implemented yet. Already automated for the dormant schema: `packages/contracts/tests/my-profile.test.ts` and two tests in `apps/api/tests/api/profile.test.ts` (fields rejected and hidden today; account deletion removes `userPhotos` and `appearanceAnalyses`).
+
+| ID | Scenario | Expected |
+|---|---|---|
+| T-58 | Save one My Profile section | Only that section and its `sectionUpdatedAt` change |
+| T-59 | Leave My Profile with unsaved edits | Confirmation prompt; saved sections stay saved |
+| T-60 | Measurements entered in inches | Stored in cm; shown back in inches; out-of-range values rejected with a field error |
+| T-61 | Fit-based look request without essential measurements | Asks for the missing essentials; non-fit features still work |
+| T-62 | Delete measurements only | Other profile data unchanged; affected recommendations refresh |
+| T-63 | Photo analysis without consent | Refused; no photo stored or processed |
+| T-64 | Face and body uploads | Stored as separate kinds; body photos carry an angle; no storage key or URL in responses |
+| T-65 | Unclear photo | Quality issue explained; retake or manual selection offered |
+| T-66 | Photo-only body-shape result | Shows High/Medium/Low; used only after confirm or correct |
+| T-67 | Delete photos | Objects and metadata deleted; derived results kept |
+| T-68 | Revoke consent, choose keep / delete results | Future analysis stops; results kept or deleted as chosen |
+| T-69 | Retention "delete after analysis" | Photos deleted after analysis; revoking retention deletes immediately |
+| T-70 | Any photo request | Face photos never reach an external provider (AI rule 16); full-body photos reach Gemini only when the D-122 flag is on, with per-use consent and metadata stripped (flag off until the privacy review); logs contain no photo, URL or key |
+| T-71 | Reset preferences | Selected sections reset; basic information, photos and measurements kept unless selected |
+| T-72 | Export JSON and PDF | Owner only; contains profile and measurements |
+| T-73 | Account deletion with photos | Stored objects, `userPhotos` and `appearanceAnalyses` deleted; tombstone replay covers them |
+| T-74 | Home with an empty profile | General content plus an optional setup prompt; no error |
+| T-75 | One Home section fails | Retry shown for that section; navigation and other sections usable |
+| T-76 | Unavailable feature card | "Coming soon" with an alternative; never a mock |
+| T-77 | Profile change | Relevant Home recommendations refresh; "Your recommendations have been updated." shown |
+| T-78 | Notifications | Unread count accurate; mark read persists |
+| T-79 | Theme | Light, dark and system; AA contrast in both themes |
+
+## 10b. Feature-specification scenarios (D-109 … D-128)
+
+Written with the specifications; each feature's issue implements its rows. Already automated for the declared models: `packages/contracts/tests/catalogue.test.ts` (IDs, body-shape mapping, HEX, custom-palette limits, admin permission matrix, audit change shape) and `apps/api/tests/api/catalogue-models.test.ts` (no publish without founder approval or verified rights, duplicate-save detection, account deletion removes the new user-owned collections).
+
+**Shared catalogue and engine**
+
+| ID | Scenario | Expected |
+|---|---|---|
+| T-80 | Import approved style-rules files into MongoDB twice | Same records and versions; idempotent; drafts not published |
+| T-81 | Publish a styling record without founder approval | `NOT_APPROVED`; nothing changes |
+| T-82 | Publish an illustration without verified rights | `NOT_APPROVED` |
+| T-83 | Archive a style that a template or saved item references | `RECORD_IN_USE` unless a replacement is named; saved item still opens with `SOURCE_RETIRED` |
+| T-84 | Publish a change | Engine index refreshed; next request sees the new version; version and audit entry recorded |
+| T-85 | Same profile and content version, same request | Identical recommendations (deterministic) |
+| T-86 | Representative profile scenarios per body shape × goal × department | Only suitable styles in "Recommended"; explanations cite only matched rules; judgemental language rejected |
+| T-87 | No style meets all requirements | `NO_SUITABLE_MATCH`, criteria named, closest suitable alternatives; never an unsuitable style as a match |
+| T-88 | Measurements present vs body-shape label only | Measured proportions take precedence; photo-only estimates unused until confirmed |
+| T-89 | Profile without body data | General styles, `GENERAL_RESULTS`, missing inputs listed; nothing blocked |
+| T-90 | "Not for me" on a style, then undo | Lower rank, still browsable; undo restores; `useFeedback: false` ignores feedback; reset ignores earlier feedback |
+| T-91 | Natural-language search with AI off or failing | Parser result; no error |
+| T-92 | Natural-language search with AI on | Only the query text leaves the server; output validated against the vocabulary |
+
+**Discover My Style and Outfit Categories**
+
+| ID | Scenario | Expected |
+|---|---|---|
+| T-93 | Category → attribute → style → detail | Correct illustrations and attributes; related similar and contrasting styles |
+| T-94 | Combine V-neck + three-quarter sleeves + hip length | Combined preference passed to outfits and Design Studio hand-off; profile unchanged |
+| T-95 | Colour step on a line-only sketch | Swatch shown beside the sketch; no pretend recolour |
+| T-96 | Filters and Clear all | Combine correctly; temporary; not saved to the profile |
+| T-97 | Compare two styles | Side by side with the same attributes |
+| T-98 | Missing illustration or failed request | Placeholder or section retry; rest of the page works |
+
+**My Colour Palette**
+
+| ID | Scenario | Expected |
+|---|---|---|
+| T-99 | With and without skin tone and undertone | Ranked by tone/undertone first, or general palettes labelled as general with an optional prompt |
+| T-100 | Avoided colour | Never appears; liked colours never excluded |
+| T-101 | Customise a curated palette | Separate custom palette created; curated palette unchanged |
+| T-102 | Create from HEX codes | 2 – 12 colours with roles; invalid HEX rejected |
+| T-103 | Swatch → copy HEX; swatch → Shop this colour | Clipboard gets the HEX; Shop My Look opens with that colour preselected and removable |
+| T-104 | Unsave a palette | Saved reference removed; catalogue unchanged |
+
+**Saved Outfits**
+
+| ID | Scenario | Expected |
+|---|---|---|
+| T-105 | Save the same item twice | One record; "Already saved" |
+| T-106 | Save a customised variation | Separate item |
+| T-107 | Replace a garment in a saved outfit | Save as New Look by default; original unchanged |
+| T-108 | Item in two collections; delete one collection with keep items | Item remains, in the other collection |
+| T-109 | Unsave in Saved Outfits | Save indicators update on source cards; Undo restores |
+| T-110 | Retired source or discontinued product | Snapshot with notice; historical price labelled; no broken image |
+| T-111 | Another user's saved item or collection ID | `NOT_FOUND` |
+| T-112 | Load failure | Retry shown; never an empty collection |
+
+**Shop My Look**
+
+| ID | Scenario | Expected |
+|---|---|---|
+| T-113 | No authorised source | `PRODUCT_DATA_UNAVAILABLE`, styling alternatives and the shortlist; no placeholder product |
+| T-114 | Outfit total with a missing price | `PARTIAL_TOTAL`, labelled partial estimate; shipping unknown stated |
+| T-115 | Budget lowered below the total | Overage highlighted, substitutions suggested; nothing replaced automatically |
+| T-116 | Replace one item | Other items kept |
+| T-117 | Inherited filters from a palette or style | Visible, editable, removable; precedence order of D-127 |
+| T-118 | Back from product detail | Same results, filters and selection |
+| T-119 | Report an issue | Stored for review; product data unchanged |
+| T-120 | Ranking with and without affiliate data | Identical order (D-46) |
+
+**Virtual Try-On (2D)**
+
+| ID | Scenario | Expected |
+|---|---|---|
+| T-121 | First view | Default model in a plain white shirt and plain white pants; illustrative label |
+| T-122 | Dress after top and trousers | Asks, then replaces both; never overlapping layers |
+| T-123 | Garment without a layer for the model variant | Unavailable for this preview, alternative offered |
+| T-124 | Recolour a non-recolourable garment | Only supported colours offered |
+| T-125 | Save, reload, reopen | Same configuration; removed garment shows an unavailable notice |
+| T-126 | Any try-on action | No camera request, upload or external call |
+
+**Admin Panel**
+
+| ID | Scenario | Expected |
+|---|---|---|
+| T-127 | Non-admin, disabled admin, or admin without an `adminAccounts` record | `ADMIN_FORBIDDEN` on every `/v1/admin/*` route |
+| T-128 | Content Admin on users, audit, admins, styling approval | `ADMIN_FORBIDDEN` |
+| T-129 | Suspend a user | Sessions revoked; next request `ACCOUNT_SUSPENDED`; reactivation restores access; both audited |
+| T-130 | Admin user detail response | No profile, measurements, appearance, photos or preferences |
+| T-131 | Failed admin action | Audit entry with `status: failure`; no sensitive values |
+| T-132 | Dashboard with a group of 7 | Shown as "fewer than 10" |
+| T-133 | Bulk publish with one invalid record | Valid ones per confirmation; invalid one reported; nothing half-written |
+| T-134 | Last active Super Admin disabled or self-escalation | Refused |
+
+**Connected journeys (E2E, FR-CONN-08):** each journey listed in FR-CONN-08 runs at 375×812 and 1280×800; a connection counts as ready only when its journey passes.
+
 ## 11. Deferred and Future Features
 
 When a deferred feature is approved, its test plan must cover at least:
-- **Photo analysis:** consent required; good, bad, dark, multiple-person, no-face and partial-body photos; low confidence and `not_sure`; confirmation never changes confidence; unconfirmed estimates unused; photos deleted after analysis; no photo reaches an external AI provider unless rule 16 is satisfied.
+- **Photo analysis:** consent required; good, bad, dark, multiple-person, no-face and partial-body photos; low confidence and `not_sure`; confirmation never changes confidence; unconfirmed estimates unused; photos deleted after analysis unless kept by choice; no face photo reaches an external AI provider; full-body photos reach Gemini only under D-122 (flag off until the privacy review).
 - **Chatbot and sketch:** minimised context; Zod validation; AI failure → clear error, never a fake answer.
-- **Try-on:** must not be built until D-48 is decided; fallback never implies success.
+- **Photo-based or generative try-on:** must not be built until D-48 is decided; fallback never implies success. (The 2D illustrative try-on is covered by T-121 … T-126.)
 
 ---
 
@@ -231,4 +358,4 @@ A feature is done only when its unit and API tests exist and pass, the relevant 
 
 ## 13. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-02, D-07, D-19, D-36, D-39, D-42, D-52, D-67, D-70, D-77, D-78, D-80, D-82, D-83, D-87 … D-94.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-02, D-07, D-19, D-36, D-39, D-42, D-52, D-67, D-70, D-77, D-78, D-80, D-82, D-83, D-87 … D-94, D-109 … D-128.

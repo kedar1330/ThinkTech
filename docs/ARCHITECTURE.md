@@ -17,7 +17,10 @@ Next.js (Vercel) ── first-party HttpOnly session cookie (D-06); Google OAuth
   ▼
 Express API (Render, Docker)
   ├── Auth, profile, appearance signals, looks, saved looks        [Stage 1]
-  ├── Look generator (deterministic) ◄── style-rules/ (versioned files)  [Stage 1]
+  ├── Look generator and style/palette matching (deterministic) ◄── in-memory index of the
+  │      published shared catalogue in MongoDB (D-110); style-rules/ files = review and seed format  [Stage 1]
+  ├── Saved items, collections, custom palettes, feedback (one save system, D-116)  [Stage 1, specified]
+  ├── Admin API /v1/admin/* — RBAC, validation, audit log (D-120)  [Stage 1, specified]
   ├── Optional AI wording ──► Gemini (off by default; skipped on failure) [Stage 1, optional]
   ├── Shortlist + budget engine on user-entered prices              [Stage 1, D-77 = B]
   ├── Product layer: catalogue, matching, budget, quality ◄── ingestion scripts
@@ -31,6 +34,13 @@ MongoDB Atlas (separate database per environment)
 ```
 
 Hosting platforms are planned (D-40); accounts, plans and costs are decided at the hosting checkpoint HC-1 (D-81). Until then everything runs locally and in CI.
+
+**Feature specifications (D-109 … D-128).** The seven specified features add no new service or infrastructure:
+- **Shared catalogue (D-110).** Categories, attribute values, clothing styles, palettes, templates, rules and illustrations are shared MongoDB collections with a draft → published → archived lifecycle. The API loads published records into the same in-memory indexes the generator already uses, and refreshes them after a publish (one API instance today; with several instances a short polling refresh is used — no message bus).
+- **Illustrations (D-113).** Shared, non-personal SVG/WebP assets are versioned static files in the web app and referenced by `illustrations` records; object storage only if size requires it (D-107).
+- **2D try-on (D-119).** Rendered in the browser from SVG layers; the API only serves catalogue metadata and stores configurations. No jobs, queues or GPUs.
+- **Admin panel (D-120).** A route group `(admin)/admin/*` in the existing Next.js app, behind the same BFF and session cookie, calling `/v1/admin/*`. The API enforces roles and permissions on every request and writes `adminAuditLogs`. No separate app, database or direct database access.
+- **Hand-offs (D-127).** Features link to each other with stable IDs in URL parameters; each page fetches what it needs from the owning endpoint.
 
 ---
 
@@ -58,7 +68,7 @@ Hosting platforms are planned (D-40); accounts, plans and costs are decided at t
 | Hugging Face / Qwen / Leffa | Original try-on design; not approved | Future (D-48) |
 | Redis, BullMQ | Only when a concrete need appears (rate-limit sharing across instances, long-running jobs) | When needed |
 
-Nothing in the "Deferred", "Future" or "When needed" rows is installed or configured until its stage starts.
+Nothing in the "Deferred", "Future" or "When needed" rows is installed or configured until its stage starts. Today Playwright, Zustand and any AI SDK are also not installed. Declared versions (Next.js 16.4, React 19.3, Tailwind 4.3, Express 5.3, Mongoose 9.11, Zod 4.6, TypeScript 5.9, Vitest 5, Node 24, pnpm 10.34) are listed in [SPECS.md](SPECS.md) §1.
 
 ---
 
@@ -99,7 +109,7 @@ StyleMe/
 │       ├── scripts/ (admin, migrate + migrations/, later ingestion and link checks)
 │       ├── tests/ (incl. fixtures/)
 │       └── Dockerfile
-├── packages/contracts/src/ (existing empty files: auth, profile, appearance, outfit, product, chat, design, index; to add: style, shortlist, weather, …)
+├── packages/contracts/src/ (auth, profile, profile-completeness, appearance, style-vocabulary, cities, common, envelope, outfit, palette, product, index; chat and design reserved and empty; to add: weather, …)
 ├── e2e/                               [Playwright]
 ├── docs/, infra/docker/, .github/workflows/ci.yml
 ├── docker-compose.yml, render.yaml, .env.example, pnpm-workspace.yaml
@@ -203,8 +213,12 @@ Local, CI, staging and production are separate, with separate databases and secr
 | Chatbot | `POST /v1/chat` → minimised context → AI router (Gemini, Groq fallback) → Zod → response; AI failure → clear error | D-76 |
 | Design Studio, sketch-to-design, tailor PDF | Zustand design state → `designs`; sketch → AI vision → Zod → user confirmation; PDFKit for PDFs | D-76; D-32 for the generation provider |
 | 3D avatar | Three.js / React Three Fiber, GLB model, approximate proportions, never used for sizing | D-76 |
-| Virtual try-on | Not designed. The earlier hosted-provider design is superseded by AI rule 16 | D-48 |
+| Photo-based or generative virtual try-on | Not designed. The earlier hosted-provider design is superseded by AI rule 16. The approved 2D illustrative try-on (D-119) needs none of it | D-48 |
+| Gemini full-body analysis (approved, D-122 = b) | `src/integrations/ai/` module against mocks behind a disabled flag until the privacy review; consented image only, no identifiers, Zod-validated output, user confirmation | D-122, privacy review |
+| Admin MFA | Emailed step-up code or TOTP for sensitive admin actions | D-121 (HC-1) |
 | Weather | Server-side provider call, cached about 1 hour, soft ranking only | Stage 2, D-60 |
+| My Profile photos (approved, not built) | Face and full-body uploads → EXIF strip → private object storage via `src/integrations/storage/` (provider D-107) with metadata in `userPhotos`; analysis on device where feasible, else on StyleMe's servers; face photos never go to external AI, full-body photos may go to Gemini under D-122 after the privacy review; results in `appearanceAnalyses`, confirmed values in `appearanceProfiles` | D-103, D-107, D-122 |
+| Home redesign (approved, not built) | Server components compose Home from existing collections, each section loaded and retried independently; `notifications`, `userActivity` for persistent actions; no `home` collection | D-106 |
 
 ---
 
@@ -223,4 +237,4 @@ Local, CI, staging and production are separate, with separate databases and secr
 
 ## 11. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-01, D-02, D-05, D-06, D-19, D-36, D-40, D-48, D-51, D-60, D-66, D-67, D-76, D-77, D-78.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-01, D-02, D-05, D-06, D-19, D-36, D-40, D-48, D-51, D-60, D-66, D-67, D-76, D-77, D-78, D-107, D-110, D-113, D-119 … D-122, D-127.
