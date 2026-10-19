@@ -51,7 +51,7 @@ All automated suites run in CI on every pull request and push to `main` (D-42). 
 | Alternatives | 3–5 when available; fewer with `ALTERNATIVES_LIMITED`; never padded |
 | Explanation builder | Every claim maps to a reference; inclusive-language check |
 
-**Status (2026-10-19, #33, not yet merged):** `apps/api/tests/unit/engine.test.ts` (50 tests, including colour-family and contrast rule effects) covers each row above on the synthetic engine fixture library (`buildEngineFixtureLibrary()` in `tests/fixtures/style-library.ts`), plus T-12, T-13, T-14, T-15, T-16, T-17, T-18, T-19, T-20, T-21, T-23, T-24 and T-38 at unit level, and **AC5 on the approved C0 shipped library** (loaded as in production): every department (women, men, any, none) × all 8 occasions returns valid, deterministic, palette-compatible looks with valid categories, no metallic bottoms and fabrics only from scoped fabric rules; removing STY-007, STY-008 or STY-005 changes the looks. The earlier simulated-approval test was removed. `apps/api/tests/api/recommendations.test.ts` (13 tests) covers AC5 end to end on the default library, T-03, validation, the password-set requirement, per-user isolation, account deletion of `outfits`, stored `outfits` with the 7-day TTL, palette `view` modes and the signals toggle. The full named suite and coverage target remain #34.
+**Status (2026-10-19, #34, PR pending):** the engine tests live in `apps/api/tests/unit/engine/`, one file per area, and every test name starts with its ID (`it('T-12 …')`): `determinism.test.ts` (output contract, T-12, T-19, T-24, T-28 content version), `constraints.test.ts` (filters, T-13, T-14, T-15 precedence, T-10, T-32), `defaults-conflicts.test.ts` (T-16 … T-18), `explanations.test.ts` (T-20 … T-23, T-25), `palettes.test.ts` (T-33, T-10 for palettes), `scale.test.ts` (T-38 generator half: 150 palettes and 150 templates, every occasion × department, about 8 ms per request locally), `c0-content.test.ts` (AC-05 … AC-08 and AC5 on the approved C0 library, loaded as in production) and `evaluate.test.ts` (the evaluation entry point, §6.1). They run on the synthetic engine fixture library (`buildEngineFixtureLibrary()`) and the profile builders in `tests/fixtures/profiles.ts`. `apps/api/tests/api/recommendations.test.ts` adds T-10, T-12, T-13, T-16, T-17, T-18, T-24, T-25 and T-27 with AI wording off (no outbound call) end to end. T-26 and T-27 with AI wording on need the optional AI wording step and are added with it (#55); no test is left as `it.todo`. **Test IDs:** the IDs in §5 are canonical. Issue #34's table labels T-24 "palette ranking with signals off" and T-27 "inclusive language"; those areas are tested under T-10 and T-33 (`palettes.test.ts`) and T-22 (`explanations.test.ts`), and T-24 and T-27 keep their §5 meanings, as MVP.md AC-11 and AC-12 and SPECS.md TAC-06 and TAC-07 use them. **Coverage (D-70):** `pnpm --filter @styleme/api test:coverage` (`@vitest/coverage-v8`) measures the generator (`src/services/engine/`) and the rule loader and linter, and fails below 80 % lines in any of those files. It is not part of `pnpm test` or CI (D-70: no global gate). Measured results are recorded in §6.1.
 | Search phrase builder | Built from the look spec only; no links or prices |
 | Size note | Uses the category size; body shape and signals have no effect |
 | Budget engine (user-entered prices) | Totals, `pricedSlots`/`totalSlots`, `complete`, budget remaining, `within_budget` / `over_budget` / `no_budget`, exact boundary `total == budget` |
@@ -144,6 +144,33 @@ All automated suites run in CI on every pull request and push to `main` (D-42). 
 - **Founder review:** each look is judged relevant or not relevant to the profile and occasion.
 - **Proposed target:** at least 80% of looks judged relevant (D-52). This is a target to measure, not a result.
 - **Uses:** tune rule weights (D-19), find library gaps (FR-STY-08), and decide whether optional AI wording improves explanations (D-67).
+
+### 6.1 Evaluation entry point (#34, for the #54 dataset)
+
+`runEvaluation(profiles, library)` in `apps/api/src/services/engine/evaluate.ts` runs each synthetic profile through the engine and returns `[{ profileId, looks, warnings, limitedBy, checks }]`. It is pure (no database, network or AI) and uses only the engine's `StyleLibrary` interface (D-110).
+
+| Check | Verifies |
+|---|---|
+| `outcome` | At least one look, or no looks with `INSUFFICIENT_MATCHES` and `limitedBy` (AC-05). Fewer than 5 looks always names the limit. The engine never throws |
+| `contract` | Every look parses with the shared `lookSchema` |
+| `deterministic` | A second run gives identical looks (AC-06) |
+| `hardConstraints` | No disliked colour, avoided fabric, coverage minimum or department violation, in any slot or alternative (AC-07) |
+| `templateFidelity` | Occasion, style, wear type, compatible palette, category options and required slots come from the template; suggested mode uses palette colours only |
+| `uniqueSignatures` | No repeated combination signature (AC-08) |
+| `alternatives` | 0–5 distinct alternatives per slot, none equal to the slot; `ALTERNATIVES_LIMITED` exactly when a slot has fewer than 3 (AC-08) |
+| `explanationFidelity` | Every referenced rule is quoted and every quoted rationale is referenced; template, palette and occasion are referenced; liked colours and signals are cited only when used (T-21) |
+| `noProductData` | No product, price, retailer, availability or link field or text (T-23, T-24) |
+| `inclusiveLanguage` | Every explanation passes `findJudgementalLanguage` (T-22) |
+
+**From code (tests):** build profiles with `evaluationProfile(id, request, profileFields, signals)` from `tests/fixtures/profiles.ts`, then `runEvaluation(profiles, library)`; `summarizeEvaluation` and `formatEvaluationReport` give counts and a Markdown report. `edgeCaseProfiles()` has 16 edge cases (missing inputs, every department, conflicts, hard constraints, explore mode, signals on and off, restrictive requests).
+
+**From the command line:** `pnpm --filter @styleme/api evaluate` runs the edge-case profiles on the approved shipped library and prints the Markdown report; `--profiles <file.json>` runs a JSON array of profiles instead; `--json` prints the full result. It exits 1 if any check fails and 2 if the profile file is invalid. A profile in the file is `{ id, request, profile, signals? }`: `request` as `POST /v1/recommendations` takes it, `profile` as `PUT /v1/profile` takes it (with `department` allowed to be `null`), `signals` as `{ undertone?, skinTone?, bodyProportions? }`. Unknown fields are rejected (`evaluationProfileInputSchema`).
+
+**Rules for the dataset:** profiles are synthetic and identified by ID only; reports never print profile values. The checks are automated; relevance is still judged by the founder (above).
+
+**Recorded results (2026-10-19, C0 content version `cf425d8178522449`):** AC-05 … AC-08: 160 profiles (every occasion × department, plus the 16 edge cases on every occasion) pass all 10 checks; 723 looks; 15 restrictive edge cases get no looks, each with `INSUFFICIENT_MATCHES` and the limit named. The 16 edge cases alone (`pnpm --filter @styleme/api evaluate`): 16/16 pass, 75 looks. T-38: 32 requests on 150 palettes and 150 templates, about 8.6 ms each locally. Coverage (D-70, lines): 96.2 % over the measured files; every file ≥ 80 % (`evaluate.ts` 89.4, `text.ts` 90, `loader.ts` 94.3, `linter.ts` 98.1, `slots.ts` 98.3, `generate.ts` 99.2, the other engine files 100).
+
+**Issue #34 acceptance status (2026-10-19).** (1) *Named tests:* T-12 … T-25, T-27 with AI wording off (no outbound call), T-28 and T-38 exist, are named with their IDs and pass (§4 status). **Open dependency:** T-26, and T-27 with AI wording on, test the optional AI wording step, which only #55 builds; #55 is on hold until #54 and the founder evaluation are done, so #34 stays open until those tests land with #55. (2) *AC-05 … AC-08 on C0:* verified and recorded in the issue ([#34 comment](https://github.com/kedar1330/ThinkTech/issues/34#issuecomment-6270614982)): 160/160 profiles, 723 looks, 0 hard-constraint violations. (3) *Evaluation entry point:* documented in this section for the #54 owner. The D-70 coverage target in TODO.md TD-STY-04 is met (above).
 
 ---
 

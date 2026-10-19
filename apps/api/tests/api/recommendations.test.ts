@@ -1,6 +1,6 @@
 import type { Types } from 'mongoose';
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { paletteListResponseSchema, recommendationResponseSchema } from '@styleme/contracts';
 import { SUGGESTED_LOOK_TTL_MS } from '../../src/services/recommendations.service';
 import { loadStyleLibrary } from '../../src/style-rules';
@@ -91,7 +91,7 @@ describe('POST /v1/recommendations (FR-LOOK, API.md §3.5)', () => {
     expect(ttl?.expireAfterSeconds).toBe(0);
   });
 
-  it('the same request twice gives the same looks (T-12)', async () => {
+  it('T-12 the same request twice gives the same looks', async () => {
     const { app, token } = await signedIn('det@example.com');
     const ask = () => request(app).post('/v1/recommendations').set(bearer(token)).send({ occasion: 'work' });
     const strip = (body: { data: { looks: { id: string }[] } }) => body.data.looks.map(({ id: _id, ...look }) => look);
@@ -179,43 +179,116 @@ describe('POST /v1/recommendations (FR-LOOK, API.md §3.5)', () => {
   });
 });
 
-describe('GET /v1/style/palettes (FR-PAL-01 … 03, API.md §3.4)', () => {
-  it('requires a signed-in user and a valid view', async () => {
-    const { app, token } = await signedIn('pal@example.com');
-    expect((await request(app).get('/v1/style/palettes')).status).toBe(401);
-    for (const query of ['view=popular', 'view=all&sort=name']) {
-      const res = await request(app).get(`/v1/style/palettes?${query}`).set(bearer(token));
-      expect(res.status, query).toBe(400);
-      expect(res.body.error.code).toBe('INVALID_REQUEST');
-    }
-  });
+// The named engine scenarios end to end (TESTING.md §5, #34). The unit suite in tests/unit/engine covers
+// each rule in depth; these confirm the API returns what the engine decided.
+describe('POST /v1/recommendations: named scenarios (#34)', () => {
+  const recommend = (app: Parameters<typeof request>[0], token: string, body: object) =>
+    request(app).post('/v1/recommendations').set(bearer(token)).send(body);
+  const colours = (data: {
+    looks: { slots: { lookSpec: { colorId: string }; alternatives: { lookSpec: { colorId: string } }[] }[] }[];
+  }) =>
+    data.looks.flatMap((l) =>
+      l.slots.flatMap((s) => [s.lookSpec.colorId, ...s.alternatives.map((a) => a.lookSpec.colorId)]),
+    );
 
-  it('view=all lists every approved palette with nothing suggested', async () => {
-    const { app, token } = await signedIn('all@example.com');
-    const res = await request(app).get('/v1/style/palettes?view=all').set(bearer(token));
+  it('T-16 only an occasion: looks, DEFAULTS_APPLIED and the defaults listed', async () => {
+    const { app, token } = await signedIn('t16@example.com');
+    const res = await recommend(app, token, { occasion: 'everyday' });
     expect(res.status).toBe(200);
-    const { palettes } = paletteListResponseSchema.parse(res.body.data);
-    expect(palettes.map((p) => p.id)).toEqual(['PAL-001', 'PAL-002', 'PAL-003']);
-    expect(palettes.every((p) => p.suggestedBecause.length === 0)).toBe(true);
+    expect(res.body.data.looks.length).toBeGreaterThan(0);
+    expect(res.body.data.defaultsApplied).toEqual(['department', 'colors', 'signals', 'sizes', 'style']);
+    expect(res.body.warnings).toContain('DEFAULTS_APPLIED');
   });
 
-  it('suggested (the default) uses the undertone only while signals are on', async () => {
-    const { app, token } = await signedIn('tone@example.com');
+  it('T-13 / T-17 a disliked colour never appears; liked and disliked is a reported conflict', async () => {
+    const { app, token } = await signedIn('t17@example.com');
     await request(app)
       .put('/v1/profile')
       .set(bearer(token))
-      .send({ department: 'women', likedColors: ['emerald'] });
+      .send({ department: 'women', likedColors: ['navy'], dislikedColors: ['navy', 'rust'] })
+      .expect(200);
+    for (const paletteMode of ['suggested', 'explore']) {
+      const res = await recommend(app, token, { occasion: 'everyday', paletteMode });
+      const data = recommendationResponseSchema.parse(res.body.data);
+      expect(data.looks.length).toBeGreaterThan(0);
+      expect(colours(data)).not.toContain('navy');
+      expect(colours(data)).not.toContain('rust');
+      expect(data.conflicts).toEqual([{ field: 'colors', value: 'navy' }]);
+      expect(res.body.warnings).toContain('PREFERENCE_CONFLICT');
+    }
+  });
+
+  it('T-18 a very restrictive request: 200, fewer looks, INSUFFICIENT_MATCHES and the limit named', async () => {
+    const { app, token } = await signedIn('t18@example.com');
+    await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'men' }).expect(200);
+    const res = await recommend(app, token, { occasion: 'everyday', wearType: ['indian'] });
+    expect(res.status).toBe(200);
+    expect(res.body.data.looks.length).toBeGreaterThan(0);
+    expect(res.body.data.looks.length).toBeLessThan(5);
+    expect(res.body.data.limitedBy).toEqual({ constraint: 'wearType', suggestion: expect.any(String) });
+    expect(res.body.warnings).toContain('INSUFFICIENT_MATCHES');
+  });
+
+  it('T-10 signals switched off give the same looks as no signals', async () => {
+    const { app, token } = await signedIn('t10@example.com');
+    await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women' }).expect(200);
+    const looks = async () =>
+      (await recommend(app, token, { occasion: 'everyday', style: 'casual' })).body.data.looks.map(
+        ({ id: _id, ...look }: { id: string }) => look,
+      );
+    const without = await looks();
+    await request(app)
+      .put('/v1/appearance')
+      .set(bearer(token))
+      .send({ bodyProportions: { value: 'hips_wider_than_shoulders' } })
+      .expect(200);
+    expect(await looks()).not.toEqual(without);
+    await request(app).put('/v1/appearance').set(bearer(token)).send({ useInRecommendations: false }).expect(200);
+    expect(await looks()).toEqual(without);
+    const user = await env.db.models.User.findOne({ email: 't10@example.com' }).lean();
+    const latest = await env.db.models.Outfit.findOne({ userId: user!._id }).sort({ _id: -1 }).lean();
+    expect(latest!.inputsUsed).toMatchObject({ signalsUsed: false });
+  });
+
+  it('T-24 the response carries no product, price, retailer, availability or link', async () => {
+    const { app, token } = await signedIn('t24@example.com');
+    await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women', budgetPreference: 3000 });
+    const res = await recommend(app, token, { occasion: 'everyday', paletteMode: 'explore' });
+    expect(res.body.data.looks.length).toBeGreaterThan(0);
+    expect(JSON.stringify(res.body)).not.toMatch(/price|retailer|product|availab|₹|https?:/i);
+  });
+
+  it('T-25 with AI wording off, looks are complete with template explanations and aiModel null', async () => {
+    const { app, token } = await signedIn('t25@example.com');
+    const res = await recommend(app, token, { occasion: 'work' });
+    const data = recommendationResponseSchema.parse(res.body.data);
+    expect(data.looks.length).toBeGreaterThan(0);
+    for (const look of data.looks) {
+      expect(look.aiModel).toBeNull();
+      expect(look.explanation.length).toBeGreaterThan(0);
+      expect(look.explanationRefs.attributes).toContainEqual({ attribute: 'template', value: look.templateId });
+    }
+    const stored = await env.db.models.Outfit.find().lean();
+    expect(stored.every((o) => o.aiModel === null)).toBe(true);
+  });
+
+  it('T-27 (AI wording off) no outbound call is made while generating looks', async () => {
+    const { app, token } = await signedIn('t27@example.com');
+    await request(app)
+      .put('/v1/profile')
+      .set(bearer(token))
+      .send({ department: 'women', likedColors: ['navy'] });
     await request(app)
       .put('/v1/appearance')
       .set(bearer(token))
       .send({ undertone: { value: 'cool' } });
-
-    const on = await request(app).get('/v1/style/palettes').set(bearer(token));
-    expect(on.body.data.palettes[0]).toMatchObject({ id: 'PAL-002', suggestedBecause: ['undertone'] });
-
-    await request(app).put('/v1/appearance').set(bearer(token)).send({ useInRecommendations: false });
-    const off = await request(app).get('/v1/style/palettes').set(bearer(token));
-    expect(off.body.data.palettes[0]).toMatchObject({ id: 'PAL-003', suggestedBecause: ['likedColors'] });
-    expect(JSON.stringify(off.body.data)).not.toContain('undertone');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    try {
+      expect((await recommend(app, token, { occasion: 'everyday' })).status).toBe(200);
+      expect((await request(app).get('/v1/style/palettes').set(bearer(token))).status).toBe(200);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });
