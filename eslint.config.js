@@ -6,7 +6,20 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/next-env.d.ts', 'docs/**'] },
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.next/**',
+      '**/next-env.d.ts',
+      'docs/**',
+      // Playwright output (e2e/)
+      'playwright-report/**',
+      'test-results/**',
+      'e2e/.outbox/**',
+      'e2e/.logs/**',
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.recommended,
   {
