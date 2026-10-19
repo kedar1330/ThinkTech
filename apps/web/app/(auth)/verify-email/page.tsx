@@ -4,7 +4,7 @@ import type { PendingVerificationResponse } from '@styleme/contracts';
 import { VerifyEmailPanel } from '@/components/auth/VerifyEmailPanel';
 import { AuthSplitLayout } from '@/components/site/AuthSplitLayout';
 import { apiRequest } from '@/lib/api/server';
-import { readCookie } from '@/lib/actions';
+import { clientIp, readCookie } from '@/lib/actions';
 
 export const metadata: Metadata = { title: 'Verify your email' };
 
@@ -20,6 +20,8 @@ export default async function VerifyEmailPage({
     pending = await apiRequest<PendingVerificationResponse>('/v1/auth/email-verification/pending', {
       method: 'POST',
       body: { pendingToken },
+      // The lookup is rate-limited per visitor IP (codeCheck); without it every visitor shares the BFF's.
+      clientIp: await clientIp(),
     }).catch(() => null);
   }
   const recoveryEmail = await readCookie('pendingEmail');

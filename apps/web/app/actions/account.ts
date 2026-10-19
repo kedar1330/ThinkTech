@@ -16,6 +16,7 @@ import { clearSession } from '@/lib/auth/session';
 import {
   BLOCKED,
   bool,
+  clientIp,
   errorState,
   fieldErrors,
   redirectIfSignedOut,
@@ -136,6 +137,7 @@ export async function confirmEmailChangeLinkAction(token: string): Promise<FormS
     const res = await apiRequest<{ email: string }>('/v1/account/email-change/confirm', {
       method: 'POST',
       body: { token: parsed.data },
+      clientIp: await clientIp(),
     });
     return { success: `Your email address is now ${res.email}.` };
   } catch (err) {

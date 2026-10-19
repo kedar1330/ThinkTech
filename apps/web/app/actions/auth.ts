@@ -89,6 +89,7 @@ async function pendingEmailFor(pendingToken: string | undefined): Promise<string
     const res = await apiRequest<PendingVerificationResponse>('/v1/auth/email-verification/pending', {
       method: 'POST',
       body: { pendingToken },
+      clientIp: await clientIp(),
     });
     return res.email;
   } catch {
