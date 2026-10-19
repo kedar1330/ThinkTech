@@ -1,1 +1,250 @@
-[]
+[
+  {
+    "id": "PAL-009",
+    "version": 1,
+    "tags": ["warm", "festive", "haldi-mehendi", "brights"],
+    "userAdjustable": ["colors", "contrast"],
+    "rationale": "Pairs haldi yellow, saffron, parrot green and rani pink with off-white and cream. These bright, warm colours are widely worn at haldi, mehendi and other daytime celebrations, and off-white gives a calmer base when one bright piece is enough.",
+    "limitations": "Offered first when a user reports a warm undertone, but anyone can browse and choose it; undertone affinity is a starting suggestion, never a restriction. Colour customs differ by family and region. Swatch colours approximate the named colours and are not product colours.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "name": "Haldi and saffron",
+    "undertoneAffinity": ["warm"],
+    "neutrals": ["off_white", "cream"],
+    "accents": ["haldi_yellow", "saffron", "parrot_green", "rani_pink"],
+    "combinations": [
+      {
+        "colors": ["haldi_yellow", "saffron"],
+        "contrastLevel": "low"
+      },
+      {
+        "colors": ["cream", "parrot_green", "haldi_yellow"],
+        "contrastLevel": "medium"
+      },
+      {
+        "colors": ["off_white", "rani_pink"],
+        "contrastLevel": "high"
+      }
+    ],
+    "prints": ["leheriya", "bandhani", "mirror_work", "block_print"],
+    "occasions": ["festive", "wedding", "party"]
+  },
+  {
+    "id": "PAL-010",
+    "version": 1,
+    "tags": ["neutral", "festive", "jewel-tones", "peacock"],
+    "userAdjustable": ["colors", "contrast"],
+    "rationale": "Sets peacock blue, rama green and wine against ivory and charcoal, with antique gold as the metallic. The blue-green pair sits close in depth for a rich tonal look, and ivory with wine gives a sharper option for evening functions.",
+    "limitations": "Offered first when a user reports a neutral undertone or is not sure, but anyone can browse and choose it; undertone affinity is a starting suggestion, never a restriction. Antique gold here is a colour swatch, not a claim about metal or zari quality.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "name": "Peacock jewel",
+    "undertoneAffinity": ["neutral"],
+    "neutrals": ["ivory", "charcoal"],
+    "accents": ["peacock_blue", "rama_green", "wine", "antique_gold"],
+    "combinations": [
+      {
+        "colors": ["peacock_blue", "rama_green"],
+        "contrastLevel": "low"
+      },
+      {
+        "colors": ["peacock_blue", "antique_gold"],
+        "contrastLevel": "medium"
+      },
+      {
+        "colors": ["ivory", "wine", "antique_gold"],
+        "contrastLevel": "high"
+      }
+    ],
+    "prints": ["zardozi", "embroidered", "paisley"],
+    "occasions": ["festive", "wedding", "party", "formal"]
+  },
+  {
+    "id": "PAL-011",
+    "version": 1,
+    "tags": ["olive", "earthy", "mehendi"],
+    "userAdjustable": ["colors", "contrast"],
+    "rationale": "Builds on mehendi green, rust and mustard with khaki and cream, adding copper as a soft metallic. The muted, earthy greens and browns share a warm cast, so the accents sit together without clashing.",
+    "limitations": "Offered first when a user reports an olive undertone, but anyone can browse and choose it; undertone affinity is a starting suggestion, never a restriction. Copper here is a colour swatch, not a claim about metal quality. Swatch colours approximate the named colours and are not product colours.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "name": "Mehendi and rust",
+    "undertoneAffinity": ["olive"],
+    "neutrals": ["cream", "khaki"],
+    "accents": ["mehendi_green", "rust", "mustard", "copper"],
+    "combinations": [
+      {
+        "colors": ["khaki", "mustard"],
+        "contrastLevel": "low"
+      },
+      {
+        "colors": ["cream", "rust", "copper"],
+        "contrastLevel": "medium"
+      },
+      {
+        "colors": ["cream", "mehendi_green"],
+        "contrastLevel": "high"
+      }
+    ],
+    "prints": ["kalamkari", "block_print", "mirror_work", "ikat"],
+    "occasions": ["everyday", "festive", "wedding", "travel"]
+  },
+  {
+    "id": "PAL-012",
+    "version": 1,
+    "tags": ["any-undertone", "indigo", "everyday"],
+    "userAdjustable": ["colors", "contrast"],
+    "rationale": "Pairs indigo and denim blue with white, off-white and light grey, with rust as a single warm accent. Indigo with white is a long-standing pairing in Indian hand-dyed and block-printed cotton, and it reads crisp for work and travel.",
+    "limitations": "Not aimed at any one undertone. Swatch colours approximate the named colours and are not product colours.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "name": "Indigo and white",
+    "undertoneAffinity": ["any"],
+    "neutrals": ["white", "off_white", "light_grey"],
+    "accents": ["indigo", "denim_blue", "rust"],
+    "combinations": [
+      {
+        "colors": ["off_white", "light_grey"],
+        "contrastLevel": "low"
+      },
+      {
+        "colors": ["light_grey", "denim_blue", "rust"],
+        "contrastLevel": "medium"
+      },
+      {
+        "colors": ["white", "indigo"],
+        "contrastLevel": "high"
+      }
+    ],
+    "prints": ["block_print", "ikat", "stripes", "checks"],
+    "occasions": ["everyday", "work", "travel", "date"]
+  },
+  {
+    "id": "PAL-013",
+    "version": 1,
+    "tags": ["cool", "neutral", "pastels"],
+    "userAdjustable": ["colors", "contrast"],
+    "rationale": "Groups soft onion pink, pista green, powder blue and mauve with ivory, light grey and charcoal. The light pastels sit close together for gentle daytime looks, and charcoal gives a deeper base when more contrast is wanted.",
+    "limitations": "Offered first when a user reports a cool or neutral undertone, but anyone can browse and choose it; undertone affinity is a starting suggestion, never a restriction. Swatch colours approximate the named colours and are not product colours.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "name": "Soft pastels",
+    "undertoneAffinity": ["cool", "neutral"],
+    "neutrals": ["ivory", "light_grey", "charcoal"],
+    "accents": ["onion_pink", "pista_green", "powder_blue", "mauve"],
+    "combinations": [
+      {
+        "colors": ["onion_pink", "pista_green"],
+        "contrastLevel": "low"
+      },
+      {
+        "colors": ["ivory", "mauve"],
+        "contrastLevel": "medium"
+      },
+      {
+        "colors": ["ivory", "charcoal", "onion_pink"],
+        "contrastLevel": "high"
+      }
+    ],
+    "prints": ["chikankari", "floral", "embroidered"],
+    "occasions": ["everyday", "work", "date", "festive", "wedding"]
+  },
+  {
+    "id": "PAL-014",
+    "version": 1,
+    "tags": ["any-undertone", "tailoring", "work"],
+    "userAdjustable": ["colors", "contrast"],
+    "rationale": "Uses the tailoring neutrals navy, khaki, coffee, light grey and white, with bottle green and wine as deeper accents. Most pairs are easy to repeat across a working week, and navy with white gives a clear, high-contrast option.",
+    "limitations": "Not aimed at any one undertone. Dress codes vary by workplace and event; the user's own colour choices take priority. Swatch colours approximate the named colours and are not product colours.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "name": "Tailored neutrals",
+    "undertoneAffinity": ["any"],
+    "neutrals": ["navy", "khaki", "coffee", "light_grey", "white"],
+    "accents": ["bottle_green", "wine"],
+    "combinations": [
+      {
+        "colors": ["khaki", "light_grey"],
+        "contrastLevel": "low"
+      },
+      {
+        "colors": ["khaki", "coffee", "bottle_green"],
+        "contrastLevel": "medium"
+      },
+      {
+        "colors": ["white", "navy", "wine"],
+        "contrastLevel": "high"
+      }
+    ],
+    "prints": ["stripes", "checks", "geometric"],
+    "occasions": ["work", "formal", "everyday", "travel", "date"]
+  },
+  {
+    "id": "PAL-015",
+    "version": 1,
+    "tags": ["warm", "olive", "evening", "wine"],
+    "userAdjustable": ["colors", "contrast"],
+    "rationale": "Pairs wine and ruby with black and cream, using antique gold and copper as metallics. The deep reds share a warm cast and stay rich under evening light, and cream lifts the look when more contrast is wanted.",
+    "limitations": "Offered first when a user reports a warm or olive undertone, but anyone can browse and choose it; undertone affinity is a starting suggestion, never a restriction. Metallic shades are colour swatches, not claims about metal or embellishment quality.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "name": "Wine and antique gold",
+    "undertoneAffinity": ["warm", "olive"],
+    "neutrals": ["black", "cream"],
+    "accents": ["wine", "ruby", "antique_gold", "copper"],
+    "combinations": [
+      {
+        "colors": ["wine", "ruby"],
+        "contrastLevel": "low"
+      },
+      {
+        "colors": ["black", "antique_gold"],
+        "contrastLevel": "medium"
+      },
+      {
+        "colors": ["cream", "wine", "copper"],
+        "contrastLevel": "high"
+      }
+    ],
+    "prints": ["zardozi", "embroidered", "paisley"],
+    "occasions": ["party", "wedding", "formal", "festive", "date"]
+  },
+  {
+    "id": "PAL-016",
+    "version": 1,
+    "tags": ["warm", "olive", "boho", "travel"],
+    "userAdjustable": ["colors", "contrast"],
+    "rationale": "Sets turquoise, coral, mustard and rust against off-white, tan and coffee. The sandy neutrals keep the brighter accents relaxed, which suits printed, easy-going outfits for weekends, travel and casual dates.",
+    "limitations": "Offered first when a user reports a warm or olive undertone, but anyone can browse and choose it; undertone affinity is a starting suggestion, never a restriction. Swatch colours approximate the named colours and are not product colours.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "name": "Turquoise and coral",
+    "undertoneAffinity": ["warm", "olive"],
+    "neutrals": ["off_white", "tan", "coffee"],
+    "accents": ["turquoise", "coral", "mustard", "rust"],
+    "combinations": [
+      {
+        "colors": ["tan", "rust"],
+        "contrastLevel": "low"
+      },
+      {
+        "colors": ["off_white", "turquoise", "coral"],
+        "contrastLevel": "medium"
+      },
+      {
+        "colors": ["off_white", "coffee"],
+        "contrastLevel": "high"
+      }
+    ],
+    "prints": ["block_print", "kalamkari", "floral", "ikat"],
+    "occasions": ["everyday", "travel", "date"]
+  }
+]
