@@ -302,12 +302,12 @@
     "version": 1,
     "tags": ["wear-western", "formality-smart", "smart-streetwear"],
     "userAdjustable": ["styles", "occasions", "fit", "silhouettes"],
-    "rationale": "A shirt or clean T-shirt with wide-leg or straight tailored trousers keeps a relaxed, streetwear outline while staying neat enough for the office, dinners and dressier events.",
-    "limitations": "Many workplaces and formal events expect a collared shirt; choose the shirt option there. Dress codes vary, and the user's occasion and style choices take priority.",
+    "rationale": "A relaxed shirt with wide-leg or straight tailored trousers keeps an easy, streetwear outline while staying neat enough for the office, dinners and dressier events.",
+    "limitations": "Dress codes vary by workplace and event, and the user's occasion and style choices take priority. T-shirt looks are covered by the T-shirt and jeans template for everyday and travel.",
     "reviewStatus": "draft",
     "reviewedBy": null,
     "reviewedAt": null,
-    "name": "Relaxed shirt or T-shirt with tailored trousers",
+    "name": "Relaxed shirt with tailored trousers",
     "department": "any",
     "occasions": ["work", "date", "party", "formal"],
     "styles": ["streetwear", "casual"],
@@ -315,7 +315,7 @@
       {
         "slotId": "top",
         "slot": "top",
-        "categoryOptions": ["shirt", "t_shirt"],
+        "categoryOptions": ["shirt"],
         "colorRole": "any"
       },
       {
@@ -342,7 +342,7 @@
       }
     ],
     "compatiblePalettes": ["PAL-004", "PAL-012", "PAL-014"],
-    "ruleRefs": ["STY-005", "STY-011", "STY-014", "STY-017"]
+    "ruleRefs": ["STY-005", "STY-011", "STY-017"]
   },
   {
     "id": "OUT-016",
