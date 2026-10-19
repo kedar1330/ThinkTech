@@ -167,11 +167,11 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 | Inputs | Category (required); garment type, occasion, style, colour, budget (optional); proportions only if signals are on |
 | Outputs | A ranked gallery of templates as outfit designs with explanations |
 | Empty | No templates for the chosen filters → say which filter is limiting and offer to relax it |
-| Not in Stage 1 | Measurement- and photo-based filtering (PDF p16) — see §4 |
+| Body information | Manual body shape, measurements and the optional photo estimate are all Stage 1 sources (FR-OCAT-09; D-102, D-103 revise the PDF's "not in Stage 1"); photo estimates ship only after the privacy review — see §4 |
 | Depends on | M2 templates and engine |
 | Owner | Johita |
-| Issues | #44 (write the requirement, needs founder approval), #47 (gallery), #53 (tests) |
-| Gap | ~~No FRD section~~ — resolved: FRD §4.19 (§15 #6) |
+| Issues | #44 (spec checked against PDF p16, gaps below); the gallery is TD-FS-OCAT-01 ([TODO.md](TODO.md) §6b, issue opened when the team picks it up); #47 is the Discover results page only |
+| Gap | ~~No FRD section~~ — resolved: FRD §4.19 (§15 #6). Check against PDF p16 (#44): (1) the PDF's "colour or palette" step is a hand-off in FR-OCAT-25, not a browse filter in FR-OCAT-20; (2) the "name the limiting filter and offer to relax it" empty state is specified for Recommended for you (FR-OCAT-13) but not for filtered browsing (FR-OCAT-20 has Reset / Clear all). Both are open for the founder; neither blocks TD-FS-OCAT-01 |
 
 **Specified (FR-OCAT, D-110 … D-114).** Category-first browsing of a **shared style catalogue**: Women / Men → clothing group (tops, bottoms, dresses, Indian ethnic, fusion, outerwear, traditional menswear, co-ords, loungewear) → category → attribute (neckline, collar, sleeves, lengths, fit, silhouette, fabric and drape, rise, leg shape, skirt shapes …) → **reusable style records** linked to many body shapes through separate suitability rules. Body shapes: women hourglass, pear, inverted triangle, rectangle, apple; men rectangle, triangle, inverted triangle, oval; always "Not sure". Styling goals (taller, balanced, define the waist, longer line, structure, relaxed, highlight, explore freely), fit, comfort and coverage count too. **Recommended for you shows only suitable styles (3 – 5)**; browsing stays open to all. Visuals: artistic editorial croquis plus technical flats, figures in a plain white shirt and white pants by default, rights recorded and required before publishing. Search (including natural language), filters, sort, compare, detail pages, save; hand-offs to palettes, shop, try-on and Design Studio only when supported. Body-shape analysis "using Gemini" is approved for full-body photos only (D-122 = b), after the privacy review; manual choice and measurements work meanwhile.
 

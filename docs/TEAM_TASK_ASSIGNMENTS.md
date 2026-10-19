@@ -188,7 +188,8 @@ The proposals SH-x, JO-x, AN-x and KE-x became these issues. Assignees are as on
 | SH-6 assistant and weather | — (no issue; deferred) | Shreya |
 | JO-1 request form | #45 | Johita |
 | (size notes) | #46 | Johita |
-| JO-2, JO-3 results and gallery | #47; requirement #44 | Johita |
+| JO-2 results page | #47 | Johita |
+| JO-3 Outfit Categories gallery | TD-FS-OCAT-01 (FR-OCAT; spec check #44) | Johita |
 | JO-4 alternatives | #48 | Johita |
 | (regenerate) | #49 | Johita |
 | JO-6 tests | #53 | Johita |
