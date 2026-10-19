@@ -112,9 +112,9 @@ Ports: web `3000`, API `4000`. The API exposes `/health` and `/v1/*` only.
 | M-06 | App shell and navigation | **Implemented** | `components/app/{AppShell,TopNav}.tsx`, `lib/features.ts` | — | — | FR-UI-01 … 04 | Kedar |
 | M-07 | Style vocabulary | **Partial** — 8 occasions, 8 styles, 3 wear types, 6 slot types, 7 size groups, 11 categories (10 Stage 1 + dress Stage 2), 39 colours, 17 fabrics, 9 silhouettes, 3 fits, 8 necklines, 12 patterns, coverage lists, Monk 1–10, 6 proportion descriptors. **Missing (D-97 … D-99, #63):** formality, 8 broad categories with garment types, ~60–80 colours, new fabrics and techniques | `contracts/src/style-vocabulary.ts` | — | — | D-09, D-96 … D-101 | Shreya |
 | M-08 | Style knowledge base tooling | **Implemented** (schemas, loader, linter, coverage, scale test) | `apps/api/src/style-rules/*`, `scripts/style-rules.ts` | — | Repository JSON, not MongoDB | FR-STY-01 … 12 | Shreya |
-| M-09 | Styling content | **Partial** — `main`: 0 records. PR #68: 8 palettes, 8 templates, 8 styling rules, 6 fabric rules, all `draft`. Not approved | `style-rules/data/*.json` | — | — | D-57, D-62 | Shreya (founder approves) |
-| M-10 | Look engine and recommendations | **Contract only** | `contracts/src/outfit.ts` | `POST /v1/recommendations` (planned) | `outfits` (planned; already in `USER_OWNED_COLLECTIONS`) | FR-LOOK-01 … 19 | Shreya (#33) |
-| M-11 | Palettes | **Contract only** | `contracts/src/palette.ts` | `GET /v1/style/palettes` (planned) | — | FR-PAL-01 … 03 | Shreya (ranking), Ankita (UI #39, #40) |
+| M-09 | Styling content | **Partial** — C0 (8 palettes, 8 templates, 8 styling rules, 6 fabric rules) founder-approved by Shreya Sharma on 2026-10-19 (version 2), in the working tree (PR pending). C1 not started | `style-rules/data/*.json` | — | — | D-57, D-62 | Shreya (founder approves) |
+| M-10 | Look engine and recommendations | **Implemented (#33, not yet merged)**; verified on fixtures and on approved C0. AI wording (#55) not built | `contracts/src/outfit.ts`; `services/engine/*`, `services/recommendations.service.ts` | `POST /v1/recommendations` | `outfits` | FR-LOOK-01 … 15, -17 … -19 | Shreya (#33) |
+| M-11 | Palettes | **Ranking and endpoint implemented (#33, not yet merged)**; UI not built | `contracts/src/palette.ts`; `services/engine/palettes.ts`, `services/palette.service.ts` | `GET /v1/style/palettes` | — | FR-PAL-01 … 03 | Shreya (ranking), Ankita (UI #39, #40) |
 | M-12 | Saved looks and feedback | **Contract only** | `outfit.ts` (`outfitDetailSchema`, `outfitFeedbackRequestSchema`, `FEEDBACK_REASONS`) | `/v1/outfits*` (planned) | `outfits` (planned) | FR-OUT-01 … 07 | Ankita (#41, #42) |
 | M-13 | Shortlist and budget engine | **Contract only** | `contracts/src/product.ts` (`createShortlistItemRequestSchema`, `userShortlistItemSchema`, `userPriceSummarySchema`, `SHORTLIST_LIMITS`, `USER_ENTERED_LABELS`) | `/v1/shortlist*` (planned) | `shortlistItems` (planned; already in `USER_OWNED_COLLECTIONS`) | FR-LIST-01 … 07, FR-BUD-01 … 07, D-77, D-80, D-82 | Kedar (#37, #38, #43) |
 | M-14 | Outfit Categories gallery | **Specified** (FRD §4.19, D-109 … D-114); not built | — | [API.md](API.md) §3.11 F1 – F7 | shared catalogue ([DATABASE.md](DATABASE.md) §4a) | FR-OCAT-01 … 26 | Johita |
@@ -150,7 +150,7 @@ Rate limits (D-38) are in-memory per API instance (`middleware/rate-limit.ts`); 
 
 ## 6. Database models
 
-Collections, fields, indexes and retention are specified in [DATABASE.md](DATABASE.md). Models registered in `apps/api/src/models/index.ts` today: `users`, `betaInvites`, `pendingRegistrations`, `authChallenges`, `sessions`, `appearanceProfiles`, `profiles` (main database) and `deletionTombstones` (separate tombstone connection). `migrations` is written by `scripts/migrate.ts` (one migration: `001-auth-onboarding`).
+Collections, fields, indexes and retention are specified in [DATABASE.md](DATABASE.md). Models registered in `apps/api/src/models/index.ts` today: `users`, `betaInvites`, `pendingRegistrations`, `authChallenges`, `sessions`, `appearanceProfiles`, `profiles`, `outfits` (#33; TTL on `expiresAt`) (main database) and `deletionTombstones` (separate tombstone connection). `migrations` is written by `scripts/migrate.ts` (one migration: `001-auth-onboarding`).
 
 Also declared but unused (approved D-102 … D-104, not built yet): `userPhotos` and `appearanceAnalyses`, and optional My Profile fields on `profiles` and `appearanceProfiles` with `default: undefined` — existing documents are unchanged, so no migration is needed.
 
@@ -172,14 +172,14 @@ Also declared but unused (specified 2026-10-18, D-110 … D-125): shared catalog
 | Runtime | Only approved, lint-clean records load; any issue stops API startup | Implemented |
 | Coverage report | `pnpm --filter @styleme/api style-rules coverage` (FR-STY-11); D-100 dimensions (per category, garment type, wear type × department) not yet added | Partial |
 | Scale | Designed for ≥ 150 palettes and ≥ 150 templates without code changes; scale test T-38 on a synthetic fixture library | Implemented (test) |
-| Content sets | C0 (≥ 6 + ≥ 6, temporary), C1 (12–20 palettes, ~20 templates; Stage 1 release), C2 (≥ 100 + ≥ 100; Stage 2 release) (D-57) | C0 drafted (PR #68); C1, C2 not started |
+| Content sets | C0 (≥ 6 + ≥ 6, temporary), C1 (12–20 palettes, ~20 templates; Stage 1 release), C2 (≥ 100 + ≥ 100; Stage 2 release) (D-57) | C0 approved 2026-10-19 (PR pending); C1, C2 not started |
 | Approval | Founder only (D-62); checklist in [CONTRIBUTING.md](CONTRIBUTING.md) §6 | — |
 
-**The knowledge base is not complete.** On `main` it holds no records; the C0 drafts are unapproved.
+**The knowledge base is not complete.** It holds the approved C0 seed (30 records); C1 and C2 are not started, and the coverage report shows 89 empty and 54 thin cells.
 
 ## 8. Deterministic recommendation engine
 
-Specified in [AI.md](AI.md) §3 and [FRD.md](FRD.md) FR-LOOK; **not implemented** (#33). The contract is fixed in `packages/contracts/src/outfit.ts`:
+Specified in [AI.md](AI.md) §3 and [FRD.md](FRD.md) FR-LOOK; **implemented in #33 (not yet merged) and verified on fixtures and on the approved C0 library** — see "Implementation" below. The contract is fixed in `packages/contracts/src/outfit.ts`:
 
 * **Request** `recommendationRequestSchema`: `occasion` (required), `style?`, `wearType?` (1–3 unique; a hard filter for that request, D-96), `paletteMode` (`suggested` default / `explore`). Strict: unknown fields rejected; no budget or product fields in Stage 1.
 * **Pipeline (specified):** templates → palettes → rules → look specifications → diversity check; precedence hard constraints > explicit preferences > rules > signals (FR-LOOK-08, D-19); weighted sum of approved rule effects, weights tuned on the evaluation set; affiliate status never an input.
@@ -188,6 +188,22 @@ Specified in [AI.md](AI.md) §3 and [FRD.md](FRD.md) FR-LOOK; **not implemented*
 * **Persistence (specified):** each look is an `outfits` document, `status: suggested` with a 7-day expiry; saving removes the expiry (D-23).
 * **Missing-data behaviour:** without a department, results are general and labelled "no department filter applied" (`departmentScope()`); signals are used only when `useInRecommendations` is on; measurements and photos are not inputs to the current engine; once My Profile is built (D-102, D-103) user-entered measurements and confirmed photo results become inputs, and size recommendations still wait for size charts (FR-SIZE-06).
 * **Performance target:** p95 < 2 s without AI on the production plan — **proposed, not measured** (D-68).
+
+**Implementation (#33).** `apps/api/src/services/engine/` holds pure functions (no I/O, clock, randomness or AI); `recommendations.service.ts` and `palette.service.ts` load the profile and, only while `useInRecommendations` is on, the signals, then call it.
+
+| Step | File | Behaviour |
+|---|---|---|
+| Library | `library.ts` | The engine reads records only through the `StyleLibrary` interface (D-110); `style-rules/loader.ts` implements it today, the MongoDB catalogue later (TD-FS-CAT-02). `contentVersion` hashes every record's `id@version` |
+| Inputs | `preferences.ts` | Resolves hard constraints, preferences, signals, `defaultsApplied` and `conflicts` (a colour both liked and disliked is disliked; a fabric both liked and avoided is avoided) |
+| filterTemplates | `generate.ts` | Occasion, style, department (`departmentScope()`; categories outside the department are dropped per slot) and the request's `wearType` |
+| fillSlots | `slots.ts` | Colours from the palette's role colours (explore: any non-disliked vocabulary colour), built around each usable palette combination; fabric, silhouette, fit, neckline, sleeve, length and pattern from slot constraints, preferences and rules; minimum sleeve and garment length are hard filters |
+| applyRules, rank | `rules.ts`, `score.ts`, `generate.ts` | Slot attributes (category, slot type, colour, colour family, fabric, silhouette, fit, neckline, sleeve, length, pattern) are scored per slot; a look's palette-combination `contrast` is scored once per look (added 2026-10-19 so contrast rules such as STY-007 and STY-008 take effect; `necklineDepth` and `patternScale` are not evaluated yet). Scores are compared **tier by tier** — preferences, then rules (rule weights plus palette coordination), then signals (rules scoped to body proportions, undertone and skin-tone affinity) — so a lower tier never overrides a higher one (FR-LOOK-08). Within a tier, D-19's weighted sum applies. Ties break on template, palette and combination IDs |
+| signature, select | `generate.ts` | Combination signature over template, palette and each slot's category, colour, fabric, silhouette and pattern; duplicates dropped; best look per template first, then per template and palette, then the rest; at most 5 |
+| explain | `explain.ts` | Sentences only from `explanationRefs`: template, palette, occasion, matched preferences and signals, up to 3 supporting rule rationales, and conflicts; each sentence passes the inclusive-language check or is dropped |
+| alternatives, phrases | `slots.ts`, `text.ts` | Up to 5 per slot, each differing in one of colour, category option, fabric or silhouette and meeting the same hard constraints; search phrases and size notes from vocabulary labels only |
+| Palettes | `palettes.ts` | `view=all` by ID; `view=suggested` without palettes containing a disliked colour, ordered by tone affinity, liked colours, contrast and occasions (AI.md §10.2) |
+
+**Known limits (defaults chosen for #33).** Template `wearType` is read from the C0 `wear-*` tags until #63 adds the field (`templateWearType()` is the only place to change). There is no neckline-to-coverage mapping in the vocabulary, so with a neckline minimum no neckline is stated. Comfort preferences and profile `preferredWearTypes` (not in the profile contract yet) are not ranking inputs. Look feedback (D-115) will be a fourth, lowest tier (#42). No rate limit on the endpoint yet.
 
 ## 9. Authentication, security and privacy
 
@@ -232,7 +248,9 @@ Strategy and scenario IDs: [TESTING.md](TESTING.md). Suite state verified on 202
 | `pnpm format:check` | — | — | Fails on a Windows checkout with `core.autocrlf=true` (CRLF only); `prettier --check --end-of-line auto .` passes ([TODO.md](TODO.md) TD-DOC-06) |
 | Playwright E2E, evaluation set | — | — | Not set up (#36, #54) |
 
-On `main` the shipped library is empty, so the linter-clean test passes there.
+With C0 approved (2026-10-19) the shipped library is linter-clean, so that test passes everywhere.
+
+**Update 2026-10-18 (#33 branch, on top of `main` 6e663d8):** contracts 6 files / 112 tests, `apps/api` 20 files / 209 tests (new `unit/engine.test.ts` 43, `api/recommendations.test.ts` 13; 2026-10-19 after C0 approval: `unit/engine.test.ts` 50 incl. AC5, 218 API tests, none skipped), `apps/web` 8 / 58 — all pass; typecheck, lint and build pass.
 
 **Update (local working tree, after adding the dormant My Profile schema):** contracts 5 files / 103 tests, all pass (new `my-profile.test.ts`); `apps/api/tests/api/profile.test.ts` gained 2 tests (proposed fields stay rejected and hidden; account deletion removes `userPhotos` and `appearanceAnalyses`).
 
@@ -272,8 +290,8 @@ The release acceptance criteria are AC-01 … AC-25, AC-B1 … B4 ([MVP.md](MVP.
 | FR-PROF, FR-SIZE-01 … 04 | `profile.ts` | `profile.service.ts`, `ProfileForm.tsx` | `profile.test.ts`, `profile-form.test.ts` | #4 | Implemented (no `preferredWearTypes`) |
 | FR-SIG | `appearance.ts` | `appearance.service.ts`, `AppearanceForm.tsx` | `appearance.test.ts`, `appearance-log-privacy.test.ts`, `appearance-form.test.ts` | #5 | Implemented |
 | FR-STY | (`style-vocabulary.ts`) | `style-rules/*` | `style-rules.test.ts`, `style-rules-scale.test.ts`, `style-vocabulary.test.ts` | #2, #3, #30, #63, #32, #35 | Tooling implemented; content draft |
-| FR-LOOK | `outfit.ts` | — | `outfit.test.ts` (contract only) | #33, #34, #45 … #49 | Contract only |
-| FR-PAL | `palette.ts` | — | `outfit.test.ts` (palette contract) | #33, #39, #40 | Contract only |
+| FR-LOOK | `outfit.ts` | `services/engine/*`, `recommendations.service.ts` | `outfit.test.ts`; `unit/engine.test.ts`, `api/recommendations.test.ts` | #33, #34, #45 … #49 | Engine and endpoint on fixtures (#33); UI not built |
+| FR-PAL | `palette.ts` | `services/engine/palettes.ts`, `palette.service.ts` | `outfit.test.ts`; `unit/engine.test.ts`, `api/recommendations.test.ts` | #33, #39, #40 | Ranking and endpoint (#33); UI not built |
 | FR-OUT | `outfit.ts` | — | `outfit.test.ts` (contract only) | #41, #42 | Contract only |
 | FR-LIST, FR-BUD | `product.ts` | — | `outfit.test.ts` (shortlist and price-summary contracts) | #37, #38, #43 | Contract only |
 | FR-DATA | `product.ts` labels | landing/feature copy | `security.test.ts` (web) | #52, #59 | Partial |

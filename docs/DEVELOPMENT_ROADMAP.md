@@ -43,7 +43,7 @@ M10 Shared catalogue in MongoDB + suitability engine ⏳ (after M2's engine inte
 | # | Milestone | Status and evidence | Owner | Implementation Plan |
 |---|---|---|---|---|
 | M1 | Account, onboarding, Home and profile foundation | ✅ Sign-up with email code (PR #25), top navigation (#26), Skip for now and profile completeness (#28); profile, appearance signals, settings, deletion and tombstones (S1.1–S1.3) | Kedar (maintains); profile contracts Shreya | S1.1, S1.2, S1.3 |
-| M2 | Shared styling data, rules, validation and engine | 🔄 Merged: vocabulary, record schemas, loader, linter, coverage and scale test (#2, #3); audit and decisions D-96 … D-101 (#30, PR #62); shared contracts for looks, palettes and shortlist (#31, PR #64). **Not done:** vocabulary decisions beyond `WEAR_TYPES` (#63 — closed but not implemented); C0 content is drafted in **open PR #68** (8 palettes, 8 templates, 8 styling + 6 fabric rules, all draft, not approved; `main` has none); engine, `outfits` model and palette ranking (#33, tests #34); C1 (#35) | Shreya | S1.4, content C0 (#32), C1 (#35) |
+| M2 | Shared styling data, rules, validation and engine | 🔄 Merged: vocabulary, record schemas, loader, linter, coverage and scale test (#2, #3); audit and decisions D-96 … D-101 (#30, PR #62); shared contracts for looks, palettes and shortlist (#31, PR #64). **Not done:** vocabulary decisions beyond `WEAR_TYPES` (#63 — closed but not implemented); engine tests #34; C1 (#35). **Done locally, PR pending:** C0 content in the shipped library, founder-approved by Shreya Sharma on 2026-10-19 (version 2); engine, `POST /v1/recommendations`, `outfits` model and palette ranking (`GET /v1/style/palettes`), verified on fixtures and on approved C0 (#33, AC5) | Shreya | S1.4, content C0 (#32), C1 (#35) |
 | M3 | Discover My Style, My Colour Palette, Outfit Categories | ⏳ Placeholders only; the style-profile editor is live as "Discover My Style". Issues #45, #46, #47, #48, #44, #53 (Johita); #39, #40 (Ankita). #39, #45, #46 can start now on the merged contracts | Johita (Discover, Categories), Ankita (Palette) | S1.4 results page, S1.5 |
 | M4 | Saved Outfits and feedback | ⏳ Not built; contracts merged. Issues #41, #42, #49, #50 (blocked), #51 | Ankita (#49 Johita) | S1.5 |
 | M5 | Shop My Look, initial version (shortlist and budget on user-entered prices) | ⏳ Not built; contracts merged. Issues #37 (can start now), #38, #43 | Kedar | S1.B |
@@ -99,9 +99,9 @@ Not started until the decision is recorded in [ImplementationPlan.md](Implementa
 
 | Now (no blocking dependency) | Waits for |
 |---|---|
-| Shreya: vocabulary Part 1 (#63); engine against fixtures (#33) | Founder approval of C0 (PR #68) for real looks |
-| Johita: request form (#45), size notes (#46), Categories requirement draft (#44) | Engine (#33) for live results |
-| Ankita: palette browsing (#39) against the merged contract and fixtures | `outfits` model (#33) for saving (#41) |
+| Shreya: vocabulary Part 1 (#63); engine tests (#34) and AI wording (#55) on the #33 engine | #33 merged (C0 approved 2026-10-19) |
+| Johita: request form (#45), size notes (#46), Categories requirement draft (#44) | #33 merged for live results (built and verified on C0; PR pending) |
+| Ankita: palette browsing (#39) against the merged contract and fixtures | #33 merged for `GET /v1/style/palettes` and the `outfits` model used by saving (#41) |
 | Kedar: budget engine (#37); Playwright harness (#36); unattached shortlist items (#38) | Saved looks (#41) to attach items to slots |
 
 **Checkpoints.**

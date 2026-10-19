@@ -39,7 +39,7 @@ Errors never expose stack traces, secrets, database details or internal errors. 
 
 ## 2. Endpoint Summary
 
-**Status (verified 2026-10-18 on `main` at `5b65b5c`):** the account, profile and appearance endpoints (#1–#11, #4a, A1–A21) and `/health` are **implemented**. #12–#21 have **merged Zod contracts** in `packages/contracts/src/{outfit,palette,product,common}.ts` (issue #31) but **no route, controller, service or model yet** (engine #33, saved looks #41/#42, shortlist #38). The rest are planned. "Stage 1" endpoints are planned for the closed beta; product-layer and Stage 2 endpoints are planned but gated; deferred and future endpoints are not approved for implementation.
+**Status (verified 2026-10-18 on `main` at `5b65b5c`):** the account, profile and appearance endpoints (#1–#11, #4a, A1–A21) and `/health` are **implemented**. #12–#21 have **merged Zod contracts** in `packages/contracts/src/{outfit,palette,product,common}.ts` (issue #31) but **no route, controller, service or model yet** (saved looks #41/#42, shortlist #38). **Update 2026-10-18 (#33, not yet merged):** `POST /v1/recommendations` and `GET /v1/style/palettes` are implemented with the `outfits` model and verified on the shipped, founder-approved C0 library (2026-10-19): every department × occasion returns looks, and `view=all` lists 8 palettes. The rest are planned. "Stage 1" endpoints are planned for the closed beta; product-layer and Stage 2 endpoints are planned but gated; deferred and future endpoints are not approved for implementation.
 
 | # | Method | Path | Purpose | Stage |
 |---|---|---|---|---|
@@ -169,6 +169,7 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 ### 3.4 Style (contract: `palette.ts`)
 
 **`GET /v1/style/palettes`** — query `view=suggested` (default) or `all`. Returns palettes `{ id, name, neutrals[], accents[], combinations[], rationale, limitations, suggestedBecause[] }`. `suggestedBecause` lists the preferences or enabled signals that ranked the palette; it is empty for `view=all`.
+- **Implemented (#33):** `view=all` returns every approved palette in ID order. `view=suggested` leaves out palettes containing a disliked colour and orders the rest by undertone and skin-tone affinity (only while `useInRecommendations` is on), then the number of liked colours, a combination at the preferred contrast, and preferred occasions (AI.md §10.2); a palette is never removed for a mismatched undertone (FR-PAL-03). `suggestedBecause` values: `undertone`, `skinTone`, `likedColors`, `contrastPreference`, `preferredOccasions`. Unknown query parameters or values return `INVALID_REQUEST`.
 
 ### 3.5 Recommendations and looks (`outfit.ts`)
 
@@ -180,6 +181,7 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 - **Too few matches:** `200` with fewer looks (possibly none), `limitedBy: { constraint, suggestion }` and the `INSUFFICIENT_MATCHES` warning (FR-LOOK-11).
 - **Optional AI step failure:** `200` with template explanations, `aiModel: null` and the `AI_ENHANCEMENT_SKIPPED` warning (FR-LOOK-16).
 - **Errors:** only when the core operation can't complete: `INVALID_REQUEST` (e.g. no occasion), `UNAUTHENTICATED`, `RATE_LIMITED`, `SERVICE_UNAVAILABLE` (e.g. the database is unreachable).
+- **Implemented (#33), details beyond the contract:** `200` on success, with `warnings` from `DEFAULTS_APPLIED`, `PREFERENCE_CONFLICT`, `INSUFFICIENT_MATCHES` (whenever fewer than 5 looks are returned) and `ALTERNATIVES_LIMITED` (some slot has fewer than 3 alternatives). `defaultsApplied` names: `department` (none saved: general results across departments), `colors` (no liked colours), `signals` (none set or switched off), `sizes`, `style` (none requested or preferred). `conflicts[].field` is `colors` (liked and disliked) or `fabrics` (liked and avoided). `limitedBy.constraint` is one of `wearType`, `style`, `department`, `dislikedColors`, `avoidedFabrics`, `coverage`, or `occasion` / `library` when the approved library itself is too small. Each look is stored in `outfits` before it is returned, so `looks[].id` is the outfit ID. `RATE_LIMITED` is not applied yet.
 
 **`GET /v1/outfits`** — query `status=saved` (default) or `suggested`. Returns the user's looks, newest first, paginated. With the product layer, each matched product includes `currentStatus` (FR-MATCH-08).
 
