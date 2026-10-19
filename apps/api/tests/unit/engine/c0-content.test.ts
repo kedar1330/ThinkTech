@@ -101,8 +101,9 @@ describe('AC5: the approved C0 library in the shipped library', () => {
   };
   const outcome = (result: EngineResult) => result.looks.map((l) => [l.combinationSignature, l.slots]);
 
-  it('holds all 30 C0 records, every one founder-approved', () => {
-    expect(c0.counts).toEqual({ palettes: 8, stylingRules: 8, fabricRules: 6, templates: 8 });
+  it('holds the C0 and C1 records, every one founder-approved', () => {
+    // C0 (#32): 8 · 8 · 6 · 8. C1 (#35) adds 8 palettes, 10 styling rules, 5 fabric rules, 12 templates.
+    expect(c0.counts).toEqual({ palettes: 16, stylingRules: 18, fabricRules: 11, templates: 20 });
     const records = [...c0.palettes, ...c0.stylingRules, ...c0.fabricRules, ...c0.templates];
     for (const r of records) expect([r.reviewStatus, r.isFixture], r.id).toEqual(['approved', undefined]);
     for (const r of c0.fabricRules) expect(r.practicalityValidated, r.id).toBe(false);
@@ -156,16 +157,9 @@ describe('AC5: the approved C0 library in the shipped library', () => {
   });
 
   it('palette ranking serves the approved palettes', () => {
-    expect(listAllPalettes(c0.palettes).map((p) => p.id)).toEqual([
-      'PAL-001',
-      'PAL-002',
-      'PAL-003',
-      'PAL-004',
-      'PAL-005',
-      'PAL-006',
-      'PAL-007',
-      'PAL-008',
-    ]);
+    expect(listAllPalettes(c0.palettes).map((p) => p.id)).toEqual(
+      Array.from({ length: 16 }, (_, i) => `PAL-${String(i + 1).padStart(3, '0')}`),
+    );
     const warm = rankPalettes(
       c0.palettes,
       resolvePreferences(emptyProfile(), { undertone: 'warm', skinTone: null, bodyProportions: null }),

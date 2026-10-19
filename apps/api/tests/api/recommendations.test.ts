@@ -121,18 +121,20 @@ describe('POST /v1/recommendations (FR-LOOK, API.md §3.5)', () => {
     expect(await env.db.models.Outfit.countDocuments()).toBe(0);
   });
 
-  it('AC5: the default (shipped, founder-approved C0) library serves looks and palettes end to end', async () => {
+  it('AC5: the default (shipped, founder-approved C0 + C1) library serves looks and palettes end to end', async () => {
     const { app, token } = await signedIn('shipped@example.com', { shipped: true });
     await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women' }).expect(200);
     const res = await request(app).post('/v1/recommendations').set(bearer(token)).send({ occasion: 'festive' });
     expect(res.status).toBe(200);
     const data = recommendationResponseSchema.parse(res.body.data);
     expect(data.looks.length).toBeGreaterThan(0);
-    expect(data.looks.every((l) => l.templateId === 'OUT-004')).toBe(true);
+    // Women's festive templates in the shipped library: C0 OUT-004 and C1 OUT-009 … OUT-012.
+    const festive = ['OUT-004', 'OUT-009', 'OUT-010', 'OUT-011', 'OUT-012'];
+    expect(data.looks.every((l) => festive.includes(l.templateId))).toBe(true);
     expect(await env.db.models.Outfit.countDocuments()).toBe(data.looks.length);
 
     const palettes = await request(app).get('/v1/style/palettes?view=all').set(bearer(token));
-    expect(paletteListResponseSchema.parse(palettes.body.data).palettes).toHaveLength(8);
+    expect(paletteListResponseSchema.parse(palettes.body.data).palettes).toHaveLength(16);
   });
 
   it('a Google sign-up must create a password first (withPassword)', async () => {
