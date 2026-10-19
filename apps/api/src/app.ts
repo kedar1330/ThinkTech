@@ -7,7 +7,9 @@ import type { Logger } from 'pino';
 import type { Config } from './config/env';
 import { AppearanceController } from './controllers/appearance.controller';
 import { AuthController } from './controllers/auth.controller';
+import { PaletteController } from './controllers/palette.controller';
 import { ProfileController } from './controllers/profile.controller';
+import { RecommendationsController } from './controllers/recommendations.controller';
 import type { Database } from './db';
 import { authenticate, requirePasswordSet } from './middleware/authenticate';
 import { clientIp } from './middleware/client-ip';
@@ -16,14 +18,20 @@ import { errorHandler, notFound } from './middleware/error-handler';
 import { createAuthRateLimits } from './middleware/rate-limit';
 import { appearanceRoutes } from './routes/appearance.routes';
 import { authRoutes } from './routes/auth.routes';
+import { paletteRoutes } from './routes/palette.routes';
 import { profileRoutes } from './routes/profile.routes';
+import { recommendationsRoutes } from './routes/recommendations.routes';
 import { AppearanceService } from './services/appearance.service';
 import { AccountService } from './services/account.service';
 import { AuthService } from './services/auth.service';
 import type { GoogleVerifier } from './services/google';
 import type { EmailSender, SmsSender } from './services/messaging';
+import type { StyleLibrary } from './services/engine';
 import { OnboardingService } from './services/onboarding.service';
+import { PaletteService } from './services/palette.service';
 import { ProfileService } from './services/profile.service';
+import { RecommendationsService } from './services/recommendations.service';
+import { SHIPPED_LIBRARY, loadStyleLibrary } from './style-rules';
 import { sendError } from './utils/respond';
 import pkg from '../package.json' with { type: 'json' };
 
@@ -36,6 +44,8 @@ export interface AppDeps {
   smsSender?: SmsSender | null;
   /** Null when Google sign-in isn't configured (GOOGLE_CLIENT_ID unset). */
   googleVerifier?: GoogleVerifier | null;
+  /** Approved style library (D-110). Defaults to the shipped JSON library; tests pass fixture libraries. */
+  styleLibrary?: StyleLibrary;
 }
 
 export interface App {
@@ -44,7 +54,15 @@ export interface App {
   accountService: AccountService;
 }
 
-export function createApp({ config, db, logger, emailSender, smsSender = null, googleVerifier = null }: AppDeps): App {
+export function createApp({
+  config,
+  db,
+  logger,
+  emailSender,
+  smsSender = null,
+  googleVerifier = null,
+  styleLibrary = loadStyleLibrary(SHIPPED_LIBRARY, { appEnv: config.APP_ENV }),
+}: AppDeps): App {
   const app = express();
   app.disable('x-powered-by');
   // Staging and production run behind one platform proxy (Render), so req.ip comes from it.
@@ -105,8 +123,14 @@ export function createApp({ config, db, logger, emailSender, smsSender = null, g
   const withPassword = [requireAuth, requirePasswordSet];
   const controller = new AuthController(authService, accountService, new OnboardingService(db.models));
   app.use('/v1', authRoutes(controller, requireAuth, withPassword, createAuthRateLimits()));
-  app.use('/v1', profileRoutes(new ProfileController(new ProfileService(db.models)), withPassword));
-  app.use('/v1', appearanceRoutes(new AppearanceController(new AppearanceService(db.models)), withPassword));
+  const profileService = new ProfileService(db.models);
+  const appearanceService = new AppearanceService(db.models);
+  app.use('/v1', profileRoutes(new ProfileController(profileService), withPassword));
+  app.use('/v1', appearanceRoutes(new AppearanceController(appearanceService), withPassword));
+  const recommendations = new RecommendationsService(db.models, styleLibrary, profileService, appearanceService);
+  app.use('/v1', recommendationsRoutes(new RecommendationsController(recommendations), withPassword));
+  const palettes = new PaletteService(styleLibrary, profileService, appearanceService);
+  app.use('/v1', paletteRoutes(new PaletteController(palettes), withPassword));
 
   app.use(notFound);
   app.use(errorHandler);

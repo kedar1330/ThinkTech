@@ -333,6 +333,42 @@ const profileSchema = new Schema(
   { timestamps: true, minimize: false },
 );
 
+// Looks (DATABASE.md §3.4). `POST /v1/recommendations` stores each look as `status: "suggested"` with a
+// 7-day expiry; saving (#41) sets `status: "saved"` and clears `expiresAt`. Slots, explanation and
+// references are a snapshot, so a look stays readable after the library changes. Validated by the
+// `lookSchema` contract before it is returned; never logged.
+const outfitSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true },
+    recommendationId: { type: Schema.Types.ObjectId, required: true },
+    status: { type: String, enum: ['suggested', 'saved'], required: true },
+    templateId: { type: String, required: true },
+    paletteId: { type: String, required: true },
+    // `{ slotId, slot, lookSpec, swatches, searchPhrase, sizeNote, alternatives }` per slot.
+    slots: { type: [Schema.Types.Mixed], required: true },
+    explanation: { type: String, required: true },
+    explanationRefs: { type: Schema.Types.Mixed, required: true },
+    combinationSignature: { type: String, required: true },
+    // Knowledge-base content version the look was generated from (same input + version = same looks).
+    contentVersion: { type: String, required: true },
+    // Snapshot of the request and of the profile inputs used, so regenerate (#49) can show what changed.
+    // Whether signals were used is stored; their values are not.
+    request: { type: Schema.Types.Mixed, required: true },
+    inputsUsed: { type: Schema.Types.Mixed, required: true },
+    defaultsApplied: { type: [String], default: [] },
+    conflicts: { type: [Schema.Types.Mixed], default: [] },
+    warnings: { type: [String], default: [] },
+    aiModel: { type: String, default: null },
+    // FR-OUT-04 `{ value, reason?, at }`; written by #42.
+    feedback: { type: Schema.Types.Mixed, default: null },
+    expiresAt: { type: Date, default: null },
+  },
+  { timestamps: true, minimize: false },
+);
+outfitSchema.index({ userId: 1, status: 1, createdAt: -1 });
+// Suggested looks expire 7 days after creation (D-23); saved looks have no `expiresAt`.
+outfitSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 export type UserDoc = InferSchemaType<typeof userSchema>;
 export type BetaInviteDoc = InferSchemaType<typeof betaInviteSchema>;
 export type PendingRegistrationDoc = InferSchemaType<typeof pendingRegistrationSchema>;
@@ -341,6 +377,7 @@ export type SessionDoc = InferSchemaType<typeof sessionSchema>;
 export type TombstoneDoc = InferSchemaType<typeof tombstoneSchema>;
 export type AppearanceProfileDoc = InferSchemaType<typeof appearanceProfileSchema>;
 export type ProfileDoc = InferSchemaType<typeof profileSchema>;
+export type OutfitDoc = InferSchemaType<typeof outfitSchema>;
 export type UserPhotoDoc = InferSchemaType<typeof userPhotoSchema>;
 export type AppearanceAnalysisDoc = InferSchemaType<typeof appearanceAnalysisSchema>;
 export type CatalogueCategoryDoc = InferSchemaType<typeof catalogueCategorySchema>;
@@ -368,6 +405,7 @@ export interface Models {
   Tombstone: Model<TombstoneDoc>;
   AppearanceProfile: Model<AppearanceProfileDoc>;
   Profile: Model<ProfileDoc>;
+  Outfit: Model<OutfitDoc>;
   UserPhoto: Model<UserPhotoDoc>;
   AppearanceAnalysis: Model<AppearanceAnalysisDoc>;
   // Specified 2026-10-18 (D-110 … D-125); declared only — no endpoint uses them yet.
@@ -398,6 +436,7 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     Tombstone: tombstones.model('DeletionTombstone', tombstoneSchema, 'deletionTombstones'),
     AppearanceProfile: main.model('AppearanceProfile', appearanceProfileSchema, 'appearanceProfiles'),
     Profile: main.model('Profile', profileSchema, 'profiles'),
+    Outfit: main.model('Outfit', outfitSchema, 'outfits'),
     UserPhoto: main.model('UserPhoto', userPhotoSchema, 'userPhotos'),
     AppearanceAnalysis: main.model('AppearanceAnalysis', appearanceAnalysisSchema, 'appearanceAnalyses'),
     CatalogueCategory: main.model('CatalogueCategory', catalogueCategorySchema, 'catalogueCategories'),

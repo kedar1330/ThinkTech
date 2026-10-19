@@ -5,6 +5,7 @@ import { createApp } from '../src/app';
 import type { Config } from '../src/config/env';
 import { connectDatabase, type Database } from '../src/db';
 import { createLogger } from '../src/logger';
+import type { StyleLibrary } from '../src/services/engine';
 import { identityFromClaims, type GoogleVerifier } from '../src/services/google';
 import type { EmailMessage, EmailSender, SmsMessage, SmsSender } from '../src/services/messaging';
 
@@ -103,6 +104,8 @@ export interface AppOptions {
   email?: RecordingEmailSender;
   sms?: RecordingSmsSender | null;
   google?: GoogleVerifier | null;
+  /** A fixture style library (tests/fixtures/style-library.ts); defaults to the shipped library. */
+  styleLibrary?: StyleLibrary;
 }
 
 export interface TestEnv {
@@ -140,6 +143,7 @@ export async function startTestEnv(): Promise<TestEnv> {
         emailSender: mail,
         smsSender: sms,
         googleVerifier: options.google === undefined ? fakeGoogleVerifier : options.google,
+        styleLibrary: options.styleLibrary,
       });
       return { ...app, config, mail, sms };
     },
