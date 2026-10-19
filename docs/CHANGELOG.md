@@ -6,6 +6,7 @@
 
 | PR | Branch | Change | State |
 |---|---|---|---|
+| — | `feature/issue-44` | docs: FR-OCAT checked against PDF p16 (#44) — two gaps recorded (colour as a browse filter; limiting-filter empty state for browsing); gallery tracked as TD-FS-OCAT-01; #47 scoped to the results page; stale "not in Stage 1" body-information row updated for D-102, D-103 | Open |
 | #71 | `feature/33-matching-engine` | feat: deterministic look engine (#33) — `services/engine/` (filterTemplates, fillSlots, rules and tiered ranking, signatures, explanations, alternatives, search phrases, palette ranking), `outfits` model with 7-day TTL, `POST /v1/recommendations`, `GET /v1/style/palettes`, `validateQuery`, library `contentVersion`, look-level contrast rules; C0 content (#32) approved by the founder on 2026-10-19 (30 records, version 2) after two correction rounds and moved to the shipped library; real AC5 test on the shipped library replaces the simulated-approval test | Open; awaiting review and CI |
 
 ## 2026-10-18

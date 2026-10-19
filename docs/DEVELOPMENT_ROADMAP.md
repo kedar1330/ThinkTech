@@ -100,7 +100,7 @@ Not started until the decision is recorded in [ImplementationPlan.md](Implementa
 | Now (no blocking dependency) | Waits for |
 |---|---|
 | Shreya: vocabulary Part 1 (#63); engine tests (#34) and AI wording (#55) on the #33 engine | #33 merged (C0 approved 2026-10-19) |
-| Johita: request form (#45), size notes (#46), Categories requirement draft (#44) | #33 merged for live results (built and verified on C0; PR pending) |
+| Johita: request form (#45), size notes (#46), Categories spec check (#44, done) | #33 merged for live results (built and verified on C0; PR pending) |
 | Ankita: palette browsing (#39) against the merged contract and fixtures | #33 merged for `GET /v1/style/palettes` and the `outfits` model used by saving (#41) |
 | Kedar: budget engine (#37); Playwright harness (#36); unattached shortlist items (#38) | Saved looks (#41) to attach items to slots |
 
