@@ -222,7 +222,9 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
       { ageGroup: '25_34', measurements: { displayUnit: 'cm', valuesCm: { waist: 78 } }, customOccasions: ['x'] },
     );
     const res = await request(app).get('/v1/profile').set(bearer(token));
-    expect(JSON.stringify(res.body.data)).not.toMatch(/ageGroup|measurements|customOccasions|78/);
+    // `updatedAt` is left out: a timestamp such as "…:45.078Z" would match the stored waist value 78.
+    const { updatedAt: _updatedAt, ...returned } = res.body.data;
+    expect(JSON.stringify(returned)).not.toMatch(/ageGroup|measurements|customOccasions|78/);
   });
 
   it('account deletion also removes proposed photo metadata and appearance analyses', async () => {

@@ -168,7 +168,7 @@ describe('app top navigation', () => {
     );
     const bar = screen.getByRole('navigation', { name: 'Main' });
     expect(within(bar).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
-    expect(within(bar).getByRole('link', { name: 'Discover My Style' })).toHaveAttribute('href', '/profile');
+    expect(within(bar).getByRole('link', { name: 'Discover My Style' })).toHaveAttribute('href', '/discover/looks');
 
     const more = within(bar).getByRole('button', { name: /More/ });
     expect(more).toHaveAttribute('aria-expanded', 'false');

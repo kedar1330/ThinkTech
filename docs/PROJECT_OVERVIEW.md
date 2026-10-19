@@ -104,7 +104,7 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 | Shared contracts: recommendation request/response, look, slot, alternatives, saved looks, feedback, palettes, shortlist and user-entered price summary | ✅ Contract only (no endpoint or model yet) | `packages/contracts/src/{outfit,palette,product,common}.ts` (#31, PR #64); `design.ts`, `chat.ts` reserved and empty |
 | Record schemas, loader, linter (contradictions, duplicates, unknown references, judgemental language), coverage report, scale test | ✅ | `apps/api/src/style-rules/`, `pnpm --filter @styleme/api style-rules lint\|coverage` |
 | **Content: palettes, templates, rules** | 🔄 **C0 approved (local, PR pending):** 8 palettes, 8 templates, 8 styling rules, 6 fabric rules in the shipped library, founder-approved by Shreya Sharma on 2026-10-19 (version 2); fabric practicality not yet validated. C1 (#35) not started | `apps/api/src/style-rules/data/*.json` — C0 seed (#32) and C1 release set (#35), founder-approved only (D-57, D-62); earlier issues #9 and #10 were closed without content. Templates carry `wear-*` / `formality-*` tags until the vocabulary fields land. Drafts live only in `apps/api/style-rules-drafts/`; a draft in the shipped library fails the linter and stops the API — by design ([TODO.md](TODO.md) TD-DOC-04) |
-| Look engine (`POST /v1/recommendations`, ranking, explanations, `outfits` model, palette ranking) | 🔄 **Built and verified on fixtures and on approved C0 (#33, PR pending)** | `apps/api/src/services/engine/`, `recommendations.service.ts`, `palette.service.ts`; `GET /v1/style/palettes`. Full named suite T-12 … T-28 is #34; optional AI wording is #55 |
+| Look engine (`POST /v1/recommendations`, ranking, explanations, `outfits` model, palette ranking) | ✅ **Merged (#33, PR #71); named test suite and evaluation entry point in review (#34)** | `apps/api/src/services/engine/`, `recommendations.service.ts`, `palette.service.ts`; `GET /v1/style/palettes`. Named suite T-12 … T-28 and T-38 plus `runEvaluation` (TESTING.md §6.1): #34, PR pending; AC-05 … AC-08 pass on C0. Optional AI wording is #55 |
 
 **Rules that never change:** soft effects only (prefer / deprioritise, never forbid); explanations describe effects, never judge a body or skin tone; only approved records load at runtime ([CONTRIBUTING.md](CONTRIBUTING.md) §6, [AI.md](AI.md) §4).
 
@@ -125,7 +125,7 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 | Outputs / actions | Up to 5 looks, each slot with colour, fabric, silhouette and an explanation; 3–5 alternatives per slot when available (D-53); save; shop; request alternatives |
 | Empty / limited | `INSUFFICIENT_MATCHES` (never padded), `ALTERNATIVES_LIMITED`, `DEFAULTS_APPLIED`, `PREFERENCE_CONFLICT`; no department → general results labelled "no department filter applied" |
 | Loading / error | Skeleton while generating; API failure → retry message; no partial looks |
-| Today | ✅ The style-profile editor (`/profile`) carries this name. ⬜ Recommendations are not built |
+| Today | 🔄 Request form at `/discover/looks` (#45, PR open); the Discover My Style navigation entry opens it, and the style-profile editor stays at `/profile`. ⬜ Results page (#47) |
 | Depends on | M2 (content + engine) |
 | Owner | Johita (UI and integration); Shreya (engine) |
 | Docs / Issues | [FRD.md](FRD.md) FR-LOOK-01 … 19; [API.md](API.md) §3.5; issues #45 (form), #46 (size notes), #47 (results), #48 (alternatives), #49 (regenerate), #53 (tests); earlier #11, #12 (closed) |
