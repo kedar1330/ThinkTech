@@ -276,9 +276,9 @@ The release acceptance criteria are AC-01 … AC-25, AC-B1 … B4 ([MVP.md](MVP.
 | TAC-03 | Every new endpoint has a Zod contract in `packages/contracts`, uses the envelope, and is scoped to the user | Review; API tests |
 | TAC-04 | New user-owned collections are in `USER_OWNED_COLLECTIONS`; deletion and tombstone replay tests cover them | API tests |
 | TAC-05 | No logs of bodies, personal data, codes, tokens, photos or image URLs | log-privacy tests |
-| TAC-06 | No AI call on the core path; AI failures fall back with `AI_ENHANCEMENT_SKIPPED` | T-25, T-26 (planned) |
-| TAC-07 | No product, price, retailer or availability in generated looks while the product layer is off | T-24 (planned); strict contracts already reject these fields |
-| TAC-08 | Engine determinism: same input + content version → same looks | T-12 (planned) |
+| TAC-06 | No AI call on the core path; AI failures fall back with `AI_ENHANCEMENT_SKIPPED` | T-25 (#34); T-26 is added with the AI wording module (#55) |
+| TAC-07 | No product, price, retailer or availability in generated looks while the product layer is off | T-24 (#34); strict contracts already reject these fields |
+| TAC-08 | Engine determinism: same input + content version → same looks | T-12 (#34) |
 | TAC-09 | A "Coming soon" section is turned on only when its page works end to end | Review of `lib/features.ts` |
 
 ## 15. Traceability
@@ -290,7 +290,7 @@ The release acceptance criteria are AC-01 … AC-25, AC-B1 … B4 ([MVP.md](MVP.
 | FR-PROF, FR-SIZE-01 … 04 | `profile.ts` | `profile.service.ts`, `ProfileForm.tsx` | `profile.test.ts`, `profile-form.test.ts` | #4 | Implemented (no `preferredWearTypes`) |
 | FR-SIG | `appearance.ts` | `appearance.service.ts`, `AppearanceForm.tsx` | `appearance.test.ts`, `appearance-log-privacy.test.ts`, `appearance-form.test.ts` | #5 | Implemented |
 | FR-STY | (`style-vocabulary.ts`) | `style-rules/*` | `style-rules.test.ts`, `style-rules-scale.test.ts`, `style-vocabulary.test.ts` | #2, #3, #30, #63, #32, #35 | Tooling implemented; content draft |
-| FR-LOOK | `outfit.ts` | `services/engine/*`, `recommendations.service.ts` | `outfit.test.ts`; `unit/engine.test.ts`, `api/recommendations.test.ts` | #33, #34, #45 … #49 | Engine and endpoint on fixtures (#33); UI not built |
+| FR-LOOK | `outfit.ts` | `services/engine/*`, `recommendations.service.ts` | `outfit.test.ts`; `unit/engine/*.test.ts`, `api/recommendations.test.ts` | #33, #34, #45 … #49 | Engine and endpoint merged (#33); named engine tests and evaluation entry point (#34, PR pending); UI not built |
 | FR-PAL | `palette.ts` | `services/engine/palettes.ts`, `palette.service.ts` | `outfit.test.ts`; `unit/engine.test.ts`, `api/recommendations.test.ts` | #33, #39, #40 | Ranking and endpoint (#33); UI not built |
 | FR-OUT | `outfit.ts` | — | `outfit.test.ts` (contract only) | #41, #42 | Contract only |
 | FR-LIST, FR-BUD | `product.ts` | — | `outfit.test.ts` (shortlist and price-summary contracts) | #37, #38, #43 | Contract only |
