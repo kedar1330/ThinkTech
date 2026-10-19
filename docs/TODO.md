@@ -88,7 +88,7 @@ TD-SHP-01 #37 → TD-SHP-02 #38 → TD-SHP-03 #43 (needs #41)              (Keda
 
 | ID | Task | Issue | Owner | Status | Pri | Depends on | Acceptance criteria |
 |---|---|---|---|---|---|---|---|
-| TD-QA-01 | Playwright E2E harness and auth smoke flow (both viewports) | #36 | Kedar | 🟢 not started (no `e2e/` folder) | P1 | — | Runs in CI at 375×812 and 1280×800 (D-36) |
+| TD-QA-01 | Playwright E2E harness and auth smoke flow (both viewports) | #36 | Kedar | 🟡 in review: harness, auth smoke flow, browser-level T-47/T-48 and the `e2e` CI job | P1 | — | Runs in CI at 375×812 and 1280×800 (D-36) |
 | TD-QA-02 | Complete fixture safeguards: documents, script guards, tests, CI | #52 | Ankita | 🟡 partly done (loader `FIXTURE_RECORD` guard and T-29 exist) | P1 | — | T-29, T-30; seed scripts refuse production |
 | TD-QA-03 | Remaining privacy and security hardening; legal-review follow-up | #59 | Kedar | 🟡 partly done | P1 | D-74 (founder) | SECURITY §11 checklist complete |
 | TD-QA-04 | Styling evaluation dataset (25–30 synthetic profiles) with measured thresholds | #54 | Johita | ⏸ | P1 | TD-STY-03, TD-STY-04, TD-STY-05; founder review | Relevance target ≥ 80 % proposed (D-52); thresholds measured, not assumed |

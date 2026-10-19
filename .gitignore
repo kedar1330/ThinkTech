@@ -16,3 +16,10 @@ pnpm-debug.log*
 
 # Local-only email/SMS outbox (APP_ENV=local without a provider)
 .dev-outbox/
+
+# Playwright E2E output (e2e/): reports, traces, the harness's outbox and server logs
+playwright-report/
+test-results/
+blob-report/
+e2e/.outbox/
+e2e/.logs/
