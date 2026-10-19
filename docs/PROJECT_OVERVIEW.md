@@ -99,7 +99,7 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 | Part | Status | Where |
 |---|---|---|
-| Shared vocabulary: departments, occasions, styles, wear types (D-96), slot types, size groups, 11 categories, 39 colours with swatch hex codes, fabrics, silhouettes, fits, necklines, patterns, coverage, undertones, Monk tones, proportions | ✅ | `packages/contracts/src/style-vocabulary.ts` |
+| Shared vocabulary: departments, occasions, styles, wear types (D-96), slot types, size groups, 11 categories, 63 colours with swatch hex codes (Indian colours added, D-99), fabrics, silhouettes, fits, necklines, patterns and Indian techniques, coverage, undertones, Monk tones, proportions | ✅ | `packages/contracts/src/style-vocabulary.ts` |
 | **Decided vocabulary changes (#30 audit, D-97 … D-100):** 8 broad categories with garment types, slot formality, template `wearType`, profile `preferredWearTypes`, colour and fabric growth, coverage-report dimensions | ⬜ Decided, not implemented. **Issue #63 was closed on 2026-10-17, but only `WEAR_TYPES` exists** (verified 2026-10-18) | #63 Part 1 before C0 approval, Part 2 before C1 |
 | Shared contracts: recommendation request/response, look, slot, alternatives, saved looks, feedback, palettes, shortlist and user-entered price summary | ✅ Contract only (no endpoint or model yet) | `packages/contracts/src/{outfit,palette,product,common}.ts` (#31, PR #64); `design.ts`, `chat.ts` reserved and empty |
 | Record schemas, loader, linter (contradictions, duplicates, unknown references, judgemental language), coverage report, scale test | ✅ | `apps/api/src/style-rules/`, `pnpm --filter @styleme/api style-rules lint\|coverage` |

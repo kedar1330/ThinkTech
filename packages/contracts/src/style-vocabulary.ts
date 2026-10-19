@@ -196,6 +196,32 @@ export const COLORS = [
   { id: 'gold', label: 'Gold', family: 'metallic', hex: '#C9A227' },
   { id: 'silver', label: 'Silver', family: 'metallic', hex: '#BFC1C2' },
   { id: 'rose_gold', label: 'Rose gold', family: 'metallic', hex: '#B76E79' },
+  // D-99 batch 1: Indian fashion colours first, then gaps in the base set. Appended, so the order of
+  // the colours above (and of explore-mode candidates) is unchanged.
+  { id: 'off_white', label: 'Off-white', family: 'neutral', hex: '#F4F1EA' },
+  { id: 'wine', label: 'Wine', family: 'red', hex: '#722F37' },
+  { id: 'rani_pink', label: 'Rani pink', family: 'pink', hex: '#E0115F' },
+  { id: 'peacock_blue', label: 'Peacock blue', family: 'blue', hex: '#005F86' },
+  { id: 'saffron', label: 'Saffron', family: 'orange', hex: '#FF9933' },
+  { id: 'haldi_yellow', label: 'Haldi yellow', family: 'yellow', hex: '#F5C518' },
+  { id: 'mehendi_green', label: 'Mehendi green', family: 'green', hex: '#6F7D1C' },
+  { id: 'parrot_green', label: 'Parrot green', family: 'green', hex: '#5DBB3F' },
+  { id: 'pista_green', label: 'Pista green', family: 'green', hex: '#A9D18E' },
+  { id: 'rama_green', label: 'Rama green', family: 'green', hex: '#1F9E89' },
+  { id: 'onion_pink', label: 'Onion pink', family: 'pink', hex: '#D9A3A5' },
+  { id: 'magenta', label: 'Magenta', family: 'pink', hex: '#C0007F' },
+  { id: 'vermilion', label: 'Vermilion', family: 'red', hex: '#E34234' },
+  { id: 'indigo', label: 'Indigo', family: 'blue', hex: '#2E3A87' },
+  { id: 'turquoise', label: 'Turquoise', family: 'blue', hex: '#30BFBF' },
+  { id: 'mauve', label: 'Mauve', family: 'purple', hex: '#B784A7' },
+  { id: 'copper', label: 'Copper', family: 'metallic', hex: '#B87333' },
+  { id: 'antique_gold', label: 'Antique gold', family: 'metallic', hex: '#A8894A' },
+  { id: 'light_grey', label: 'Light grey', family: 'neutral', hex: '#C9C9C9' },
+  { id: 'khaki', label: 'Khaki', family: 'brown', hex: '#C3B091' },
+  { id: 'coffee', label: 'Coffee', family: 'brown', hex: '#6F4E37' },
+  { id: 'ruby', label: 'Ruby', family: 'red', hex: '#9B111E' },
+  { id: 'lemon_yellow', label: 'Lemon yellow', family: 'yellow', hex: '#FFF44F' },
+  { id: 'aubergine', label: 'Aubergine', family: 'purple', hex: '#3D1F3D' },
 ] as const satisfies readonly (VocabularyItem & { family: ColorFamily; hex: string })[];
 export const COLOR_IDS = ids(COLORS);
 export const colorIdSchema = z.enum(COLOR_IDS);
@@ -221,6 +247,12 @@ export const FABRICS = [
   { id: 'polyester_blend', label: 'Polyester blend' },
   { id: 'leather', label: 'Leather' },
   { id: 'vegan_leather', label: 'Vegan leather' },
+  // D-99 batch 1.
+  { id: 'brocade', label: 'Brocade / Banarasi' },
+  { id: 'organza', label: 'Organza' },
+  { id: 'net', label: 'Net' },
+  { id: 'muslin', label: 'Muslin' },
+  { id: 'tissue', label: 'Tissue' },
 ] as const;
 export const FABRIC_IDS = ids(FABRICS);
 export const fabricSchema = z.enum(FABRIC_IDS);
@@ -278,6 +310,12 @@ export const PATTERNS = [
   { id: 'bandhani', label: 'Bandhani' },
   { id: 'embroidered', label: 'Embroidered' },
   { id: 'abstract', label: 'Abstract' },
+  // D-99 batch 1: Indian techniques, recorded as patterns.
+  { id: 'chikankari', label: 'Chikankari' },
+  { id: 'zardozi', label: 'Zari / zardozi' },
+  { id: 'leheriya', label: 'Leheriya' },
+  { id: 'kalamkari', label: 'Kalamkari' },
+  { id: 'mirror_work', label: 'Mirror work' },
 ] as const;
 export const PATTERN_IDS = ids(PATTERNS);
 export const patternSchema = z.enum(PATTERN_IDS);
