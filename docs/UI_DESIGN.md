@@ -47,7 +47,7 @@ Source: `apps/web/app/globals.css` (CSS custom properties exposed to Tailwind 4 
 
 The CSS states that every text/background pair used for body copy meets WCAG AA (4.5:1). `viewport.themeColor` is `#4a1f45` (`app/layout.tsx`).
 
-Colour data shown to users comes from the shared vocabulary, not from the theme: 39 colour swatches (`COLORS` in `packages/contracts/src/style-vocabulary.ts`, "hex values approximate the named colour and are not product colours") and the 10 Monk Skin Tone swatches (`MONK_TONES`).
+Colour data shown to users comes from the shared vocabulary, not from the theme: 63 colour swatches (`COLORS` in `packages/contracts/src/style-vocabulary.ts`, "hex values approximate the named colour and are not product colours") and the 10 Monk Skin Tone swatches (`MONK_TONES`).
 
 ### 2.2 Typography
 
