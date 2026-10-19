@@ -49,7 +49,7 @@ TD-SHP-01 #37 → TD-SHP-02 #38 → TD-SHP-03 #43 (needs #41)              (Keda
 
 | ID | Task | Issue | Status | Pri | Depends on | Acceptance criteria |
 |---|---|---|---|---|---|---|
-| TD-DIS-01 | Discover My Style request form and inputs on the shared contracts (was JO-1) | #45 | 🟢 not started | P0 | Contracts ✅ | Occasion required; style, wear type, palette mode optional; keyboard accessible; usable at 320 px; field errors shown |
+| TD-DIS-01 | Discover My Style request form and inputs on the shared contracts (was JO-1) | #45 | 🔄 PR open: form at `/discover/looks`; shows a found-looks message until the results page (#47) adds the redirect | P0 | Contracts ✅ | Occasion required; style, wear type, palette mode optional; keyboard accessible; usable at 320 px; field errors shown |
 | TD-DIS-02 | Size notes on look slots (FR-SIZE-04) | #46 | 🟢 not started | P1 | Contracts ✅ | Saved size shown per sized slot; prompt to add one otherwise; nothing for free-size slots |
 | TD-DIS-03 | Outfit results page and Outfit Categories gallery (was JO-2, JO-3) | #47 | ⏸ | P0 | TD-STY-03, TD-DIS-01, TD-DIS-02; gallery also TD-DIS-05 | AC-05 (occasion-only request → looks or a clear message); AC-08 (no duplicate combination); "no department filter applied" when no department |
 | TD-DIS-04 | Ranking, explanations and alternatives UI (was JO-4) | #48 | ⏸ | P1 | TD-STY-03, TD-DIS-03 | 3–5 alternatives per slot or `ALTERNATIVES_LIMITED` (D-53); explanations shown as returned |

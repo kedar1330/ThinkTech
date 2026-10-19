@@ -17,7 +17,8 @@ export const FEATURES: Feature[] = [
     slug: 'discover-my-style',
     label: 'Discover My Style',
     icon: 'sparkles',
-    href: '/profile',
+    // The occasion → looks form until the FR-DMS catalogue page (TD-FS-DMS-01) replaces it.
+    href: '/discover/looks',
     summary: 'Your style profile and optional appearance signals — sizes, fit, colours, coverage and more.',
   },
   {
