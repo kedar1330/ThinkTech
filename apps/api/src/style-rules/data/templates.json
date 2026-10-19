@@ -1,1 +1,381 @@
-[]
+[
+  {
+    "id": "OUT-001",
+    "version": 2,
+    "tags": ["wear-indian", "formality-casual", "kurti-set"],
+    "userAdjustable": ["styles", "occasions", "silhouettes", "fit"],
+    "rationale": "A kurti over straight or tapered trousers gives a long, easy line from shoulder to ankle that works from a day at home to a day at the office.",
+    "limitations": "Trousers stand in for salwar, churidar and palazzo until those garment types are added. Kurti length and sleeve follow the user's coverage preferences, not this template.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "name": "Everyday kurti with straight trousers",
+    "department": "women",
+    "occasions": ["everyday", "work"],
+    "styles": ["traditional", "casual"],
+    "slots": [
+      {
+        "slotId": "top",
+        "slot": "top",
+        "categoryOptions": ["kurti"],
+        "colorRole": "accent"
+      },
+      {
+        "slotId": "bottom",
+        "slot": "bottom",
+        "categoryOptions": ["trousers"],
+        "colorRole": "neutral",
+        "constraints": {
+          "silhouettes": ["straight", "tapered", "wide_leg"]
+        }
+      },
+      {
+        "slotId": "footwear",
+        "slot": "footwear",
+        "categoryOptions": ["shoes"],
+        "colorRole": "neutral"
+      },
+      {
+        "slotId": "accessory-1",
+        "slot": "accessory",
+        "categoryOptions": ["accessory"],
+        "optional": true,
+        "colorRole": "any"
+      }
+    ],
+    "compatiblePalettes": ["PAL-001", "PAL-003", "PAL-007"],
+    "ruleRefs": ["STY-002", "STY-005", "STY-006", "FAB-001"]
+  },
+  {
+    "id": "OUT-002",
+    "version": 2,
+    "tags": ["wear-western", "formality-formal", "office"],
+    "userAdjustable": ["styles", "occasions", "fit", "colors"],
+    "rationale": "A collared shirt with tailored trousers is a structured, easy-to-repeat base for work and formal events, and the palette's medium-contrast combinations keep it polished.",
+    "limitations": "Dress codes vary widely by workplace; the user's style and occasion choices take priority. Blazers and other layers are not included yet.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "name": "Office shirt and tailored trousers",
+    "department": "any",
+    "occasions": ["work", "formal"],
+    "styles": ["classic", "smart_casual", "minimal"],
+    "slots": [
+      {
+        "slotId": "top",
+        "slot": "top",
+        "categoryOptions": ["shirt"],
+        "colorRole": "any",
+        "constraints": {
+          "necklines": ["collared", "mandarin"]
+        }
+      },
+      {
+        "slotId": "bottom",
+        "slot": "bottom",
+        "categoryOptions": ["trousers"],
+        "colorRole": "neutral",
+        "constraints": {
+          "silhouettes": ["straight", "tapered", "wide_leg"]
+        }
+      },
+      {
+        "slotId": "footwear",
+        "slot": "footwear",
+        "categoryOptions": ["shoes"],
+        "colorRole": "neutral"
+      },
+      {
+        "slotId": "accessory-1",
+        "slot": "accessory",
+        "categoryOptions": ["accessory"],
+        "optional": true,
+        "colorRole": "neutral"
+      }
+    ],
+    "compatiblePalettes": ["PAL-002", "PAL-003", "PAL-004"],
+    "ruleRefs": ["STY-003", "STY-005", "STY-007", "FAB-001", "FAB-002"]
+  },
+  {
+    "id": "OUT-003",
+    "version": 2,
+    "tags": ["wear-indian", "formality-festive", "kurta-set"],
+    "userAdjustable": ["styles", "occasions", "colors", "fabrics"],
+    "rationale": "A thigh- or knee-length kurta in a rich fabric over slim trousers forms a classic festive set, and a mandarin or round neckline keeps the look formal and clean.",
+    "limitations": "Trousers stand in for churidar, pyjama and dhoti pants until those garment types are added. Nehru jackets and other layers are not included yet.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "name": "Festive kurta set",
+    "department": "men",
+    "occasions": ["festive", "wedding"],
+    "styles": ["traditional"],
+    "slots": [
+      {
+        "slotId": "top",
+        "slot": "top",
+        "categoryOptions": ["kurta"],
+        "colorRole": "accent",
+        "constraints": {
+          "lengths": ["thigh", "knee"],
+          "necklines": ["mandarin", "round"]
+        }
+      },
+      {
+        "slotId": "bottom",
+        "slot": "bottom",
+        "categoryOptions": ["trousers"],
+        "colorRole": "neutral",
+        "constraints": {
+          "silhouettes": ["straight", "tapered"]
+        }
+      },
+      {
+        "slotId": "footwear",
+        "slot": "footwear",
+        "categoryOptions": ["shoes"],
+        "colorRole": "any"
+      },
+      {
+        "slotId": "accessory-1",
+        "slot": "accessory",
+        "categoryOptions": ["accessory"],
+        "optional": true,
+        "colorRole": "accent"
+      }
+    ],
+    "compatiblePalettes": ["PAL-005", "PAL-006", "PAL-008"],
+    "ruleRefs": ["STY-004", "STY-005", "FAB-003"]
+  },
+  {
+    "id": "OUT-004",
+    "version": 2,
+    "tags": ["wear-indian", "formality-festive", "saree"],
+    "userAdjustable": ["styles", "occasions", "colors", "fabrics"],
+    "rationale": "A saree in a draping fabric with coordinated footwear and jewellery is a complete festive or evening look; the palette's metallic and jewel tones tie the accessories to the drape.",
+    "limitations": "The blouse is not a separate slot yet and is assumed to match or contrast with the saree. Draping styles vary by region and are not described here.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "name": "Festive saree",
+    "department": "women",
+    "occasions": ["festive", "wedding", "party"],
+    "styles": ["traditional"],
+    "slots": [
+      {
+        "slotId": "outfit",
+        "slot": "one_piece",
+        "categoryOptions": ["saree"],
+        "colorRole": "accent",
+        "constraints": {
+          "fabrics": ["silk", "georgette", "chiffon", "chanderi"]
+        }
+      },
+      {
+        "slotId": "footwear",
+        "slot": "footwear",
+        "categoryOptions": ["shoes"],
+        "colorRole": "neutral"
+      },
+      {
+        "slotId": "accessory-1",
+        "slot": "accessory",
+        "categoryOptions": ["accessory"],
+        "colorRole": "any"
+      },
+      {
+        "slotId": "accessory-2",
+        "slot": "accessory",
+        "categoryOptions": ["accessory"],
+        "optional": true,
+        "colorRole": "accent"
+      }
+    ],
+    "compatiblePalettes": ["PAL-005", "PAL-006", "PAL-008"],
+    "ruleRefs": ["STY-004", "STY-005", "FAB-003", "FAB-004"]
+  },
+  {
+    "id": "OUT-005",
+    "version": 2,
+    "tags": ["wear-fusion", "formality-casual", "kurti-jeans"],
+    "userAdjustable": ["styles", "occasions", "silhouettes", "fit"],
+    "rationale": "A short kurti over straight or tapered jeans mixes an Indian top with a western base, giving a relaxed look that moves easily from errands to travel to a casual date.",
+    "limitations": "Kurti length and sleeve follow the user's coverage preferences. Jeans fit is personal, so the user's saved bottoms fit takes priority.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "name": "Short kurti with jeans",
+    "department": "women",
+    "occasions": ["everyday", "travel", "date"],
+    "styles": ["fusion", "casual"],
+    "slots": [
+      {
+        "slotId": "top",
+        "slot": "top",
+        "categoryOptions": ["kurti"],
+        "colorRole": "accent",
+        "constraints": {
+          "lengths": ["hip", "thigh"]
+        }
+      },
+      {
+        "slotId": "bottom",
+        "slot": "bottom",
+        "categoryOptions": ["jeans"],
+        "colorRole": "neutral",
+        "constraints": {
+          "silhouettes": ["straight", "tapered", "flared"]
+        }
+      },
+      {
+        "slotId": "footwear",
+        "slot": "footwear",
+        "categoryOptions": ["shoes"],
+        "colorRole": "neutral"
+      },
+      {
+        "slotId": "accessory-1",
+        "slot": "accessory",
+        "categoryOptions": ["accessory"],
+        "optional": true,
+        "colorRole": "any"
+      }
+    ],
+    "compatiblePalettes": ["PAL-001", "PAL-002", "PAL-007"],
+    "ruleRefs": ["STY-001", "STY-006", "FAB-001", "FAB-005"]
+  },
+  {
+    "id": "OUT-006",
+    "version": 2,
+    "tags": ["wear-fusion", "formality-smart", "kurta-jeans"],
+    "userAdjustable": ["styles", "occasions", "silhouettes", "fit"],
+    "rationale": "A short kurta over slim or straight jeans pairs an Indian top with a western base, a smart-casual look for everyday outings and dates.",
+    "limitations": "Kurta length and fit follow the user's preferences; longer kurtas over jeans are also common. Jeans fit is personal, so the user's saved bottoms fit takes priority.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "name": "Short kurta with jeans",
+    "department": "men",
+    "occasions": ["everyday", "date"],
+    "styles": ["fusion", "smart_casual"],
+    "slots": [
+      {
+        "slotId": "top",
+        "slot": "top",
+        "categoryOptions": ["kurta"],
+        "colorRole": "accent",
+        "constraints": {
+          "lengths": ["hip", "thigh"]
+        }
+      },
+      {
+        "slotId": "bottom",
+        "slot": "bottom",
+        "categoryOptions": ["jeans"],
+        "colorRole": "neutral",
+        "constraints": {
+          "silhouettes": ["straight", "tapered"]
+        }
+      },
+      {
+        "slotId": "footwear",
+        "slot": "footwear",
+        "categoryOptions": ["shoes"],
+        "colorRole": "neutral"
+      }
+    ],
+    "compatiblePalettes": ["PAL-001", "PAL-002", "PAL-007"],
+    "ruleRefs": ["STY-001", "STY-006", "FAB-001", "FAB-005"]
+  },
+  {
+    "id": "OUT-007",
+    "version": 2,
+    "tags": ["wear-western", "formality-casual", "weekend"],
+    "userAdjustable": ["styles", "occasions", "fit", "colors"],
+    "rationale": "A T-shirt with jeans is an easy, low-effort base for errands and travel; a solid top keeps the outfit simple to coordinate with shoes and accessories.",
+    "limitations": "Fit and silhouette are personal, so the user's saved fit preferences take priority. Overshirts, jackets and other layers are not included yet.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "name": "T-shirt and jeans",
+    "department": "any",
+    "occasions": ["everyday", "travel"],
+    "styles": ["casual", "minimal", "streetwear"],
+    "slots": [
+      {
+        "slotId": "top",
+        "slot": "top",
+        "categoryOptions": ["t_shirt"],
+        "colorRole": "any"
+      },
+      {
+        "slotId": "bottom",
+        "slot": "bottom",
+        "categoryOptions": ["jeans"],
+        "colorRole": "neutral"
+      },
+      {
+        "slotId": "footwear",
+        "slot": "footwear",
+        "categoryOptions": ["shoes"],
+        "colorRole": "neutral"
+      },
+      {
+        "slotId": "accessory-1",
+        "slot": "accessory",
+        "categoryOptions": ["accessory"],
+        "optional": true,
+        "colorRole": "any"
+      }
+    ],
+    "compatiblePalettes": ["PAL-002", "PAL-003", "PAL-004", "PAL-007"],
+    "ruleRefs": ["STY-001", "STY-006", "FAB-005", "FAB-006"]
+  },
+  {
+    "id": "OUT-008",
+    "version": 2,
+    "tags": ["wear-western", "formality-smart", "evening"],
+    "userAdjustable": ["styles", "occasions", "colors", "contrast"],
+    "rationale": "A shirt with tailored trousers in a higher-contrast combination, or a deep tonal one, gives a sharp evening look for parties and dinners.",
+    "limitations": "Evening dress codes vary; the user's style choices take priority. Blazers and other layers are not included yet.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "name": "Evening shirt and trousers",
+    "department": "men",
+    "occasions": ["party", "date"],
+    "styles": ["smart_casual", "classic"],
+    "slots": [
+      {
+        "slotId": "top",
+        "slot": "top",
+        "categoryOptions": ["shirt"],
+        "colorRole": "any"
+      },
+      {
+        "slotId": "bottom",
+        "slot": "bottom",
+        "categoryOptions": ["trousers"],
+        "colorRole": "neutral",
+        "constraints": {
+          "silhouettes": ["straight", "tapered"]
+        }
+      },
+      {
+        "slotId": "footwear",
+        "slot": "footwear",
+        "categoryOptions": ["shoes"],
+        "colorRole": "neutral"
+      },
+      {
+        "slotId": "accessory-1",
+        "slot": "accessory",
+        "categoryOptions": ["accessory"],
+        "optional": true,
+        "colorRole": "neutral"
+      }
+    ],
+    "compatiblePalettes": ["PAL-004", "PAL-008"],
+    "ruleRefs": ["STY-005", "STY-008"]
+  }
+]
