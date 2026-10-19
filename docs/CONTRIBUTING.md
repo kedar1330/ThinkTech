@@ -23,10 +23,10 @@ Feature branches never deploy to production. Once staging exists (after the host
 
 ```
 Issue → feature/* or fix/* branch → contracts first → implementation → tests → local check
-→ pull request → CI (typecheck, lint, format check, style-rule linter and coverage report, tests, build, Docker image build) → review → merge
+→ pull request → CI (typecheck, lint, format check, style-rule linter and coverage report, tests, build, Docker image build, Playwright E2E) → review → merge
 ```
 
-Commit messages follow Conventional Commits. The CI steps are in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). The Playwright E2E smoke flow is planned (#36; earlier #7) and is not part of CI yet.
+Commit messages follow Conventional Commits. The CI steps are in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). The Playwright E2E suite (`e2e/`, #36) runs in CI as the `e2e` job; see [`e2e/README.md`](../e2e/README.md) to add a feature flow.
 
 ---
 

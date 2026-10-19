@@ -52,7 +52,7 @@ Versions are the ranges declared in each `package.json` on 2026-10-18. Exact res
 | Container | Docker (API image only); Docker Compose runs the API against local MongoDB | — | `apps/api/Dockerfile`, `docker-compose.yml` |
 | Hosting definition | `render.yaml` (not connected to any account, D-81) | — | root |
 
-**Not installed** (listed in planning documents only): Playwright, Zustand, Gemini/any AI SDK, Cloudinary, MediaPipe, Three.js, PDFKit, Redis, BullMQ, any weather or retailer client. Their folders (`apps/api/src/integrations/*`, `apps/web/app/{analyze,avatar,chat,design,outfits,products,tailor,tryon}`, `apps/web/stores`) contain only `.gitkeep`.
+**Not installed** (listed in planning documents only): Zustand, Gemini/any AI SDK, Cloudinary, MediaPipe, Three.js, PDFKit, Redis, BullMQ, any weather or retailer client. Their folders (`apps/api/src/integrations/*`, `apps/web/app/{analyze,avatar,chat,design,outfits,products,tailor,tryon}`, `apps/web/stores`) contain only `.gitkeep`.
 
 ## 2. Runtime requirements
 
@@ -246,7 +246,8 @@ Strategy and scenario IDs: [TESTING.md](TESTING.md). Suite state verified on 202
 | `apps/web` (Vitest + Testing Library, jsdom) | 8 | 58 | All pass |
 | `pnpm typecheck`, `pnpm lint` | — | — | Pass |
 | `pnpm format:check` | — | — | Fails on a Windows checkout with `core.autocrlf=true` (CRLF only); `prettier --check --end-of-line auto .` passes ([TODO.md](TODO.md) TD-DOC-06) |
-| Playwright E2E, evaluation set | — | — | Not set up (#36, #54) |
+| Playwright E2E (`e2e/`) | 2 | 5 × 2 viewports | Added by #36: auth smoke flow and browser-level T-47/T-48 ([TESTING.md](TESTING.md) §7) |
+| Evaluation set | — | — | Not set up (#54) |
 
 With C0 approved (2026-10-19) the shipped library is linter-clean, so that test passes everywhere.
 
