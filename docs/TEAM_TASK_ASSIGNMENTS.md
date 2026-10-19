@@ -74,7 +74,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 
 **Out of scope.** Feature pages, saved-look UI, shopping, photo analysis, measurements, retailer data.
 
-**Issues.** #30 ✅, #31 ✅, #63 (closed but only `WEAR_TYPES` implemented), #32 (PR #68 open), #33, #34, #35, #55. Details: [TODO.md](TODO.md) §2.
+**Issues.** #30 ✅, #31 ✅, #63 (closed but only `WEAR_TYPES` implemented), #32 (C0 approved 2026-10-19, PR pending), #33 (built and verified on C0, PR pending), #34, #35, #55. Details: [TODO.md](TODO.md) §2.
 
 ### 4.2 Johita — Discover My Style and Outfit Categories
 
@@ -92,7 +92,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 **Interfaces.** Consumes `POST /v1/recommendations` and the outfit contracts (Shreya); calls save and feedback (Ankita) and shortlist (Kedar).
 
 **Can start now.** UI and component tests against the agreed contract shapes with fixture data; the Outfit Categories requirement draft.
-**Must wait.** Live integration waits for the engine (#33); real looks wait for approved content (#32).
+**Must wait.** Live integration waits for #33 to merge (engine built; C0 approved 2026-10-19).
 
 **Tests.** Component tests for filters, results, alternatives and empty, loading and error states; integration test of request → results → save → shop; responsive checks at 320, 390, 768 and 1366 px.
 

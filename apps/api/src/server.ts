@@ -21,7 +21,7 @@ async function main() {
   const styleLibrary = loadStyleLibrary(SHIPPED_LIBRARY, { appEnv: config.APP_ENV });
   logger.info({ event: 'style_library_loaded', ...styleLibrary.counts });
   const db = await connectDatabase(config.MONGODB_URI, config.TOMBSTONE_STORE_URI);
-  const { app } = createApp({ config, db, logger, emailSender, smsSender, googleVerifier: google });
+  const { app } = createApp({ config, db, logger, emailSender, smsSender, googleVerifier: google, styleLibrary });
   const server = app.listen(config.PORT, '0.0.0.0', () => {
     logger.info({
       event: 'api_started',

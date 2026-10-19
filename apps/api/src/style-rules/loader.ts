@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Category, Department, Occasion, Style } from '@styleme/contracts';
 import fabricRules from './data/fabric-rules.json' with { type: 'json' };
 import palettes from './data/palettes.json' with { type: 'json' };
@@ -46,6 +47,8 @@ export class StyleLibrary {
   readonly stylingRules: readonly StylingRule[];
   readonly fabricRules: readonly FabricRule[];
   readonly templates: readonly Template[];
+  /** Hash of every loaded record's `id@version`: the same input and content version give the same looks. */
+  readonly contentVersion: string;
 
   private readonly byId = new Map<string, Palette | Rule | Template>();
   private readonly templatesByOccasion = new Map<Occasion, Template[]>();
@@ -66,9 +69,17 @@ export class StyleLibrary {
     this.fabricRules = records.fabricRules;
     this.templates = records.templates;
 
-    for (const record of [...this.palettes, ...this.stylingRules, ...this.fabricRules, ...this.templates]) {
-      this.byId.set(record.id, record);
-    }
+    const all = [...this.palettes, ...this.stylingRules, ...this.fabricRules, ...this.templates];
+    for (const record of all) this.byId.set(record.id, record);
+    this.contentVersion = createHash('sha256')
+      .update(
+        all
+          .map((r) => `${r.id}@${r.version}`)
+          .sort()
+          .join(','),
+      )
+      .digest('hex')
+      .slice(0, 16);
     for (const template of this.templates) {
       for (const occasion of template.occasions) push(this.templatesByOccasion, occasion, template);
       for (const style of template.styles) push(this.templatesByStyle, style, template);

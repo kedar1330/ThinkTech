@@ -134,6 +134,178 @@ export function fixtureTemplate(n: number, overrides: Overrides & { paletteCount
   };
 }
 
+/**
+ * A small hand-built library for the look engine and palette tests (#33, #34): every department, wear
+ * type, slot role and rule tier appears at least once, so each engine step can be tested by name.
+ * Synthetic like everything here — the colours, rules and wording are not styling advice.
+ */
+export function buildEngineFixtureLibrary(): RawLibrary {
+  const slot = (slotId: string, slot: string, categoryOptions: string[], extra: Overrides = {}) => ({
+    slotId,
+    slot,
+    categoryOptions,
+    ...extra,
+  });
+  const footwear = slot('footwear', 'footwear', ['shoes'], { colorRole: 'neutral' });
+  return {
+    palettes: [
+      fixturePalette(1, {
+        name: 'Fixture warm',
+        undertoneAffinity: ['warm'],
+        neutrals: ['cream', 'tan'],
+        accents: ['rust', 'mustard'],
+        combinations: [
+          { colors: ['cream', 'rust'], contrastLevel: 'medium' },
+          { colors: ['tan', 'mustard'], contrastLevel: 'low' },
+        ],
+        occasions: ['everyday', 'work'],
+      }),
+      fixturePalette(2, {
+        name: 'Fixture cool',
+        undertoneAffinity: ['cool'],
+        skinToneRange: '2-4',
+        neutrals: ['white', 'navy', 'grey'],
+        accents: ['powder_blue', 'lavender'],
+        combinations: [
+          { colors: ['navy', 'white'], contrastLevel: 'high' },
+          { colors: ['grey', 'powder_blue'], contrastLevel: 'low' },
+          { colors: ['white', 'lavender'], contrastLevel: 'medium' },
+        ],
+        occasions: ['everyday', 'work', 'formal'],
+      }),
+      fixturePalette(3, {
+        name: 'Fixture festive',
+        undertoneAffinity: ['any'],
+        neutrals: ['ivory', 'gold'],
+        accents: ['maroon', 'emerald'],
+        combinations: [
+          { colors: ['ivory', 'maroon'], contrastLevel: 'high' },
+          { colors: ['gold', 'emerald'], contrastLevel: 'medium' },
+        ],
+        occasions: ['festive', 'wedding'],
+      }),
+    ],
+    stylingRules: [
+      fixtureStylingRule(1, {
+        rationale: 'Synthetic fixture rationale: one solid piece makes the look easier to coordinate.',
+        type: 'coordination',
+        areas: ['coordination'],
+        coordinationAspects: ['pattern_mixing'],
+        appliesTo: { occasions: ['everyday'] },
+        effect: { prefer: [{ attribute: 'pattern', value: 'solid' }], weight: 0.3 },
+      }),
+      fixtureStylingRule(2, {
+        rationale: 'Synthetic fixture rationale: straight trousers keep a clean line under a long top.',
+        areas: ['coordination'],
+        coordinationAspects: ['proportion_balance'],
+        appliesTo: { categories: ['trousers'], styles: ['traditional'] },
+        effect: { prefer: [{ attribute: 'silhouette', value: 'straight' }], weight: 0.4 },
+      }),
+      // Scoped to self-described proportions, so it counts as an appearance signal (lowest tier).
+      fixtureStylingRule(3, {
+        rationale: 'Synthetic fixture rationale: tapered trousers narrow towards the ankle.',
+        type: 'proportion',
+        areas: ['fit'],
+        appliesTo: { categories: ['trousers'], proportions: ['hips_wider_than_shoulders'] },
+        effect: { prefer: [{ attribute: 'silhouette', value: 'tapered' }], weight: 1 },
+      }),
+      fixtureStylingRule(4, {
+        rationale: 'Synthetic fixture rationale: an A-line kurti flares gently from the chest.',
+        type: 'proportion',
+        areas: ['fit'],
+        appliesTo: { categories: ['kurti'], proportions: ['hips_wider_than_shoulders'] },
+        effect: { prefer: [{ attribute: 'silhouette', value: 'a_line' }], weight: 0.5 },
+      }),
+    ],
+    fabricRules: [
+      fixtureFabricRule(1, {
+        fabric: 'cotton',
+        rationale: 'Synthetic fixture rationale: cotton is a breathable everyday fabric.',
+        appliesTo: { occasions: ['everyday', 'work'] },
+        effect: { prefer: [{ attribute: 'fabric', value: 'cotton' }], weight: 0.4 },
+      }),
+      fixtureFabricRule(2, {
+        fabric: 'silk',
+        rationale: 'Synthetic fixture rationale: silk has a sheen often chosen for festive wear.',
+        appliesTo: { occasions: ['festive', 'wedding'] },
+        effect: { prefer: [{ attribute: 'fabric', value: 'silk' }], weight: 0.5 },
+      }),
+    ],
+    templates: [
+      fixtureTemplate(1, {
+        name: 'Fixture kurti set',
+        tags: ['fixture', 'wear-indian'],
+        department: 'women',
+        occasions: ['everyday', 'work'],
+        styles: ['casual', 'traditional'],
+        slots: [
+          slot('top', 'top', ['kurti'], { colorRole: 'accent' }),
+          slot('bottom', 'bottom', ['trousers'], {
+            colorRole: 'neutral',
+            constraints: { silhouettes: ['straight', 'tapered', 'wide_leg'] },
+          }),
+          footwear,
+          slot('accessory-1', 'accessory', ['accessory'], { optional: true }),
+        ],
+        compatiblePalettes: ['PAL-001', 'PAL-002'],
+        ruleRefs: ['STY-002', 'FAB-001'],
+      }),
+      fixtureTemplate(2, {
+        name: 'Fixture shirt and trousers',
+        tags: ['fixture', 'wear-western'],
+        department: 'any',
+        occasions: ['everyday', 'work', 'formal'],
+        styles: ['classic', 'smart_casual'],
+        slots: [
+          slot('top', 'top', ['shirt'], { constraints: { necklines: ['collared'] } }),
+          slot('bottom', 'bottom', ['trousers', 'jeans'], { colorRole: 'neutral' }),
+          footwear,
+        ],
+        compatiblePalettes: [],
+      }),
+      fixtureTemplate(3, {
+        name: 'Fixture kurta set',
+        tags: ['fixture', 'wear-indian'],
+        department: 'men',
+        occasions: ['everyday'],
+        styles: ['casual', 'traditional'],
+        slots: [
+          slot('top', 'top', ['kurta'], { colorRole: 'accent' }),
+          slot('bottom', 'bottom', ['trousers'], { colorRole: 'neutral' }),
+          footwear,
+        ],
+        compatiblePalettes: ['PAL-001'],
+      }),
+      fixtureTemplate(4, {
+        name: 'Fixture festive drape',
+        tags: ['fixture', 'wear-indian'],
+        department: 'women',
+        occasions: ['festive', 'wedding'],
+        styles: ['traditional'],
+        slots: [
+          slot('outfit', 'one_piece', ['saree', 'lehenga'], { colorRole: 'accent' }),
+          footwear,
+          slot('accessory-1', 'accessory', ['accessory'], { colorRole: 'neutral' }),
+        ],
+        compatiblePalettes: ['PAL-003'],
+      }),
+      fixtureTemplate(5, {
+        name: 'Fixture tee and jeans',
+        tags: ['fixture', 'wear-fusion'],
+        department: 'any',
+        occasions: ['everyday'],
+        styles: ['casual', 'streetwear'],
+        slots: [
+          slot('top', 'top', ['t_shirt'], { constraints: { sleeves: ['short', 'elbow'] } }),
+          slot('bottom', 'bottom', ['jeans'], { colorRole: 'neutral' }),
+          footwear,
+        ],
+        compatiblePalettes: ['PAL-002'],
+      }),
+    ],
+  };
+}
+
 const range = (count: number) => Array.from({ length: count }, (_, i) => i + 1);
 
 /** A synthetic library of the given size; defaults to the T-38 scale (150 palettes, 150 templates). */

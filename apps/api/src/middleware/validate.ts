@@ -11,3 +11,13 @@ export function validateBody(schema: ZodType): RequestHandler {
     next();
   };
 }
+
+/** Puts the parsed query in `res.locals.query` (Express 5's `req.query` is read-only), or rejects with INVALID_REQUEST. */
+export function validateQuery(schema: ZodType): RequestHandler {
+  return (req, res, next) => {
+    const result = schema.safeParse(req.query ?? {});
+    if (!result.success) throw new AppError('INVALID_REQUEST');
+    res.locals.query = result.data;
+    next();
+  };
+}
