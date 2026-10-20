@@ -143,6 +143,7 @@ describe('dashboard sections', () => {
     expect(available.map((f) => f.slug)).toEqual([
       'discover-my-style',
       'colour-palette',
+      'outfit-categories',
       'shop-my-look',
       'saved-outfits',
     ]);
