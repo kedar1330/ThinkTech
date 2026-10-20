@@ -177,13 +177,13 @@ describe('app top navigation', () => {
     for (const name of [
       'My Colour Palette',
       'Outfit Categories',
-      'Shop My Look',
       'Virtual Try-On',
       'Design Studio',
       'Style Assistant',
     ]) {
       expect(within(menu).getByRole('link', { name: new RegExp(name) })).toHaveTextContent('Coming soon');
     }
+    expect(within(menu).getByRole('link', { name: 'Shop My Look' })).toHaveAttribute('href', '/shop');
     expect(within(menu).getByRole('link', { name: 'Saved Outfits' })).toHaveAttribute('href', '/saved');
     await user.keyboard('{Escape}');
     expect(document.getElementById('nav-more')).toBeNull();

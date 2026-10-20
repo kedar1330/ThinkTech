@@ -1,0 +1,91 @@
+import type { Page } from '@playwright/test';
+import { expect, signUpAndSkipOnboarding, test } from './fixtures/auth';
+
+// Shop My Look, Stage 1 (#43): the user's own shortlist items on the parts of a saved look. Synthetic data
+// only; the link uses an example domain and is never opened.
+
+async function looks(page: Page) {
+  await page.goto('/discover/looks');
+  await page.getByRole('radio', { name: 'Everyday' }).check();
+  await page.getByRole('button', { name: 'Show me looks' }).click();
+  return page.getByRole('region', { name: 'Your looks' });
+}
+
+test('shop a saved look: add your own item to a part and see the labelled total', async ({ page }) => {
+  await signUpAndSkipOnboarding(page);
+  const results = await looks(page);
+  const first = results.getByRole('article', { name: 'Look 1' });
+
+  await test.step('save the look and open it in Shop My Look', async () => {
+    await first.getByRole('button', { name: 'Save to Saved Outfits' }).click();
+    await expect(first.getByRole('status')).toHaveText(/Saved to Saved Outfits\./);
+    await first.getByRole('link', { name: 'Shop this look' }).click();
+    await expect(page).toHaveURL(/\/shop\?outfitId=[a-f0-9]{24}$/);
+    await expect(page.getByText('Product data unavailable')).toBeVisible();
+    await expect(page.getByText(/Add items from your shortlist to the parts below/)).toBeVisible();
+  });
+  const shopUrl = page.url();
+
+  await test.step('add an item you found to the shortlist', async () => {
+    await page.goto('/shortlist');
+    await page.getByLabel('Item name').fill('Synthetic test kurta');
+    await page.getByLabel('Price you saw (₹)').fill('1299.50');
+    await page.getByLabel('Link').fill('https://shop.example/kurta?ref=e2e');
+    await page.getByRole('button', { name: 'Add to shortlist' }).click();
+    await expect(page.getByText('“Synthetic test kurta” was added to your shortlist.')).toBeVisible();
+  });
+
+  await test.step('put it on the first part of the look', async () => {
+    await page.goto(shopUrl);
+    const part = page.getByRole('list', { name: 'Parts of this look' }).locator(':scope > li').first();
+    await part.getByRole('combobox').selectOption({ label: 'Synthetic test kurta — ₹1,299.50' });
+    await part.getByRole('button', { name: 'Add to look' }).click();
+    await expect(part.getByText('Synthetic test kurta')).toBeVisible();
+    await expect(part.getByText('Added by you — not verified by StyleMe')).toBeVisible();
+    const link = part.getByRole('link', { name: /shop\.example/ });
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow');
+
+    const summary = page.getByRole('group', { name: 'Price summary' });
+    await expect(summary).toContainText('₹1,299.50');
+    await expect(summary).toContainText('Total of prices you entered — not verified by StyleMe; not a checkout price');
+    await expect(summary).toContainText(/1 of \d+ parts priced/);
+  });
+
+  await test.step('the saved look shows the same labelled total', async () => {
+    await page.goto(`/saved/${new URL(shopUrl).searchParams.get('outfitId')}`);
+    const summary = page.getByRole('group', { name: 'Price summary' });
+    await expect(summary).toContainText('₹1,299.50');
+    await expect(summary).toContainText('not a checkout price');
+    await page.getByRole('link', { name: 'Shop this look' }).click();
+    await expect(page).toHaveURL(shopUrl);
+  });
+
+  await test.step('take it off again; it stays in the shortlist', async () => {
+    const part = page.getByRole('list', { name: 'Parts of this look' }).locator(':scope > li').first();
+    await part.getByRole('button', { name: /^Take Synthetic test kurta off/ }).click();
+    await expect(page.getByText(/Add items from your shortlist to the parts below/)).toBeVisible();
+    await page.goto('/shortlist');
+    await expect(page.getByRole('heading', { name: 'Synthetic test kurta' })).toBeVisible();
+  });
+});
+
+test('Shop My Look lists saved looks, and asks to save a suggested look first', async ({ page }) => {
+  await signUpAndSkipOnboarding(page);
+  const results = await looks(page);
+
+  await test.step('an unsaved look must be saved before items can be added', async () => {
+    await results.getByRole('article', { name: 'Look 2' }).getByRole('link', { name: 'Shop this look' }).click();
+    await expect(page.getByText(/Save this look first/)).toBeVisible();
+    await page.getByRole('button', { name: 'Save to Saved Outfits' }).click();
+    // Once saved, the page shows the look's parts to shop.
+    await expect(page.getByRole('list', { name: 'Parts of this look' })).toBeVisible();
+    await expect(page.getByText(/Save this look first/)).toHaveCount(0);
+  });
+
+  await test.step('the navigation entry opens the list of saved looks', async () => {
+    await page.goto('/shop');
+    await expect(page.getByRole('heading', { name: 'Shop your saved looks' })).toBeVisible();
+    await expect(page.getByText('Product data unavailable')).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Shop this look: / })).toHaveCount(1);
+  });
+});

@@ -29,7 +29,7 @@ describe('navigation items', () => {
       'Style Assistant',
       'Saved Outfits',
     ]);
-    expect(NAV_ITEMS.filter((i) => i.soon)).toHaveLength(6);
+    expect(NAV_ITEMS.filter((i) => i.soon)).toHaveLength(5);
   });
   it('matches the active route without false prefixes', () => {
     expect(isActive('/home', '/home')).toBe(true);

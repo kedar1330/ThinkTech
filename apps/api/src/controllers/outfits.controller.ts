@@ -14,7 +14,9 @@ export class OutfitsController {
   };
 
   get: RequestHandler = async (req, res) => {
-    sendData(res, await this.outfits.get(userOf(req), outfitIdOf(req)));
+    const look = await this.outfits.get(userOf(req), outfitIdOf(req));
+    // Attached items carry user-entered prices (AC-B1, B-05).
+    sendData(res, look, 200, look.userItems.length ? ['USER_ENTERED_PRICES'] : undefined);
   };
 
   save: RequestHandler = async (req, res) => {

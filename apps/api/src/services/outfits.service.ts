@@ -12,9 +12,11 @@ import {
   type OutfitStatus,
   type RecommendationRequest,
 } from '@styleme/contracts';
-import type { Models, OutfitDoc } from '../models/index';
+import type { Models, OutfitDoc, ShortlistItemDoc } from '../models/index';
 import { AppError } from '../utils/errors';
+import { calculatePriceSummary } from './budget';
 import type { StyleLibrary } from './engine';
+import { toItem } from './shortlist.service';
 
 // Saved looks (FR-OUT-01 … 03, FR-OUT-05). Every query is scoped by `userId`, so another user's look,
 // a missing one and an expired suggestion all read as NOT_FOUND (T-04: no existence leak). Saving only
@@ -31,6 +33,7 @@ import type { StyleLibrary } from './engine';
 //   saved look without an entry, which the next save or remove repairs.
 
 type StoredOutfit = OutfitDoc & { _id: Types.ObjectId };
+type StoredItem = ShortlistItemDoc & { _id: Types.ObjectId };
 
 function toLook(doc: StoredOutfit): Look {
   return {
@@ -85,18 +88,31 @@ export class OutfitsService {
   }
 
   /**
-   * `GET /v1/outfits/:id`, suggested or saved. Items can't be attached to a look until Shop My Look
-   * (#43), so `userItems` is always empty and there is no price summary; #43 adds both.
+   * `GET /v1/outfits/:id`, suggested or saved, with the user's items attached to its slots (#43) and,
+   * when any are attached, the price summary of the prices they entered, computed on read against their
+   * budget per look (FR-BUD-07).
    */
   async get(userId: Types.ObjectId, id: Types.ObjectId): Promise<OutfitDetail> {
     const doc = await this.models.Outfit.findOne(this.owned(userId, id)).lean<StoredOutfit>();
     if (!doc) throw new AppError('NOT_FOUND');
+    const items = await this.models.ShortlistItem.find({ userId, outfitId: doc._id })
+      .sort({ createdAt: 1, _id: 1 })
+      .lean<StoredItem[]>();
+    const priceSummary =
+      items.length === 0
+        ? undefined
+        : calculatePriceSummary(
+            { slotIds: doc.slots.map((s: LookSlot) => s.slotId) },
+            items.map((i) => ({ slotId: i.slotId!, priceEntered: i.priceEntered })),
+            (await this.models.Profile.findOne({ userId }, { budgetPreference: 1 }).lean())?.budgetPreference,
+          );
     // The request and inputs snapshot let regenerate (#49) re-run the request and say what changed.
     return {
       ...toLook(doc),
       request: doc.request as RecommendationRequest,
       inputsUsed: doc.inputsUsed as LookInputs,
-      userItems: [],
+      userItems: items.map(toItem),
+      ...(priceSummary ? { priceSummary } : {}),
     };
   }
 
