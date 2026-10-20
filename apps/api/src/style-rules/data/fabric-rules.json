@@ -226,5 +226,195 @@
       "weight": 0.3
     },
     "practicalityValidated": false
+  },
+  {
+    "id": "FAB-007",
+    "version": 2,
+    "tags": ["brocade", "banarasi", "festive"],
+    "userAdjustable": ["fabrics", "comfort"],
+    "rationale": "Brocade, including Banarasi weaves, has woven patterns and often zari that give a structured shape and a rich surface suited to weddings and festive functions.",
+    "limitations": "Brocade is heavy, warm and needs careful storage and dry cleaning; it can feel stiff in hot weather. Properties are typical for the fabric, not for any particular garment.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "fabric": "brocade",
+    "properties": {
+      "breathability": "low",
+      "moistureManagement": "low",
+      "quickDry": false,
+      "warmth": "medium",
+      "weight": "heavy",
+      "stretch": "none",
+      "wrinkleResistance": "medium",
+      "care": "delicate"
+    },
+    "useCases": ["Wedding sarees and lehengas", "Festive kurtas", "Evening receptions in cooler weather"],
+    "areas": ["preference", "occasion"],
+    "appliesTo": {
+      "occasions": ["festive", "wedding"],
+      "categories": ["saree", "lehenga", "kurta"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "fabric",
+          "value": "brocade"
+        }
+      ],
+      "weight": 0.3
+    },
+    "practicalityValidated": false
+  },
+  {
+    "id": "FAB-008",
+    "version": 2,
+    "tags": ["organza", "sheer", "festive"],
+    "userAdjustable": ["fabrics", "comfort"],
+    "rationale": "Organza is light, sheer and crisp, so it holds a gentle shape and catches the light, which suits sarees and lehengas for daytime and evening celebrations.",
+    "limitations": "Organza is sheer and usually needs a lining or petticoat; it creases and snags easily and needs gentle care. Properties are typical for the fabric, not for any particular garment.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "fabric": "organza",
+    "properties": {
+      "breathability": "medium",
+      "moistureManagement": "low",
+      "quickDry": true,
+      "warmth": "low",
+      "weight": "light",
+      "stretch": "none",
+      "wrinkleResistance": "low",
+      "care": "delicate"
+    },
+    "useCases": ["Lightweight festive sarees", "Lehengas for daytime functions"],
+    "areas": ["preference", "occasion"],
+    "appliesTo": {
+      "occasions": ["festive", "wedding", "party"],
+      "categories": ["saree", "lehenga"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "fabric",
+          "value": "organza"
+        }
+      ],
+      "weight": 0.3
+    },
+    "practicalityValidated": false
+  },
+  {
+    "id": "FAB-009",
+    "version": 2,
+    "tags": ["muslin", "breathable", "everyday"],
+    "userAdjustable": ["fabrics", "comfort"],
+    "rationale": "Muslin is a soft, loosely woven cotton that breathes well and feels light, which makes it practical for everyday kurtas and kurtis in warm weather.",
+    "limitations": "Muslin creases easily and can be slightly sheer in light colours. Properties are typical for the fabric, not for any particular garment.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "fabric": "muslin",
+    "properties": {
+      "breathability": "high",
+      "moistureManagement": "medium",
+      "quickDry": true,
+      "warmth": "low",
+      "weight": "light",
+      "stretch": "none",
+      "wrinkleResistance": "low",
+      "care": "moderate"
+    },
+    "useCases": ["Everyday kurtas and kurtis", "Warm-weather travel"],
+    "areas": ["preference"],
+    "appliesTo": {
+      "occasions": ["everyday", "travel", "work"],
+      "categories": ["kurta", "kurti"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "fabric",
+          "value": "muslin"
+        }
+      ],
+      "weight": 0.3
+    },
+    "practicalityValidated": false
+  },
+  {
+    "id": "FAB-010",
+    "version": 2,
+    "tags": ["net", "sheer", "evening"],
+    "userAdjustable": ["fabrics", "comfort"],
+    "rationale": "Net is an open, lightweight mesh that layers well and carries embroidery and sequins, which suits lehengas and sarees for evening functions and parties.",
+    "limitations": "Net is sheer and usually lined; it can snag and some people find it scratchy against the skin. Properties are typical for the fabric, not for any particular garment.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "fabric": "net",
+    "properties": {
+      "breathability": "medium",
+      "moistureManagement": "low",
+      "quickDry": true,
+      "warmth": "low",
+      "weight": "light",
+      "stretch": "none",
+      "wrinkleResistance": "medium",
+      "care": "delicate"
+    },
+    "useCases": ["Evening lehengas", "Party sarees"],
+    "areas": ["preference", "occasion"],
+    "appliesTo": {
+      "occasions": ["party", "wedding"],
+      "categories": ["lehenga", "saree"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "fabric",
+          "value": "net"
+        }
+      ],
+      "weight": 0.3
+    },
+    "practicalityValidated": false
+  },
+  {
+    "id": "FAB-011",
+    "version": 2,
+    "tags": ["tissue", "sheen", "festive"],
+    "userAdjustable": ["fabrics", "comfort"],
+    "rationale": "Tissue fabrics are woven with metallic yarn, giving a light fabric with a soft shimmer that suits festive sarees and lehengas without the weight of brocade.",
+    "limitations": "Tissue creases easily, can feel crisp against the skin and needs dry cleaning. Properties are typical for the fabric, not for any particular garment.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "fabric": "tissue",
+    "properties": {
+      "breathability": "low",
+      "moistureManagement": "low",
+      "quickDry": false,
+      "warmth": "low",
+      "weight": "light",
+      "stretch": "none",
+      "wrinkleResistance": "low",
+      "care": "delicate"
+    },
+    "useCases": ["Festive sarees", "Lehengas for daytime ceremonies"],
+    "areas": ["preference", "occasion"],
+    "appliesTo": {
+      "occasions": ["festive", "wedding"],
+      "categories": ["saree", "lehenga"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "fabric",
+          "value": "tissue"
+        }
+      ],
+      "weight": 0.3
+    },
+    "practicalityValidated": false
   }
 ]

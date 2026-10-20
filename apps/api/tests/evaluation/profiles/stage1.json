@@ -1,0 +1,174 @@
+[
+  {
+    "id": "EVAL-01-women-everyday-minimal",
+    "request": { "occasion": "everyday", "style": "minimal" },
+    "profile": { "department": "women", "likedColors": ["sage", "off_white"], "sizes": { "tops": { "letter": "M" } } }
+  },
+  {
+    "id": "EVAL-02-women-work-smart-casual",
+    "request": { "occasion": "work", "style": "smart_casual" },
+    "profile": {
+      "department": "women",
+      "likedColors": ["navy", "charcoal"],
+      "dislikedColors": ["fuchsia"],
+      "fitPreferences": { "tops": "regular" }
+    }
+  },
+  {
+    "id": "EVAL-03-women-festive-indian",
+    "request": { "occasion": "festive", "wearType": ["indian"] },
+    "profile": {
+      "department": "women",
+      "likedColors": ["maroon", "gold"],
+      "fabricPreferences": { "liked": ["silk"], "avoided": [] },
+      "sizes": { "ethnicTops": { "letter": "L" } }
+    }
+  },
+  {
+    "id": "EVAL-04-women-wedding-traditional",
+    "request": { "occasion": "wedding", "style": "traditional" },
+    "profile": {
+      "department": "women",
+      "likedColors": ["emerald", "antique_gold"],
+      "coveragePreferences": { "minSleeveLength": "elbow" }
+    }
+  },
+  {
+    "id": "EVAL-05-women-party-explore",
+    "request": { "occasion": "party", "paletteMode": "explore" },
+    "profile": { "department": "women", "likedColors": ["fuchsia"], "dislikedColors": ["black"] }
+  },
+  {
+    "id": "EVAL-06-women-date-boho",
+    "request": { "occasion": "date" },
+    "profile": { "department": "women", "preferredStyles": ["boho"], "silhouettePreferences": ["a_line", "wrap"] }
+  },
+  {
+    "id": "EVAL-07-women-travel-comfort",
+    "request": { "occasion": "travel" },
+    "profile": {
+      "department": "women",
+      "comfortPreferences": ["lightweight", "breathable", "flat_footwear"],
+      "fabricPreferences": { "liked": [], "avoided": ["silk", "satin"] }
+    }
+  },
+  {
+    "id": "EVAL-08-women-formal-high-contrast",
+    "request": { "occasion": "formal" },
+    "profile": { "department": "women", "likedColors": ["black", "silver"], "contrastPreference": "high" }
+  },
+  {
+    "id": "EVAL-09-men-everyday-casual",
+    "request": { "occasion": "everyday", "style": "casual" },
+    "profile": {
+      "department": "men",
+      "likedColors": ["denim_blue", "white"],
+      "sizes": { "bottoms": { "waistIn": 32 } }
+    }
+  },
+  {
+    "id": "EVAL-10-men-work-western",
+    "request": { "occasion": "work", "wearType": ["western"] },
+    "profile": { "department": "men", "likedColors": ["navy", "light_grey"], "fitPreferences": { "tops": "slim" } }
+  },
+  {
+    "id": "EVAL-11-men-festive",
+    "request": { "occasion": "festive" },
+    "profile": {
+      "department": "men",
+      "likedColors": ["saffron", "cream"],
+      "sizes": { "ethnicTops": { "letter": "M" } }
+    }
+  },
+  {
+    "id": "EVAL-12-men-wedding-traditional",
+    "request": { "occasion": "wedding", "style": "traditional" },
+    "profile": { "department": "men" }
+  },
+  {
+    "id": "EVAL-13-men-party-streetwear",
+    "request": { "occasion": "party", "style": "streetwear" },
+    "profile": { "department": "men", "likedColors": ["black"] }
+  },
+  {
+    "id": "EVAL-14-men-date-dislikes",
+    "request": { "occasion": "date", "style": "smart_casual" },
+    "profile": { "department": "men", "dislikedColors": ["red", "orange"] }
+  },
+  {
+    "id": "EVAL-15-men-travel-comfort",
+    "request": { "occasion": "travel" },
+    "profile": { "department": "men", "comfortPreferences": ["stretch", "easy_care"] }
+  },
+  {
+    "id": "EVAL-16-men-formal-classic",
+    "request": { "occasion": "formal", "style": "classic" },
+    "profile": { "department": "men", "sizes": { "tops": { "letter": "L", "collarIn": 15.5 }, "shoes": { "uk": 9 } } }
+  },
+  {
+    "id": "EVAL-17-any-everyday-fusion",
+    "request": { "occasion": "everyday", "wearType": ["fusion"] },
+    "profile": { "department": "any" }
+  },
+  {
+    "id": "EVAL-18-any-festive-explore",
+    "request": { "occasion": "festive", "paletteMode": "explore" },
+    "profile": { "department": "any", "likedColors": ["teal"] }
+  },
+  {
+    "id": "EVAL-19-no-department-occasion-only",
+    "request": { "occasion": "party" },
+    "profile": { "department": null }
+  },
+  {
+    "id": "EVAL-20-no-department-wedding",
+    "request": { "occasion": "wedding" },
+    "profile": { "department": null, "likedColors": ["rani_pink"] }
+  },
+  {
+    "id": "EVAL-21-women-signals-warm",
+    "request": { "occasion": "everyday" },
+    "profile": { "department": "women" },
+    "signals": { "undertone": "warm", "skinTone": "6-7", "bodyProportions": "balanced_defined_waist" }
+  },
+  {
+    "id": "EVAL-22-men-signals-cool",
+    "request": { "occasion": "work" },
+    "profile": { "department": "men" },
+    "signals": { "undertone": "cool", "skinTone": "2-3", "bodyProportions": "shoulders_wider_than_hips" }
+  },
+  {
+    "id": "EVAL-23-women-signals-olive",
+    "request": { "occasion": "date" },
+    "profile": { "department": "women", "likedColors": ["coral"] },
+    "signals": { "undertone": "olive", "skinTone": "4-5", "bodyProportions": "fuller_midsection" }
+  },
+  {
+    "id": "EVAL-24-colour-conflict",
+    "request": { "occasion": "work" },
+    "profile": { "department": "women", "likedColors": ["mustard", "teal"], "dislikedColors": ["mustard"] }
+  },
+  {
+    "id": "EVAL-25-fabric-conflict",
+    "request": { "occasion": "everyday" },
+    "profile": { "department": "men", "fabricPreferences": { "liked": ["linen"], "avoided": ["linen", "khadi"] } }
+  },
+  {
+    "id": "EVAL-26-full-coverage-wedding",
+    "request": { "occasion": "wedding" },
+    "profile": {
+      "department": "women",
+      "coveragePreferences": { "minSleeveLength": "full", "minNecklineCoverage": "high", "minGarmentLength": "ankle" }
+    }
+  },
+  {
+    "id": "EVAL-27-restrictive-festive-western",
+    "request": { "occasion": "festive", "wearType": ["western"] },
+    "profile": { "department": "women" }
+  },
+  {
+    "id": "EVAL-28-many-dislikes-explore",
+    "request": { "occasion": "travel", "paletteMode": "explore" },
+    "profile": { "department": "any", "dislikedColors": ["black", "white", "grey", "beige", "navy", "taupe"] }
+  }
+]

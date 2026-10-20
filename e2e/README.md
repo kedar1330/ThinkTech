@@ -54,6 +54,7 @@ is `https://`; the local harness is plain HTTP, where the cookies are correctly 
 | `support/servers.ts`   | Starts, waits for and stops the server processes (logs in `e2e/.logs/`)                   |
 | `auth.spec.ts`         | Authentication smoke flow                                                                 |
 | `security.spec.ts`     | T-47 (cookies, foreign-origin server action) and T-48 (reset link) in the browser         |
+| `discover.spec.ts`     | Discover My Style looks: journey, no department, limited results, responsive widths       |
 
 ## Adding a feature flow
 

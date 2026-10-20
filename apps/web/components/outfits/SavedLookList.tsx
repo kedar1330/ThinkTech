@@ -3,7 +3,7 @@ import { Heart } from 'lucide-react';
 import type { OutfitListResponse } from '@styleme/contracts';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { LookCard } from './LookCard';
+import { SavedLookCard } from './SavedLookCard';
 
 // One page of saved looks (FR-OUT-02) with the count and page links, or the empty state.
 
@@ -35,7 +35,7 @@ export function SavedLookList({ looks, page, limit, total }: OutfitListResponse)
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {looks.map((look) => (
           <li key={look.id}>
-            <LookCard look={look} />
+            <SavedLookCard look={look} />
           </li>
         ))}
       </ul>

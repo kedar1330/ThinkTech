@@ -7,7 +7,7 @@ import type { Look } from '@styleme/contracts';
 const actions = vi.hoisted(() => ({ saveOutfitAction: vi.fn(), removeOutfitAction: vi.fn() }));
 vi.mock('@/app/actions/outfits', () => actions);
 
-import { LookCard } from '@/components/outfits/LookCard';
+import { SavedLookCard } from '@/components/outfits/SavedLookCard';
 import { LookDetail } from '@/components/outfits/LookDetail';
 import { RemoveLookButton } from '@/components/outfits/RemoveLookButton';
 import { SavedLookList } from '@/components/outfits/SavedLookList';
@@ -63,7 +63,7 @@ beforeEach(() => {
 
 describe('saved look card', () => {
   it('names each piece and colour in text and links to the details', () => {
-    const { container } = render(<LookCard look={LOOK} />);
+    const { container } = render(<SavedLookCard look={LOOK} />);
     expect(screen.getByRole('link', { name: 'Navy kurta · Ivory trousers' })).toHaveAttribute(
       'href',
       `/saved/${LOOK.id}`,

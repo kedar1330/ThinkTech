@@ -46,12 +46,25 @@ const envSchema = z.object({
     .transform((v) => v === 'true'),
   // Google sign-in (D-88): the OAuth client ID that Google ID tokens must be issued for.
   GOOGLE_CLIENT_ID: optional,
+  // Optional AI wording of look explanations (D-67, #55): off by default. The key and model are
+  // required only when it is on (D-12: the model is chosen and recorded when enabling).
+  AI_WORDING_ENABLED: bool,
+  GEMINI_API_KEY: optional,
+  GEMINI_MODEL: optional,
+  AI_WORDING_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(4000),
+});
+
+const configSchema = envSchema.superRefine((env, ctx) => {
+  if (!env.AI_WORDING_ENABLED) return;
+  for (const name of ['GEMINI_API_KEY', 'GEMINI_MODEL'] as const) {
+    if (!env[name]) ctx.addIssue({ code: 'custom', path: [name], message: 'required when AI_WORDING_ENABLED=true' });
+  }
 });
 
 export type Config = z.infer<typeof envSchema>;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const parsed = envSchema.safeParse(env);
+  const parsed = configSchema.safeParse(env);
   if (!parsed.success) {
     // Report variable names only, never values.
     const names = parsed.error.issues.map((i) => i.path.join('.')).join(', ');

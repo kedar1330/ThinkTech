@@ -22,6 +22,9 @@ services:
         value: none
       - key: MAINTENANCE_MODE
         value: 'false'
+      # Optional AI wording stays off until enabled per D-67 (then add GEMINI_API_KEY and GEMINI_MODEL).
+      - key: AI_WORDING_ENABLED
+        value: 'false'
       - key: MONGODB_URI
         sync: false
       - key: TOMBSTONE_STORE_URI

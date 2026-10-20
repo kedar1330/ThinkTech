@@ -8,6 +8,7 @@ import {
   type WarningCode,
 } from '@styleme/contracts';
 import type { Palette, Template } from '../../style-rules/schemas';
+import { wearsContrast } from './contrast';
 import { explain, type Explanation } from './explain';
 import { templateWearType, type StyleLibrary } from './library';
 import { resolvePreferences, type EngineSignals, type PreferenceConflict, type Preferences } from './preferences';
@@ -193,17 +194,20 @@ function buildCandidate(
     if (['top', 'bottom', 'one_piece', 'layer'].includes(slot.slot)) usedGarmentColours.add(filled.choice.spec.colorId);
     slots.push(filled);
   }
-  const look = lookScore(template, palette, combination?.contrastLevel ?? null, request, prefs);
+  // A look has the combination's contrast only if its worn colours do (contrast.ts); otherwise neither
+  // the contrast preference nor contrast rules are claimed for it.
+  const realised = combination && wearsContrast(combination, usedColours) ? combination : null;
+  const look = lookScore(template, palette, realised?.contrastLevel ?? null, request, prefs);
   // Look-level rule effects: the contrast of the palette combination the look is built on (e.g. a
   // rule preferring medium contrast for work). Rules that apply to any of the look's garments count.
   const lookRules = new Map<string, ApplicableRule>();
   for (const { choice } of slots) {
     for (const r of applicableRules(library, choice.spec.category, scope, prefs)) lookRules.set(r.rule.id, r);
   }
-  const contrast = combination
+  const contrast = realised
     ? ruleEffects(
         [...lookRules.values()].sort((a, b) => a.rule.id.localeCompare(b.rule.id)),
-        { contrast: combination.contrastLevel },
+        { contrast: realised.contrastLevel },
       )
     : { score: ZERO, supporting: new Map<string, number>() };
   const supporting = new Map<string, number>(contrast.supporting);
@@ -244,24 +248,43 @@ const byRank = (a: Candidate, b: Candidate) =>
   a.combinationIndex - b.combinationIndex ||
   a.signature.localeCompare(b.signature);
 
+const GARMENT_SLOTS = new Set(['top', 'bottom', 'one_piece', 'layer']);
+
+/** What the user sees of a look's garments: every garment's specification, regardless of template or palette. */
+function outfitKey(candidate: Candidate): string {
+  return JSON.stringify(
+    candidate.slots
+      .filter(({ slot }) => GARMENT_SLOTS.has(slot.slot))
+      .map(({ choice: { spec } }) => JSON.stringify(Object.entries(spec).sort(([a], [b]) => a.localeCompare(b))))
+      .sort(),
+  );
+}
+
 /**
- * Up to MAX_LOOKS looks with unique signatures (FR-LOOK-13). For variety, the best look of each
- * template is taken first, then of each template and palette pair, then the rest in rank order.
+ * Up to MAX_LOOKS looks with unique signatures (FR-LOOK-13) and no two with the same garments (two
+ * templates or palettes can produce the same visible outfit). For variety, the best look of each wear
+ * type is taken first, then of each template, then of each template and palette pair, then the rest
+ * in rank order.
  */
 function select(candidates: Candidate[]): Candidate[] {
   const ranked = [...candidates].sort(byRank);
   const picked: Candidate[] = [];
   const signatures = new Set<string>();
-  const seen = { template: new Set<string>(), pair: new Set<string>() };
+  const outfits = new Set<string>();
+  const seen = { wearType: new Set<string>(), template: new Set<string>(), pair: new Set<string>() };
+  const wearType = (c: Candidate) => templateWearType(c.template) ?? '';
   const pair = (c: Candidate) => `${c.template.id}|${c.palette.id}`;
-  for (const pass of ['template', 'pair', 'fill'] as const) {
+  for (const pass of ['wearType', 'template', 'pair', 'fill'] as const) {
     for (const candidate of ranked) {
       if (picked.length === MAX_LOOKS) return picked.sort(byRank);
-      if (signatures.has(candidate.signature)) continue;
+      if (signatures.has(candidate.signature) || outfits.has(outfitKey(candidate))) continue;
+      if (pass === 'wearType' && seen.wearType.has(wearType(candidate))) continue;
       if (pass === 'template' && seen.template.has(candidate.template.id)) continue;
       if (pass === 'pair' && seen.pair.has(pair(candidate))) continue;
       picked.push(candidate);
       signatures.add(candidate.signature);
+      outfits.add(outfitKey(candidate));
+      seen.wearType.add(wearType(candidate));
       seen.template.add(candidate.template.id);
       seen.pair.add(pair(candidate));
     }

@@ -359,6 +359,8 @@ const outfitSchema = new Schema(
     conflicts: { type: [Schema.Types.Mixed], default: [] },
     warnings: { type: [String], default: [] },
     aiModel: { type: String, default: null },
+    // Prompt version used when AI wording reworded the explanation (D-67, #55); null otherwise.
+    aiPromptVersion: { type: String, default: null },
     // FR-OUT-04 `{ value, reason?, at }`; written by #42.
     feedback: { type: Schema.Types.Mixed, default: null },
     expiresAt: { type: Date, default: null },
@@ -369,6 +371,48 @@ outfitSchema.index({ userId: 1, status: 1, createdAt: -1 });
 // Suggested looks expire 7 days after creation (D-23); saved looks have no `expiresAt`.
 outfitSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
+// Items the user found elsewhere (DATABASE.md §3.6, D-77 = B, D-80). Everything is the user's own entry:
+// nothing is verified, and there is no retailer, stock, rating, image or quality field (FR-LIST-03).
+// Items are never edited (delete and re-add), so only `createdAt` is kept. `outfitId` and `slotId` are
+// set together (an item attached to one slot of a saved look) or both null.
+const shortlistItemSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true },
+    outfitId: { type: Schema.Types.ObjectId, default: null },
+    slotId: { type: String, default: null },
+    name: { type: String, required: true },
+    // Stored exactly as entered; never fetched, previewed or modified (FR-LIST-05).
+    url: { type: String, default: null },
+    priceEntered: { type: Number, required: true },
+    currency: { type: String, enum: ['INR'], default: 'INR' },
+    priceBasis: { type: String, enum: ['user_entered'], default: 'user_entered' },
+    note: { type: String, default: null },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+shortlistItemSchema.index({ userId: 1, createdAt: -1 });
+// At most one item per slot of a look (D-82). Partial, so unattached items never conflict.
+shortlistItemSchema.index(
+  { outfitId: 1, slotId: 1 },
+  { unique: true, partialFilterExpression: { outfitId: { $type: 'objectId' } } },
+);
+
+// Cached optional AI wording (DATABASE.md §3.5, D-13). System data: the key and the response come from
+// rule references and attribute labels only, never personal data (AI rule 16), so it is not user-owned.
+const aiCacheSchema = new Schema(
+  {
+    cacheKey: { type: String, required: true, unique: true },
+    provider: { type: String, required: true },
+    model: { type: String, required: true },
+    requestType: { type: String, required: true },
+    // The validated output, e.g. `{ text, promptVersion }`.
+    response: { type: Schema.Types.Mixed, required: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+aiCacheSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 export type UserDoc = InferSchemaType<typeof userSchema>;
 export type BetaInviteDoc = InferSchemaType<typeof betaInviteSchema>;
 export type PendingRegistrationDoc = InferSchemaType<typeof pendingRegistrationSchema>;
@@ -378,6 +422,8 @@ export type TombstoneDoc = InferSchemaType<typeof tombstoneSchema>;
 export type AppearanceProfileDoc = InferSchemaType<typeof appearanceProfileSchema>;
 export type ProfileDoc = InferSchemaType<typeof profileSchema>;
 export type OutfitDoc = InferSchemaType<typeof outfitSchema>;
+export type ShortlistItemDoc = InferSchemaType<typeof shortlistItemSchema>;
+export type AiCacheDoc = InferSchemaType<typeof aiCacheSchema>;
 export type UserPhotoDoc = InferSchemaType<typeof userPhotoSchema>;
 export type AppearanceAnalysisDoc = InferSchemaType<typeof appearanceAnalysisSchema>;
 export type CatalogueCategoryDoc = InferSchemaType<typeof catalogueCategorySchema>;
@@ -406,6 +452,8 @@ export interface Models {
   AppearanceProfile: Model<AppearanceProfileDoc>;
   Profile: Model<ProfileDoc>;
   Outfit: Model<OutfitDoc>;
+  ShortlistItem: Model<ShortlistItemDoc>;
+  AiCache: Model<AiCacheDoc>;
   UserPhoto: Model<UserPhotoDoc>;
   AppearanceAnalysis: Model<AppearanceAnalysisDoc>;
   // Specified 2026-10-18 (D-110 … D-125); declared only — no endpoint uses them yet.
@@ -437,6 +485,8 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     AppearanceProfile: main.model('AppearanceProfile', appearanceProfileSchema, 'appearanceProfiles'),
     Profile: main.model('Profile', profileSchema, 'profiles'),
     Outfit: main.model('Outfit', outfitSchema, 'outfits'),
+    ShortlistItem: main.model('ShortlistItem', shortlistItemSchema, 'shortlistItems'),
+    AiCache: main.model('AiCache', aiCacheSchema, 'aiCache'),
     UserPhoto: main.model('UserPhoto', userPhotoSchema, 'userPhotos'),
     AppearanceAnalysis: main.model('AppearanceAnalysis', appearanceAnalysisSchema, 'appearanceAnalyses'),
     CatalogueCategory: main.model('CatalogueCategory', catalogueCategorySchema, 'catalogueCategories'),

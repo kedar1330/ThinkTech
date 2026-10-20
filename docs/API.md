@@ -179,7 +179,8 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 - **Output:** `{ recommendationId, looks[], defaultsApplied[], conflicts[], limitedBy? }`. Each look: `{ id, status: "suggested", templateId, paletteId, slots[], explanation, explanationRefs, combinationSignature, aiModel, priceSummary? (product layer only) }`. Each slot: `{ slotId, slot, lookSpec, swatches[], illustration? { url, licenceLabel }, searchPhrase, sizeNote, alternatives[], productMatch? (product layer only) }`. Shortlist items are attached later to saved looks and appear only in `GET /v1/outfits/:id`.
 - **Without the product layer**, `productMatch` is always absent and no price, retailer or availability appears anywhere in the response.
 - **Too few matches:** `200` with fewer looks (possibly none), `limitedBy: { constraint, suggestion }` and the `INSUFFICIENT_MATCHES` warning (FR-LOOK-11).
-- **Optional AI step failure:** `200` with template explanations, `aiModel: null` and the `AI_ENHANCEMENT_SKIPPED` warning (FR-LOOK-16).
+- **Optional AI step failure:** `200` with template explanations, `aiModel: null` and the `AI_ENHANCEMENT_SKIPPED` warning (FR-LOOK-16). While AI wording is off (the default) nothing changes: template text, `aiModel: null`, no warning.
+- **Implemented (#55, off by default):** with `AI_WORDING_ENABLED=true`, each look's explanation is reworded from its references only; a reworded look has `aiModel` set to the provider's model. If any look falls back, the response carries `AI_ENHANCEMENT_SKIPPED` once. See [AI.md](AI.md) §5.
 - **Errors:** only when the core operation can't complete: `INVALID_REQUEST` (e.g. no occasion), `UNAUTHENTICATED`, `RATE_LIMITED`, `SERVICE_UNAVAILABLE` (e.g. the database is unreachable).
 - **Implemented (#33), details beyond the contract:** `200` on success, with `warnings` from `DEFAULTS_APPLIED`, `PREFERENCE_CONFLICT`, `INSUFFICIENT_MATCHES` (whenever fewer than 5 looks are returned) and `ALTERNATIVES_LIMITED` (some slot has fewer than 3 alternatives). `defaultsApplied` names: `department` (none saved: general results across departments), `colors` (no liked colours), `signals` (none set or switched off), `sizes`, `style` (none requested or preferred). `conflicts[].field` is `colors` (liked and disliked) or `fabrics` (liked and avoided). `limitedBy.constraint` is one of `wearType`, `style`, `department`, `dislikedColors`, `avoidedFabrics`, `coverage`, or `occasion` / `library` when the approved library itself is too small. Each look is stored in `outfits` before it is returned, so `looks[].id` is the outfit ID. `RATE_LIMITED` is not applied yet.
 
@@ -204,6 +205,12 @@ Everything here is the user's own entry and is returned with `priceBasis: "user_
 **`POST /v1/shortlist`** — input `{ name, priceEntered, url?, note?, outfitId?, slotId? }`, validated per FR-LIST-07 and D-80. `outfitId` and `slotId` are sent together or not at all: together they must name one of the user's saved looks and one of its slot IDs (D-82); omitted, the item is unattached. The URL is never fetched, previewed or modified. Returns the item. Errors: `INVALID_REQUEST` (validation, non-https URL, only one of `outfitId`/`slotId` sent), `NOT_FOUND` (look not owned or not saved), `CONFLICT` (that `slotId` already has an item, or the 200-item limit is reached).
 
 **`DELETE /v1/shortlist/:id`** — deletes the user's item. Returns `{ deleted: true }`.
+
+**Implemented (#38), details beyond the contract:** all three endpoints need a StyleMe password (`PASSWORD_SETUP_REQUIRED` otherwise) and are scoped to the user.
+- `GET` returns `{ items[], page, limit, total }` (`shortlistListResponseSchema`), newest first; there is no list-level total or budget status (price summaries are per saved look, FR-BUD-07). Unknown query parameters, `limit` above 50 or a malformed `outfitId` return `INVALID_REQUEST`. Another user's items are never listed.
+- `POST` returns `201` with the item. The link and the trimmed name and note are stored as entered; a note of only spaces is stored as `null`. Unknown fields (for example `category`, `currency`, `imageUrl`) return `INVALID_REQUEST`. The 201st item returns `CONFLICT` ("You can keep up to 200 items. Remove one to add another."). **Attaching is not available yet:** a request with both `outfitId` and `slotId` returns `INVALID_REQUEST` ("Adding an item to a look is not available yet"); attaching, the saved-look and slot checks, the one-item-per-slot `CONFLICT` and detaching on look deletion come with #43.
+- `DELETE` returns `NOT_FOUND` for an unknown item, an item already deleted or another user's item, and `INVALID_REQUEST` for a malformed ID.
+- `GET` (when it returns items) and `POST` responses carry the `USER_ENTERED_PRICES` warning (AC-B1). No endpoint requests, previews or rewrites a link, and item values are never logged. The per-user limit on shortlist writes (§5) is not applied yet.
 
 ### 3.7 Products (`product.ts`) — product layer
 
@@ -399,7 +406,7 @@ Every endpoint is authenticated (all feature pages require login), uses the enve
 | `PREFERENCE_CONFLICT` | Two explicit preferences conflict; the more restrictive applied | 1 |
 | `INSUFFICIENT_MATCHES` | Fewer looks than usual; limiting constraint and relaxation named | 1 |
 | `ALTERNATIVES_LIMITED` | Fewer than 3 suitable alternatives | 1 |
-| `AI_ENHANCEMENT_SKIPPED` | Optional AI wording was off or failed; template text used | 1 |
+| `AI_ENHANCEMENT_SKIPPED` | Optional AI wording was on but failed or its text was rejected; template text used. Not sent while AI wording is off | 1 |
 | `NO_VERIFIED_PRODUCT` | No eligible real product matched a slot | Product layer |
 | `PRICE_STALE` | Price older than the warning threshold | Product layer |
 | `PRICE_NOT_RECENTLY_VERIFIED` | Shown on saved looks or product detail for expired prices | Product layer |

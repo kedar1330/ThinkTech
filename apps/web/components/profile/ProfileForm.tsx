@@ -36,9 +36,9 @@ function Status({ state }: { state: FormState }) {
   return null;
 }
 
-function Section({ title, why, children }: { title: string; why: string; children: React.ReactNode }) {
+function Section({ id, title, why, children }: { id?: string; title: string; why: string; children: React.ReactNode }) {
   return (
-    <fieldset className="space-y-3 rounded-xl border border-border bg-surface p-5">
+    <fieldset id={id} className="scroll-mt-20 space-y-3 rounded-xl border border-border bg-surface p-5">
       <legend className="px-1 text-sm font-semibold">{title}</legend>
       <p className="text-xs text-muted-foreground">{why}</p>
       {children}
@@ -215,6 +215,7 @@ export function ProfileForm({
       </Section>
 
       <Section
+        id="sizes"
         title="Sizes"
         why="Each look shows your saved size for that kind of clothing, so you know what to search for. Sizes differ by category; sarees and most accessories are free size. Your body shape and appearance signals never change your size."
       >
