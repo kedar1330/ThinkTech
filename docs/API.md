@@ -179,7 +179,8 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 - **Output:** `{ recommendationId, looks[], defaultsApplied[], conflicts[], limitedBy? }`. Each look: `{ id, status: "suggested", templateId, paletteId, slots[], explanation, explanationRefs, combinationSignature, aiModel, priceSummary? (product layer only) }`. Each slot: `{ slotId, slot, lookSpec, swatches[], illustration? { url, licenceLabel }, searchPhrase, sizeNote, alternatives[], productMatch? (product layer only) }`. Shortlist items are attached later to saved looks and appear only in `GET /v1/outfits/:id`.
 - **Without the product layer**, `productMatch` is always absent and no price, retailer or availability appears anywhere in the response.
 - **Too few matches:** `200` with fewer looks (possibly none), `limitedBy: { constraint, suggestion }` and the `INSUFFICIENT_MATCHES` warning (FR-LOOK-11).
-- **Optional AI step failure:** `200` with template explanations, `aiModel: null` and the `AI_ENHANCEMENT_SKIPPED` warning (FR-LOOK-16).
+- **Optional AI step failure:** `200` with template explanations, `aiModel: null` and the `AI_ENHANCEMENT_SKIPPED` warning (FR-LOOK-16). While AI wording is off (the default) nothing changes: template text, `aiModel: null`, no warning.
+- **Implemented (#55, off by default):** with `AI_WORDING_ENABLED=true`, each look's explanation is reworded from its references only; a reworded look has `aiModel` set to the provider's model. If any look falls back, the response carries `AI_ENHANCEMENT_SKIPPED` once. See [AI.md](AI.md) §5.
 - **Errors:** only when the core operation can't complete: `INVALID_REQUEST` (e.g. no occasion), `UNAUTHENTICATED`, `RATE_LIMITED`, `SERVICE_UNAVAILABLE` (e.g. the database is unreachable).
 - **Implemented (#33), details beyond the contract:** `200` on success, with `warnings` from `DEFAULTS_APPLIED`, `PREFERENCE_CONFLICT`, `INSUFFICIENT_MATCHES` (whenever fewer than 5 looks are returned) and `ALTERNATIVES_LIMITED` (some slot has fewer than 3 alternatives). `defaultsApplied` names: `department` (none saved: general results across departments), `colors` (no liked colours), `signals` (none set or switched off), `sizes`, `style` (none requested or preferred). `conflicts[].field` is `colors` (liked and disliked) or `fabrics` (liked and avoided). `limitedBy.constraint` is one of `wearType`, `style`, `department`, `dislikedColors`, `avoidedFabrics`, `coverage`, or `occasion` / `library` when the approved library itself is too small. Each look is stored in `outfits` before it is returned, so `looks[].id` is the outfit ID. `RATE_LIMITED` is not applied yet.
 
@@ -403,7 +404,7 @@ Every endpoint is authenticated (all feature pages require login), uses the enve
 | `PREFERENCE_CONFLICT` | Two explicit preferences conflict; the more restrictive applied | 1 |
 | `INSUFFICIENT_MATCHES` | Fewer looks than usual; limiting constraint and relaxation named | 1 |
 | `ALTERNATIVES_LIMITED` | Fewer than 3 suitable alternatives | 1 |
-| `AI_ENHANCEMENT_SKIPPED` | Optional AI wording was off or failed; template text used | 1 |
+| `AI_ENHANCEMENT_SKIPPED` | Optional AI wording was on but failed or its text was rejected; template text used. Not sent while AI wording is off | 1 |
 | `NO_VERIFIED_PRODUCT` | No eligible real product matched a slot | Product layer |
 | `PRICE_STALE` | Price older than the warning threshold | Product layer |
 | `PRICE_NOT_RECENTLY_VERIFIED` | Shown on saved looks or product detail for expired prices | Product layer |

@@ -12,6 +12,7 @@ import { ProfileController } from './controllers/profile.controller';
 import { RecommendationsController } from './controllers/recommendations.controller';
 import { ShortlistController } from './controllers/shortlist.controller';
 import type { Database } from './db';
+import type { WordingProvider } from './integrations/ai/wording-client';
 import { authenticate, requirePasswordSet } from './middleware/authenticate';
 import { clientIp } from './middleware/client-ip';
 import './middleware/context';
@@ -34,6 +35,7 @@ import { PaletteService } from './services/palette.service';
 import { ProfileService } from './services/profile.service';
 import { RecommendationsService } from './services/recommendations.service';
 import { ShortlistService } from './services/shortlist.service';
+import { WordingService, mongoWordingCache } from './services/wording.service';
 import { SHIPPED_LIBRARY, loadStyleLibrary } from './style-rules';
 import { sendError } from './utils/respond';
 import pkg from '../package.json' with { type: 'json' };
@@ -49,6 +51,8 @@ export interface AppDeps {
   googleVerifier?: GoogleVerifier | null;
   /** Approved style library (D-110). Defaults to the shipped JSON library; tests pass fixture libraries. */
   styleLibrary?: StyleLibrary;
+  /** Optional AI wording provider (#55). Used only while AI_WORDING_ENABLED is true; tests pass a fake. */
+  wordingProvider?: WordingProvider | null;
 }
 
 export interface App {
@@ -65,6 +69,7 @@ export function createApp({
   smsSender = null,
   googleVerifier = null,
   styleLibrary = loadStyleLibrary(SHIPPED_LIBRARY, { appEnv: config.APP_ENV }),
+  wordingProvider = null,
 }: AppDeps): App {
   const app = express();
   app.disable('x-powered-by');
@@ -130,7 +135,20 @@ export function createApp({
   const appearanceService = new AppearanceService(db.models);
   app.use('/v1', profileRoutes(new ProfileController(profileService), withPassword));
   app.use('/v1', appearanceRoutes(new AppearanceController(appearanceService), withPassword));
-  const recommendations = new RecommendationsService(db.models, styleLibrary, profileService, appearanceService);
+  const wording = new WordingService(
+    config.AI_WORDING_ENABLED ? wordingProvider : null,
+    styleLibrary,
+    logger,
+    config.AI_WORDING_TIMEOUT_MS,
+    mongoWordingCache(db.models),
+  );
+  const recommendations = new RecommendationsService(
+    db.models,
+    styleLibrary,
+    profileService,
+    appearanceService,
+    wording,
+  );
   app.use('/v1', recommendationsRoutes(new RecommendationsController(recommendations), withPassword));
   const palettes = new PaletteService(styleLibrary, profileService, appearanceService);
   app.use('/v1', paletteRoutes(new PaletteController(palettes), withPassword));

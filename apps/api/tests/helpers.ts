@@ -4,6 +4,7 @@ import type { Express } from 'express';
 import { createApp } from '../src/app';
 import type { Config } from '../src/config/env';
 import { connectDatabase, type Database } from '../src/db';
+import type { WordingProvider } from '../src/integrations/ai/wording-client';
 import { createLogger } from '../src/logger';
 import type { StyleLibrary } from '../src/services/engine';
 import { identityFromClaims, type GoogleVerifier } from '../src/services/google';
@@ -31,6 +32,10 @@ export const BASE_CONFIG: Config = {
   DEV_OUTBOX_DIR: '.dev-outbox-test',
   DEV_ECHO_MESSAGES: false,
   GOOGLE_CLIENT_ID: undefined,
+  AI_WORDING_ENABLED: false,
+  GEMINI_API_KEY: undefined,
+  GEMINI_MODEL: undefined,
+  AI_WORDING_TIMEOUT_MS: 4000,
 };
 
 /** Captures messages instead of sending them; extracts codes and link tokens for the tests. */
@@ -106,6 +111,8 @@ export interface AppOptions {
   google?: GoogleVerifier | null;
   /** A fixture style library (tests/fixtures/style-library.ts); defaults to the shipped library. */
   styleLibrary?: StyleLibrary;
+  /** A fake AI wording provider (tests/fixtures/wording.ts); used only with AI_WORDING_ENABLED: true. */
+  wording?: WordingProvider;
 }
 
 export interface TestEnv {
@@ -144,6 +151,7 @@ export async function startTestEnv(): Promise<TestEnv> {
         smsSender: sms,
         googleVerifier: options.google === undefined ? fakeGoogleVerifier : options.google,
         styleLibrary: options.styleLibrary,
+        wordingProvider: options.wording ?? null,
       });
       return { ...app, config, mail, sms };
     },
