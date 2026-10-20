@@ -290,4 +290,3 @@ export const compareStylesQuerySchema = z.object({
   ids: z.string().min(1),
 });
 export type CompareStylesQuery = z.infer<typeof compareStylesQuerySchema>;
-

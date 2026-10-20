@@ -26,7 +26,10 @@ export class CatalogueController {
 
   compareStyles: RequestHandler = async (_req, res) => {
     const query = res.locals.query as CompareStylesQuery;
-    const ids = query.ids.split(',').map((id) => id.trim()).filter(Boolean);
+    const ids = query.ids
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
     const styles = await this.service.compareStyles(ids);
     sendData(res, styles);
   };

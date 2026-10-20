@@ -1,8 +1,4 @@
-import type {
-  CatalogueCategoriesQuery,
-  ClothingStylesQuery,
-  CatalogueDepartment,
-} from '@styleme/contracts';
+import type { CatalogueCategoriesQuery, ClothingStylesQuery, CatalogueDepartment } from '@styleme/contracts';
 import type { Models } from '../models/index';
 import { AppError } from '../utils/errors';
 
@@ -251,7 +247,10 @@ const STARTER_STYLES = [
     suitabilityRuleIds: ['STY-002'],
     explanation: {
       summary: 'Boat neckline gently broadens the collar line, creating harmony for pear and straight frames.',
-      benefits: ['Accentuates shoulder width for balanced proportions', 'Straight hem creates streamlined vertical line'],
+      benefits: [
+        'Accentuates shoulder width for balanced proportions',
+        'Straight hem creates streamlined vertical line',
+      ],
       tradeOffs: ['May emphasize already broad shoulders on inverted triangle silhouettes'],
       stylingTips: ['Wear with cropped cigar pants and comfortable pointed flats'],
     },
@@ -586,9 +585,7 @@ export class CatalogueService {
     if (query.department) filter.department = query.department;
     if (query.level) filter.level = query.level;
 
-    const items = await this.models.CatalogueCategory.find(filter)
-      .sort({ sortOrder: 1, name: 1 })
-      .lean();
+    const items = await this.models.CatalogueCategory.find(filter).sort({ sortOrder: 1, name: 1 }).lean();
 
     return items;
   }
@@ -635,19 +632,14 @@ export class CatalogueService {
       filter.$or = [{ name: regex }, { description: regex }, { tags: regex }];
     }
 
-    const sortOption: Record<string, 1 | -1> =
-      query.sort === 'name' ? { name: 1 } : { publishedAt: -1, _id: 1 };
+    const sortOption: Record<string, 1 | -1> = query.sort === 'name' ? { name: 1 } : { publishedAt: -1, _id: 1 };
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const [items, total] = await Promise.all([
-      this.models.ClothingStyle.find(filter)
-        .sort(sortOption)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+      this.models.ClothingStyle.find(filter).sort(sortOption).skip(skip).limit(limit).lean(),
       this.models.ClothingStyle.countDocuments(filter),
     ]);
 
