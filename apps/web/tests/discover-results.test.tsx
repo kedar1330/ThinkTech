@@ -214,4 +214,46 @@ describe('results on the Discover page', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
+
+  it('shows the empty state with the suggested change and no look cards', async () => {
+    actions.requestLooksAction.mockResolvedValue({
+      result: response([], {
+        limitedBy: { constraint: 'wearType', suggestion: 'Choose another wear type, or none to see all three.' },
+      }),
+    });
+    const user = userEvent.setup();
+    render(<RequestForm sizes={SIZES} />);
+    await user.click(screen.getByRole('radio', { name: 'Festive' }));
+    await user.click(screen.getByRole('button', { name: 'Show me looks' }));
+
+    const results = await screen.findByRole('region', { name: 'Your looks' });
+    expect(within(results).getByRole('status')).toHaveTextContent(
+      'No looks matched this request. Choose another wear type, or none to see all three.',
+    );
+    expect(within(results).queryByRole('article')).not.toBeInTheDocument();
+  });
+
+  it('shows the limited-alternatives message inside a look (ALTERNATIVES_LIMITED)', async () => {
+    const limited = look(1);
+    limited.slots[0] = {
+      ...limited.slots[0]!,
+      alternatives: [
+        {
+          lookSpec: { category: 'kurta', colorFamily: 'blue', colorId: 'navy' },
+          swatches: [{ colorId: 'navy', name: 'Navy', hex: '#1F2A44' }],
+          searchPhrase: 'navy kurta',
+        },
+      ],
+    };
+    actions.requestLooksAction.mockResolvedValue({ result: response([limited, ...FIVE.looks.slice(1)]) });
+    const user = userEvent.setup();
+    render(<RequestForm sizes={SIZES} />);
+    await user.click(screen.getByRole('radio', { name: 'Work' }));
+    await user.click(screen.getByRole('button', { name: 'Show me looks' }));
+
+    const card = await screen.findByRole('article', { name: 'Look 1' });
+    expect(within(card).getByText('1 alternative')).toBeInTheDocument();
+    expect(within(card).getByText('Only 1 suitable alternative was found for this item.')).toBeInTheDocument();
+    expect(within(card).getAllByText('No alternatives for this item yet.')).toHaveLength(1);
+  });
 });
