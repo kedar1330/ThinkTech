@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { objectIdSchema, type OutfitDetail } from '@styleme/contracts';
+import { objectIdSchema, type OutfitDetail, type ProfileResponse } from '@styleme/contracts';
 import { LookDetail } from '@/components/outfits/LookDetail';
 import { RemoveLookButton } from '@/components/outfits/RemoveLookButton';
 import { ApiError, apiRequest } from '@/lib/api/server';
@@ -21,8 +21,12 @@ export default async function SavedLookPage({ params }: { params: Promise<{ id: 
   if (!id.success) notFound();
 
   let look: OutfitDetail;
+  let profile: ProfileResponse;
   try {
-    look = await apiRequest<OutfitDetail>(`/v1/outfits/${id.data}`, { token: accessToken });
+    [look, profile] = await Promise.all([
+      apiRequest<OutfitDetail>(`/v1/outfits/${id.data}`, { token: accessToken }),
+      apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }),
+    ]);
   } catch (err) {
     if (err instanceof ApiError && err.code === 'NOT_FOUND') notFound();
     throw err;
@@ -37,7 +41,7 @@ export default async function SavedLookPage({ params }: { params: Promise<{ id: 
         <ArrowLeft aria-hidden className="size-4" />
         Saved Outfits
       </Link>
-      <LookDetail look={look} />
+      <LookDetail look={look} sizes={profile.sizes} />
       <RemoveLookButton outfitId={look.id} lookName={lookTitle(look)} from="detail" />
     </div>
   );

@@ -2,7 +2,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Look } from '@styleme/contracts';
+import type { Look, ProfileSizes } from '@styleme/contracts';
 
 const actions = vi.hoisted(() => ({ saveOutfitAction: vi.fn(), removeOutfitAction: vi.fn() }));
 vi.mock('@/app/actions/outfits', () => actions);
@@ -14,6 +14,9 @@ import { SavedLookList } from '@/components/outfits/SavedLookList';
 import { lookTitle } from '@/lib/outfits/look-text';
 
 // Saved Outfits (FR-OUT-01 … 03, #41): list, details and remove with confirmation.
+
+// The look stored 'Your saved size: M'; the profile now says L, and the page must show the current size.
+const SIZES: ProfileSizes = { tops: null, bottoms: null, ethnicTops: { letter: 'L' }, ethnicSets: null, shoes: null };
 
 const LOOK: Look = {
   id: '64b7f0c2a1b2c3d4e5f60718',
@@ -77,7 +80,7 @@ describe('saved look card', () => {
 
 describe('saved look details', () => {
   it('shows labelled swatches, the specification in words, search phrase, size note and why it works', () => {
-    const { container } = render(<LookDetail look={LOOK} />);
+    const { container } = render(<LookDetail look={LOOK} sizes={SIZES} />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Navy kurta · Ivory trousers');
     expect(screen.getByText('Saved')).toBeInTheDocument();
     expectEverySwatchNamed(container);
@@ -92,13 +95,17 @@ describe('saved look details', () => {
       ['Sleeves', 'Three-quarter'],
     ]);
     expect(within(top).getByText('navy cotton kurta')).toBeInTheDocument();
-    expect(within(top).getByText('Your saved size: M')).toBeInTheDocument();
+    // From the current profile sizes (FR-SIZE-04), not the text stored with the look.
+    expect(top).toHaveTextContent('Your saved size: L');
+    expect(top).not.toHaveTextContent('Your saved size: M');
+    const bottom = screen.getByRole('heading', { name: 'Trousers' }).closest('li')!;
+    expect(within(bottom).getByRole('link', { name: 'Add your size' })).toHaveAttribute('href', '/profile#sizes');
     expect(screen.getByRole('heading', { name: 'Why this works' })).toBeInTheDocument();
     expect(screen.getByText(LOOK.explanation)).toBeInTheDocument();
   });
 
   it('says when a look is not saved yet', () => {
-    render(<LookDetail look={{ ...LOOK, status: 'suggested' }} />);
+    render(<LookDetail look={{ ...LOOK, status: 'suggested' }} sizes={SIZES} />);
     expect(screen.getByRole('status')).toHaveTextContent('isn’t saved yet');
   });
 });
