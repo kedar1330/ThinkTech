@@ -7,6 +7,10 @@ import {
   PATTERN_IDS,
   SILHOUETTE_IDS,
   SLEEVE_LENGTH_IDS,
+  fabricSchema,
+  fitSchema,
+  occasionSchema,
+  wearTypeSchema,
   type ProportionDescriptor,
 } from './style-vocabulary';
 
@@ -254,3 +258,35 @@ export const customPaletteSchema = z
   })
   .strict();
 export type CustomPalette = z.infer<typeof customPaletteSchema>;
+
+// --- Queries for Outfit Categories and Catalogue Endpoints (API.md §3.11, F1 - F4) -----------------------
+
+export const catalogueCategoriesQuerySchema = z.object({
+  department: catalogueDepartmentSchema.optional(),
+  level: catalogueLevelSchema.optional(),
+});
+export type CatalogueCategoriesQuery = z.infer<typeof catalogueCategoriesQuerySchema>;
+
+export const clothingStylesQuerySchema = z.object({
+  department: catalogueDepartmentSchema.optional(),
+  categoryId: z.string().optional(),
+  categoryKey: z.string().optional(),
+  bodyShape: bodyShapeSchema.optional(),
+  goal: stylingGoalSchema.optional(),
+  attribute: garmentAttributeIdSchema.optional(),
+  value: z.string().optional(),
+  fit: fitSchema.optional(),
+  occasion: occasionSchema.optional(),
+  wearType: wearTypeSchema.optional(),
+  fabric: fabricSchema.optional(),
+  q: z.string().trim().optional(),
+  sort: z.enum(['best_match', 'name', 'recently_added']).default('best_match'),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+export type ClothingStylesQuery = z.infer<typeof clothingStylesQuerySchema>;
+
+export const compareStylesQuerySchema = z.object({
+  ids: z.string().min(1),
+});
+export type CompareStylesQuery = z.infer<typeof compareStylesQuerySchema>;
