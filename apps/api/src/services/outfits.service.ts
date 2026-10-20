@@ -4,6 +4,7 @@ import {
   OCCASIONS,
   SAVED_LIMITS,
   type Look,
+  type LookInputs,
   type LookSlot,
   type OutfitDetail,
   type OutfitListQuery,
@@ -90,7 +91,13 @@ export class OutfitsService {
   async get(userId: Types.ObjectId, id: Types.ObjectId): Promise<OutfitDetail> {
     const doc = await this.models.Outfit.findOne(this.owned(userId, id)).lean<StoredOutfit>();
     if (!doc) throw new AppError('NOT_FOUND');
-    return { ...toLook(doc), userItems: [] };
+    // The request and inputs snapshot let regenerate (#49) re-run the request and say what changed.
+    return {
+      ...toLook(doc),
+      request: doc.request as RecommendationRequest,
+      inputsUsed: doc.inputsUsed as LookInputs,
+      userItems: [],
+    };
   }
 
   /**
