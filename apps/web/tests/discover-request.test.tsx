@@ -31,7 +31,7 @@ beforeEach(() => actions.requestLooksAction.mockReset());
 
 describe('Discover My Style request form', () => {
   it('marks the occasion as required and every other field as optional', () => {
-    render(<RequestForm />);
+    render(<RequestForm sizes={EMPTY.sizes} />);
     const occasion = screen.getByRole('group', { name: 'Occasion (required)' });
     for (const radio of within(occasion).getAllByRole('radio')) expect(radio).toBeRequired();
     expect(screen.getByLabelText(/^Style/)).toHaveValue('');
@@ -41,7 +41,7 @@ describe('Discover My Style request form', () => {
   it('sends the chosen values to the action', async () => {
     actions.requestLooksAction.mockResolvedValue({ success: 'We found 3 looks for this request.' });
     const user = userEvent.setup();
-    render(<RequestForm />);
+    render(<RequestForm sizes={EMPTY.sizes} />);
     await user.click(screen.getByRole('radio', { name: 'Festive' }));
     await user.selectOptions(screen.getByLabelText(/^Style/), 'fusion');
     await user.click(screen.getByRole('checkbox', { name: 'Indian' }));
@@ -62,7 +62,7 @@ describe('Discover My Style request form', () => {
       fieldErrors: { occasion: 'Choose an occasion.' },
     });
     const user = userEvent.setup();
-    render(<RequestForm />);
+    render(<RequestForm sizes={EMPTY.sizes} />);
     await user.click(screen.getByRole('button', { name: 'Show me looks' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Please check the highlighted fields.');
@@ -76,7 +76,7 @@ describe('Discover My Style request form', () => {
     let finish: (state: { success: string }) => void = () => {};
     actions.requestLooksAction.mockReturnValue(new Promise((resolve) => (finish = resolve)));
     const user = userEvent.setup();
-    render(<RequestForm />);
+    render(<RequestForm sizes={EMPTY.sizes} />);
     await user.click(screen.getByRole('radio', { name: 'Work' }));
     await user.click(screen.getByRole('button', { name: 'Show me looks' }));
     expect(await screen.findByRole('button', { name: /Finding looks/ })).toBeDisabled();
@@ -87,7 +87,7 @@ describe('Discover My Style request form', () => {
 
   it('can be filled in with the keyboard', async () => {
     const user = userEvent.setup();
-    render(<RequestForm />);
+    render(<RequestForm sizes={EMPTY.sizes} />);
     await user.tab();
     const everyday = screen.getByRole('radio', { name: 'Everyday' });
     expect(everyday).toHaveFocus();
