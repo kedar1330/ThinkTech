@@ -969,5 +969,40 @@
     ],
     "compatiblePalettes": ["PAL-001", "PAL-003", "PAL-012", "PAL-013", "PAL-014"],
     "ruleRefs": ["STY-003", "STY-005", "STY-007", "FAB-001"]
+  },
+  {
+    "id": "OUT-021",
+    "version": 1,
+    "tags": ["wear-western", "formality-casual", "evening-streetwear"],
+    "userAdjustable": ["styles", "occasions", "fit", "colors"],
+    "rationale": "A relaxed or oversized T-shirt with jeans is the core streetwear outline; for a party or a date, deeper colours and a high-contrast pairing make it read as dressed for the evening.",
+    "limitations": "Stage 1 has no sneaker, jacket or layer categories, so the look covers the base outfit only. Some venues expect dressier outfits, and the user's occasion and style choices take priority.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-20",
+    "name": "Relaxed T-shirt and jeans for an evening out",
+    "department": "any",
+    "occasions": ["party", "date"],
+    "styles": ["streetwear", "casual"],
+    "slots": [
+      {
+        "slotId": "top",
+        "slot": "top",
+        "categoryOptions": ["t_shirt"],
+        "colorRole": "any",
+        "constraints": { "silhouettes": ["oversized", "relaxed"] }
+      },
+      { "slotId": "bottom", "slot": "bottom", "categoryOptions": ["jeans"], "colorRole": "neutral" },
+      { "slotId": "footwear", "slot": "footwear", "categoryOptions": ["shoes"], "colorRole": "neutral" },
+      {
+        "slotId": "accessory-1",
+        "slot": "accessory",
+        "categoryOptions": ["accessory"],
+        "optional": true,
+        "colorRole": "any"
+      }
+    ],
+    "compatiblePalettes": ["PAL-004", "PAL-008", "PAL-015"],
+    "ruleRefs": ["STY-005", "STY-008", "STY-014"]
   }
 ]

@@ -102,8 +102,8 @@ describe('AC5: the approved C0 library in the shipped library', () => {
   const outcome = (result: EngineResult) => result.looks.map((l) => [l.combinationSignature, l.slots]);
 
   it('holds the C0 and C1 records, every one founder-approved', () => {
-    // C0 (#32): 8 · 8 · 6 · 8. C1 (#35) adds 8 palettes, 10 styling rules, 5 fabric rules, 12 templates.
-    expect(c0.counts).toEqual({ palettes: 16, stylingRules: 18, fabricRules: 11, templates: 20 });
+    // C0 (#32): 8 · 8 · 6 · 8. C1 (#35) adds 8 palettes, 12 styling rules, 5 fabric rules, 13 templates.
+    expect(c0.counts).toEqual({ palettes: 16, stylingRules: 20, fabricRules: 11, templates: 21 });
     const records = [...c0.palettes, ...c0.stylingRules, ...c0.fabricRules, ...c0.templates];
     for (const r of records) expect([r.reviewStatus, r.isFixture], r.id).toEqual(['approved', undefined]);
     for (const r of c0.fabricRules) expect(r.practicalityValidated, r.id).toBe(false);
