@@ -1,6 +1,7 @@
 import type { Look, ProfileSizes } from '@styleme/contracts';
 import { Card } from '@/components/ui/card';
 import { SlotRow } from './SlotRow';
+import { WhyThisWorks } from './WhyThisWorks';
 
 /**
  * One generated look (FR-LOOK). Reused by saved looks (#41), explanations and alternatives (#48) and
@@ -14,7 +15,7 @@ export function LookCard({ look, position, sizes }: { look: Look; position: numb
         <h3 id={headingId} className="font-display text-xl text-primary">
           Look {position}
         </h3>
-        <p className="text-sm">{look.explanation}</p>
+        <WhyThisWorks explanation={look.explanation} />
         <ul aria-label="Items in this look" className="space-y-3">
           {look.slots.map((slot) => (
             <SlotRow key={slot.slotId} slot={slot} sizes={sizes} />

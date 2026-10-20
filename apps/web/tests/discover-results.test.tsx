@@ -164,6 +164,12 @@ describe('results on the Discover page', () => {
         .getAllByRole('article')
         .map((a) => a.getAttribute('aria-labelledby')),
     ).toEqual(FIVE.looks.map((l) => `look-${l.id}`));
+    // AC-11: each explanation verbatim, in ranking order.
+    expect(
+      within(results)
+        .getAllByText(/^Explanation for look \d\.$/)
+        .map((p) => p.textContent),
+    ).toEqual(FIVE.looks.map((l) => l.explanation));
     expect(within(results).queryByRole('status')).not.toBeInTheDocument();
   });
 
