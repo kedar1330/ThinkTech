@@ -14,6 +14,7 @@ import {
   recommendationResponseSchema,
   shopEntryPointSchema,
   shortlistListQuerySchema,
+  shortlistListResponseSchema,
   userPriceSummarySchema,
   userShortlistItemSchema,
 } from '../src';
@@ -254,6 +255,13 @@ describe('shortlist (FR-LIST-07, D-80)', () => {
     bad(userShortlistItemSchema, { ...stored, priceBasis: 'verified' });
     bad(userShortlistItemSchema, { ...stored, slotId: null });
     bad(userShortlistItemSchema, { ...stored, imageUrl: 'https://x.example/i.jpg' });
+  });
+
+  it('a list page carries items and counts only, never a list-level total', () => {
+    ok(shortlistListResponseSchema, { items: [stored], page: 1, limit: 20, total: 1 });
+    ok(shortlistListResponseSchema, { items: [], page: 2, limit: 20, total: 0 });
+    bad(shortlistListResponseSchema, { items: [stored], page: 1, limit: 20, total: 1, itemsTotal: 1299.5 });
+    bad(shortlistListResponseSchema, { items: [], page: 0, limit: 20, total: 0 });
   });
 });
 
