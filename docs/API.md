@@ -193,6 +193,8 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 
 **`DELETE /v1/outfits/:id`** — deletes the look and detaches any shortlist items from it (the items remain until the user deletes them). Returns `{ deleted: true }`.
 
+- **Implemented (#41), details beyond the contract:** `GET /v1/outfits`, `GET /v1/outfits/:id`, `POST /v1/outfits/:id/save` and `DELETE /v1/outfits/:id` (all `withPassword`). The list returns `outfitListResponseSchema` `{ looks[], page, limit, total }`, newest first by generation time (`createdAt`, then `_id`); `limit` is at most 50. Every query is scoped by `userId`: another user's look, a missing one and a suggestion past its `expiresAt` (not yet removed by the TTL index) are `NOT_FOUND`; a malformed `:id` is `INVALID_REQUEST`. Any look of the user's (suggested or saved) can be opened, saved or deleted. Saving is idempotent: it sets `status: "saved"` and removes `expiresAt` (`$unset`), and leaves the slots, explanation and references stored at generation unchanged (the snapshot, FR-OUT-05). Until Shop My Look (#43) lets items be attached, `GET /v1/outfits/:id` returns `userItems: []` and no `priceSummary`, and delete has nothing to detach. **Not yet written:** the `savedItems` entry for a saved look (D-116, [DATABASE.md](DATABASE.md) §3.10); the mechanism is still to be agreed with the data owner.
+
 ### 3.6 Shortlist (contract: `product.ts`) — Stage 1 (D-77 = B)
 
 Everything here is the user's own entry and is returned with `priceBasis: "user_entered"` and `verifiedByStyleMe: false`.
