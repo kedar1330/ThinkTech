@@ -72,6 +72,20 @@ export const userShortlistItemSchema = z
   });
 export type UserShortlistItem = z.infer<typeof userShortlistItemSchema>;
 
+/**
+ * `GET /v1/shortlist` data: one page of items, newest first, with the total count (D-18). There is no
+ * list-level total or budget status: price summaries exist per saved look only (FR-BUD-07).
+ */
+export const shortlistListResponseSchema = z
+  .object({
+    items: z.array(userShortlistItemSchema),
+    page: z.number().int().positive(),
+    limit: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+  })
+  .strict();
+export type ShortlistListResponse = z.infer<typeof shortlistListResponseSchema>;
+
 export const BUDGET_STATUSES = ['within_budget', 'over_budget', 'no_budget'] as const;
 export const budgetStatusSchema = z.enum(BUDGET_STATUSES);
 export type BudgetStatus = z.infer<typeof budgetStatusSchema>;

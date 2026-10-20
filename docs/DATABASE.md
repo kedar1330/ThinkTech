@@ -399,6 +399,8 @@ The user's own notes. Nothing in this collection is verified by StyleMe.
 
 There are no fields for retailer, stock, rating, image or quality: StyleMe doesn't record them for user-entered items. Limits: D-80.
 
+**Implemented (#38):** the `ShortlistItem` model in `apps/api/src/models/index.ts` with the fields above (`createdAt` only, no `updatedAt`), the index `{ userId: 1, createdAt: -1 }` and the unique index `{ outfitId: 1, slotId: 1 }`, partial to attached items (`outfitId` is an ObjectId) so unattached items never conflict. `shortlistItems` is in `USER_OWNED_COLLECTIONS`, so account deletion and tombstone replay remove the items. Until #43, the API creates only unattached items.
+
 ---
 
 ## 4. Product Layer Collections
