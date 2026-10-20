@@ -1,11 +1,12 @@
 import type { Look, ProfileSizes } from '@styleme/contracts';
 import { Card } from '@/components/ui/card';
+import { SaveLookButton } from './SaveLookButton';
 import { SlotRow } from './SlotRow';
 import { WhyThisWorks } from './WhyThisWorks';
 
 /**
- * One generated look (FR-LOOK). Reused by saved looks (#41), explanations and alternatives (#48) and
- * slot visuals (#50). Save, Shop this look and Regenerate are added when #41, #43 and #49 exist.
+ * One generated look (FR-LOOK), with Save (FR-OUT-01). Reused by explanations and alternatives (#48)
+ * and slot visuals (#50). Shop this look is added when #43 exists.
  */
 export function LookCard({ look, position, sizes }: { look: Look; position: number; sizes: ProfileSizes }) {
   const headingId = `look-${look.id}`;
@@ -21,6 +22,7 @@ export function LookCard({ look, position, sizes }: { look: Look; position: numb
             <SlotRow key={slot.slotId} slot={slot} sizes={sizes} />
           ))}
         </ul>
+        <SaveLookButton outfitId={look.id} saved={look.status === 'saved'} />
       </article>
     </Card>
   );
