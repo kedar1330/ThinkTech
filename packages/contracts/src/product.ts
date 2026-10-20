@@ -47,6 +47,13 @@ export const createShortlistItemRequestSchema = z
   });
 export type CreateShortlistItemRequest = z.infer<typeof createShortlistItemRequestSchema>;
 
+/**
+ * `PUT /v1/shortlist/:id/attach` (#43): puts an existing item on one slot of one of the user's saved
+ * looks. Both fields are required; `DELETE /v1/shortlist/:id/attach` takes the item off again.
+ */
+export const attachShortlistItemRequestSchema = z.object({ outfitId: objectIdSchema, slotId: slotIdSchema }).strict();
+export type AttachShortlistItemRequest = z.infer<typeof attachShortlistItemRequestSchema>;
+
 /** `GET /v1/shortlist` query: newest first, paginated, optionally for one look. */
 export const shortlistListQuerySchema = paginationQuerySchema.extend({ outfitId: objectIdSchema.optional() });
 export type ShortlistListQuery = z.infer<typeof shortlistListQuerySchema>;

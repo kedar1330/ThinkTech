@@ -1,5 +1,5 @@
-// Dashboard sections. Only "Discover My Style" exists today; everything else is labelled "Coming soon"
-// and opens an honest description page, never a mock of the feature.
+// Dashboard sections. Only "Discover My Style" and "Saved Outfits" exist today; everything else is
+// labelled "Coming soon" and opens an honest description page, never a mock of the feature.
 
 export type FeatureIcon = 'sparkles' | 'palette' | 'shirt' | 'bag' | 'camera' | 'ruler' | 'chat' | 'heart';
 
@@ -38,6 +38,7 @@ export const FEATURES: Feature[] = [
     slug: 'shop-my-look',
     label: 'Shop My Look',
     icon: 'bag',
+    href: '/shop',
     summary: 'Save items you find in any store, with their prices, and compare the total with your budget per look.',
   },
   {
@@ -62,6 +63,7 @@ export const FEATURES: Feature[] = [
     slug: 'saved-outfits',
     label: 'Saved Outfits',
     icon: 'heart',
+    href: '/saved',
     summary: 'Keep the looks you love in one place.',
   },
 ];

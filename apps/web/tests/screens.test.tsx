@@ -176,15 +176,14 @@ describe('app top navigation', () => {
     const menu = document.getElementById('nav-more')!;
     for (const name of [
       'Outfit Categories',
-      'Shop My Look',
       'Virtual Try-On',
       'Design Studio',
       'Style Assistant',
-      'Saved Outfits',
     ]) {
       expect(within(menu).getByRole('link', { name: new RegExp(name) })).toHaveTextContent('Coming soon');
-    }
     expect(within(menu).getByRole('link', { name: 'My Colour Palette' })).toHaveAttribute('href', '/palette');
+    expect(within(menu).getByRole('link', { name: 'Shop My Look' })).toHaveAttribute('href', '/shop');
+    expect(within(menu).getByRole('link', { name: 'Saved Outfits' })).toHaveAttribute('href', '/saved');
     await user.keyboard('{Escape}');
     expect(document.getElementById('nav-more')).toBeNull();
     expect(more).toHaveFocus();
@@ -239,8 +238,9 @@ describe('app top navigation', () => {
       // nine sections + the logo
       10,
     );
-    expect(within(drawer).getByRole('link', { name: /Saved Outfits/ })).toHaveTextContent('Coming soon');
+    expect(within(drawer).getByRole('link', { name: /Style Assistant/ })).toHaveTextContent('Coming soon');
     expect(within(drawer).getByRole('link', { name: 'My Colour Palette' })).toHaveAttribute('href', '/palette');
+    expect(within(drawer).getByRole('link', { name: 'Saved Outfits' })).toHaveAttribute('href', '/saved');
     expect(within(drawer).getByRole('button', { name: 'Close menu' })).toHaveFocus();
     expect(document.body.style.overflow).toBe('hidden');
     expect(within(drawer).getByRole('button', { name: 'Log out' })).toBeInTheDocument();

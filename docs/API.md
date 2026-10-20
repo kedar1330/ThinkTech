@@ -96,6 +96,8 @@ Remaining numbered endpoints (continuing the first table):
 | 19 | GET | `/v1/shortlist` | List items the user added | 1 |
 | 20 | POST | `/v1/shortlist` | Add an item with a user-entered price | 1 |
 | 21 | DELETE | `/v1/shortlist/:id` | Remove an item | 1 |
+| 21a | PUT | `/v1/shortlist/:id/attach` | Put an item on a slot of a saved look (#43) | 1 |
+| 21b | DELETE | `/v1/shortlist/:id/attach` | Take an item off its look (#43) | 1 |
 | 22 | GET | `/v1/products` | Browse verified products | Product layer |
 | 23 | GET | `/v1/products/:id` | Product detail with provenance and quality | Product layer |
 | 24 | GET | `/v1/products/:id/alternatives` | Eligible alternatives for a slot | Product layer |
@@ -186,13 +188,17 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 
 **`GET /v1/outfits`** — query `status=saved` (default) or `suggested`. Returns the user's looks, newest first, paginated. With the product layer, each matched product includes `currentStatus` (FR-MATCH-08).
 
-**`GET /v1/outfits/:id`** — returns one look owned by the user, with `userItems[]` (the shortlist items attached to its slots) and, if any are attached, `priceSummary` (FR-BUD-07): `{ priceBasis: "user_entered", itemsTotal, pricedSlots, totalSlots, complete, budget, budgetRemaining, status, label }` plus the `USER_ENTERED_PRICES` warning. Computed on read, never stored. Error: `NOT_FOUND` (also returned for other users' looks, so their existence isn't revealed).
+**`GET /v1/outfits/:id`** — returns one look owned by the user, with the `request` it was generated for and `inputsUsed` (the profile inputs snapshot, `lookInputsSchema`: sizes by group only, signals only as used or not) for regenerate (#49), `userItems[]` (the shortlist items attached to its slots) and, if any are attached, `priceSummary` (FR-BUD-07): `{ priceBasis: "user_entered", itemsTotal, pricedSlots, totalSlots, complete, budget, budgetRemaining, status, label }` plus the `USER_ENTERED_PRICES` warning. Computed on read, never stored. Error: `NOT_FOUND` (also returned for other users' looks, so their existence isn't revealed).
 
 **`POST /v1/outfits/:id/save`** — sets `status: "saved"` and removes the expiry. Returns the look.
+- **One save system (D-116, agreed on #41):** after the look is saved, its `savedItems` entry is upserted (`itemType: "outfit"`, `ref: { kind: "look", id }`, `identityKey` = SHA-256 of `outfit|look|<id>`), so saving twice keeps one entry; if that write fails the error is returned and a retry completes it. A new save beyond 1,000 saved items returns `CONFLICT` and the look stays suggested.
 
 **`POST /v1/outfits/:id/feedback`** — input `{ value: "love_it" | "not_for_me", reason? }`. `reason` is allowed only with `not_for_me` and is one of `not_my_style`, `colours_not_for_me`, `too_formal`, `too_casual`, `not_comfortable`, `wrong_occasion` (FR-OUT-04; no free text). Returns `{ recorded: true }`.
 
 **`DELETE /v1/outfits/:id`** — deletes the look and detaches any shortlist items from it (the items remain until the user deletes them). Returns `{ deleted: true }`.
+- **One save system (D-116):** deletes the look's `savedItems` entry first, then detaches the shortlist items (`outfitId` and `slotId` set to `null`), then deletes the look. Unsaving an outfit from the shared Saved page (TD-FS-SAV-02) will call the same removal: "remove" means gone.
+
+- **Implemented (#41), details beyond the contract:** `GET /v1/outfits`, `GET /v1/outfits/:id`, `POST /v1/outfits/:id/save` and `DELETE /v1/outfits/:id` (all `withPassword`). The list returns `outfitListResponseSchema` `{ looks[], page, limit, total }`, newest first by generation time (`createdAt`, then `_id`); `limit` is at most 50. Every query is scoped by `userId`: another user's look, a missing one and a suggestion past its `expiresAt` (not yet removed by the TTL index) are `NOT_FOUND`; a malformed `:id` is `INVALID_REQUEST`. Any look of the user's (suggested or saved) can be opened, saved or deleted. Saving is idempotent: it sets `status: "saved"` and removes `expiresAt` (`$unset`), and leaves the slots, explanation and references stored at generation unchanged (the snapshot, FR-OUT-05). Since #43, `GET /v1/outfits/:id` returns the user's attached items in `userItems` (oldest first) and, when any are attached, `priceSummary` from the budget engine (`calculatePriceSummary`, #37) against the profile's `budgetPreference`, with the `USER_ENTERED_PRICES` warning. Saving writes the look's `savedItems` entry and deleting removes it and detaches shortlist items, as agreed on #41 (D-116, [DATABASE.md](DATABASE.md) §3.10).
 
 ### 3.6 Shortlist (contract: `product.ts`) — Stage 1 (D-77 = B)
 
@@ -206,8 +212,9 @@ Everything here is the user's own entry and is returned with `priceBasis: "user_
 
 **Implemented (#38), details beyond the contract:** all three endpoints need a StyleMe password (`PASSWORD_SETUP_REQUIRED` otherwise) and are scoped to the user.
 - `GET` returns `{ items[], page, limit, total }` (`shortlistListResponseSchema`), newest first; there is no list-level total or budget status (price summaries are per saved look, FR-BUD-07). Unknown query parameters, `limit` above 50 or a malformed `outfitId` return `INVALID_REQUEST`. Another user's items are never listed.
-- `POST` returns `201` with the item. The link and the trimmed name and note are stored as entered; a note of only spaces is stored as `null`. Unknown fields (for example `category`, `currency`, `imageUrl`) return `INVALID_REQUEST`. The 201st item returns `CONFLICT` ("You can keep up to 200 items. Remove one to add another."). **Attaching is not available yet:** a request with both `outfitId` and `slotId` returns `INVALID_REQUEST` ("Adding an item to a look is not available yet"); attaching, the saved-look and slot checks, the one-item-per-slot `CONFLICT` and detaching on look deletion come with #43.
+- `POST` returns `201` with the item. The link and the trimmed name and note are stored as entered; a note of only spaces is stored as `null`. Unknown fields (for example `category`, `currency`, `imageUrl`) return `INVALID_REQUEST`. The 201st item returns `CONFLICT` ("You can keep up to 200 items. Remove one to add another."). **Attaching (#43):** with both `outfitId` and `slotId`, the look must be one of the user's **saved** looks (`NOT_FOUND` otherwise, including another user's look or a suggested one), the `slotId` must be one of its slots (`INVALID_REQUEST`), and no other item may be on that slot (`CONFLICT`, also when two requests race: the unique partial index on `{ outfitId, slotId }` decides).
 - `DELETE` returns `NOT_FOUND` for an unknown item, an item already deleted or another user's item, and `INVALID_REQUEST` for a malformed ID.
+- **`PUT /v1/shortlist/:id/attach`** (#43) — input `{ outfitId, slotId }` (`attachShortlistItemRequestSchema`, both required). Puts one of the user's items on a slot of one of their saved looks, with the same checks as attaching on `POST`; moving an item to another slot is allowed and attaching it to its own slot again is harmless. Returns the item with `USER_ENTERED_PRICES`. **`DELETE /v1/shortlist/:id/attach`** takes the item off its look (it stays in the shortlist) and returns the item. Another user's item is `NOT_FOUND`; a malformed ID is `INVALID_REQUEST`.
 - `GET` (when it returns items) and `POST` responses carry the `USER_ENTERED_PRICES` warning (AC-B1). No endpoint requests, previews or rewrites a link, and item values are never logged. The per-user limit on shortlist writes (§5) is not applied yet.
 
 ### 3.7 Products (`product.ts`) — product layer

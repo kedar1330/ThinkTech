@@ -138,9 +138,36 @@ describe('saved looks', () => {
     bad(outfitListQuerySchema, { status: 'deleted' });
   });
 
-  it('a detail carries the attached items', () => {
-    ok(outfitDetailSchema, { ...look, status: 'saved', userItems: [] });
-    bad(outfitDetailSchema, { ...look, status: 'saved' });
+  // The request and inputs snapshot the look was generated from, for regenerate (#49).
+  const stored = {
+    request: { occasion: 'work', paletteMode: 'suggested' },
+    inputsUsed: {
+      department: 'women',
+      departmentFiltered: true,
+      likedColors: ['navy'],
+      dislikedColors: [],
+      contrastPreference: null,
+      silhouettePreferences: [],
+      fitPreferences: { tops: 'slim', bottoms: null, ethnicTops: null, ethnicSets: null },
+      coveragePreferences: { minSleeveLength: null, minNecklineCoverage: null, minGarmentLength: null },
+      fabricPreferences: { liked: [], avoided: [] },
+      preferredStyles: [],
+      sizesSaved: ['tops'],
+      signalsUsed: false,
+    },
+  };
+
+  it('a detail carries the attached items, the request and the inputs used', () => {
+    ok(outfitDetailSchema, { ...look, ...stored, status: 'saved', userItems: [] });
+    bad(outfitDetailSchema, { ...look, ...stored, status: 'saved' });
+    bad(outfitDetailSchema, { ...look, status: 'saved', userItems: [] });
+  });
+
+  it('the inputs used name sizes by group only and signals only as used or not (#49)', () => {
+    const detail = { ...look, ...stored, userItems: [] };
+    bad(outfitDetailSchema, { ...detail, inputsUsed: { ...stored.inputsUsed, sizesSaved: ['dresses'] } });
+    bad(outfitDetailSchema, { ...detail, inputsUsed: { ...stored.inputsUsed, undertone: 'warm' } });
+    bad(outfitDetailSchema, { ...detail, inputsUsed: { ...stored.inputsUsed, signalsUsed: undefined } });
   });
 
   it('the shop entry point is { outfitId, slotId }', () => {

@@ -3,9 +3,12 @@ import {
   categorySchema,
   colorFamilySchema,
   colorIdSchema,
+  contrastPreferenceSchema,
+  departmentSchema,
   fabricSchema,
   fitSchema,
   garmentLengthSchema,
+  necklineDepthSchema,
   necklineSchema,
   occasionSchema,
   patternSchema,
@@ -17,6 +20,7 @@ import {
 } from './style-vocabulary';
 import { objectIdSchema, paginationQuerySchema, paletteIdSchema, slotIdSchema, templateIdSchema } from './common';
 import { userPriceSummarySchema, userShortlistItemSchema } from './product';
+import { FIT_GROUPS, SIZED_GROUPS_STAGE_1 } from './profile';
 
 // Recommendations and looks (FR-LOOK, FR-OUT, API.md §3.5, DATABASE.md §3.4).
 // Stage 1 shapes only: no price, retailer, availability or product match appears in a generated look
@@ -167,6 +171,49 @@ export type RecommendationResponse = z.infer<typeof recommendationResponseSchema
 export const outfitListQuerySchema = paginationQuerySchema.extend({ status: outfitStatusSchema.default('saved') });
 export type OutfitListQuery = z.infer<typeof outfitListQuerySchema>;
 
+/** `GET /v1/outfits` data: one page of the user's looks, newest first, and how many there are in all. */
+export const outfitListResponseSchema = z
+  .object({
+    looks: z.array(lookSchema),
+    page: z.number().int().min(1),
+    limit: z.number().int().min(1).max(50),
+    total: z.number().int().min(0),
+  })
+  .strict()
+  .refine((list) => list.looks.length <= list.limit, { message: 'More looks than the page limit' });
+export type OutfitListResponse = z.infer<typeof outfitListResponseSchema>;
+
+/**
+ * The profile inputs a look was generated from, stored with it (DATABASE.md §3.4) so regenerate (#49)
+ * can say what changed. Sizes are named by group only, and appearance signals only as used or not.
+ */
+export const lookInputsSchema = z
+  .object({
+    department: departmentSchema.nullable(),
+    departmentFiltered: z.boolean(),
+    likedColors: z.array(colorIdSchema),
+    dislikedColors: z.array(colorIdSchema),
+    contrastPreference: contrastPreferenceSchema.nullable(),
+    silhouettePreferences: z.array(silhouetteSchema),
+    fitPreferences: z.object(
+      Object.fromEntries(FIT_GROUPS.map((g) => [g, fitSchema.nullable()])) as Record<
+        (typeof FIT_GROUPS)[number],
+        z.ZodNullable<typeof fitSchema>
+      >,
+    ),
+    coveragePreferences: z.object({
+      minSleeveLength: sleeveLengthSchema.nullable(),
+      minNecklineCoverage: necklineDepthSchema.nullable(),
+      minGarmentLength: garmentLengthSchema.nullable(),
+    }),
+    fabricPreferences: z.object({ liked: z.array(fabricSchema), avoided: z.array(fabricSchema) }),
+    preferredStyles: z.array(styleSchema),
+    sizesSaved: z.array(z.enum(SIZED_GROUPS_STAGE_1)),
+    signalsUsed: z.boolean(),
+  })
+  .strict();
+export type LookInputs = z.infer<typeof lookInputsSchema>;
+
 /**
  * `GET /v1/outfits/:id`: the look with the user's items attached to its slots and, when any are
  * attached, a price summary computed on read (FR-OUT-02, FR-BUD-07).
@@ -174,6 +221,9 @@ export type OutfitListQuery = z.infer<typeof outfitListQuerySchema>;
 export const outfitDetailSchema = lookSchema.extend({
   userItems: z.array(userShortlistItemSchema),
   priceSummary: userPriceSummarySchema.optional(),
+  /** The request the look was generated for, so regenerate (#49) can run it again. */
+  request: recommendationRequestSchema,
+  inputsUsed: lookInputsSchema,
 });
 export type OutfitDetail = z.infer<typeof outfitDetailSchema>;
 

@@ -125,7 +125,7 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 | Outputs / actions | Up to 5 looks, each slot with colour, fabric, silhouette and an explanation; 3–5 alternatives per slot when available (D-53); save; shop; request alternatives |
 | Empty / limited | `INSUFFICIENT_MATCHES` (never padded), `ALTERNATIVES_LIMITED`, `DEFAULTS_APPLIED`, `PREFERENCE_CONFLICT`; no department → general results labelled "no department filter applied" |
 | Loading / error | Skeleton while generating; API failure → retry message; no partial looks |
-| Today | ✅ Request form at `/discover/looks` (#45); the Discover My Style navigation entry opens it, and the style-profile editor stays at `/profile`. ✅ Looks shown below the form with size notes and result flags (#47). 🔄 "Why this works", per-slot alternatives and copyable search phrases (#48, PR open). ⬜ Save, Shop this look and Regenerate (#41, #43, #49) |
+| Today | ✅ Request form at `/discover/looks` (#45); the Discover My Style navigation entry opens it, and the style-profile editor stays at `/profile`. ✅ Looks shown below the form with size notes and result flags (#47). ✅ "Why this works", per-slot alternatives and copyable search phrases (#48). ✅ Save (#41). 🔄 Regenerate with "What changed" on results and saved looks (#49, PR open). ⬜ Shop this look (#43) |
 | Depends on | M2 (content + engine) |
 | Owner | Johita (UI and integration); Shreya (engine) |
 | Docs / Issues | [FRD.md](FRD.md) FR-LOOK-01 … 19; [API.md](API.md) §3.5; issues #45 (form), #46 (size notes), #47 (results), #48 (alternatives), #49 (regenerate), #53 (tests); earlier #11, #12 (closed) |
@@ -194,7 +194,9 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ---
 
-## 10. Shop My Look (PDF p17) — ⬜ Placeholder; product data ⛔
+## 10. Shop My Look (PDF p17) — 🔄 Stage 1 page in review (#43); product data ⛔
+
+**Today (#43, PR open):** `/shop` lists saved looks; `/shop?outfitId=…` (the "Shop this look" link on Discover results and saved looks) shows each part with the user's saved size and the shortlist item they put on it, a labelled total against their budget per look, and filters by category, size group and price. A "Product data unavailable" notice explains that StyleMe lists no shop products yet.
 
 **Stage 1 (D-77 = B):** a **shortlist of items the user found themselves** — name, optional https link, the price they enter, optional note — attached to a look slot, with a budget summary. Every user-entered price is labelled "not verified by StyleMe"; StyleMe never fetches the link.
 

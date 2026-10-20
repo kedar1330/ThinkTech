@@ -1,0 +1,66 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import { objectIdSchema, type OutfitDetail, type ProfileResponse } from '@styleme/contracts';
+import { LookDetail } from '@/components/outfits/LookDetail';
+import { RegenerateButton } from '@/components/outfits/RegenerateButton';
+import { RemoveLookButton } from '@/components/outfits/RemoveLookButton';
+import { PriceSummary } from '@/components/shop/PriceSummary';
+import { Card } from '@/components/ui/card';
+import { ApiError, apiRequest } from '@/lib/api/server';
+import { requireOnboarded } from '@/lib/auth/session';
+import { lookTitle } from '@/lib/outfits/look-text';
+import { shopHref } from '@/lib/shop/look-shopper';
+
+export const metadata: Metadata = { title: 'Saved look' };
+
+/**
+ * One look (FR-OUT-02). Another user's look, a removed one and a malformed ID all show the 404 page.
+ * "Shop this look" opens it in Shop My Look (#43); "Regenerate with my current profile" (#49) shows new
+ * looks below it.
+ */
+export default async function SavedLookPage({ params }: { params: Promise<{ id: string }> }) {
+  const { accessToken } = await requireOnboarded();
+  const id = objectIdSchema.safeParse((await params).id);
+  if (!id.success) notFound();
+
+  let look: OutfitDetail;
+  let profile: ProfileResponse;
+  try {
+    [look, profile] = await Promise.all([
+      apiRequest<OutfitDetail>(`/v1/outfits/${id.data}`, { token: accessToken }),
+      apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }),
+    ]);
+  } catch (err) {
+    if (err instanceof ApiError && err.code === 'NOT_FOUND') notFound();
+    throw err;
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-6">
+      <Link
+        href="/saved"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-plum underline-offset-4 hover:underline"
+      >
+        <ArrowLeft aria-hidden className="size-4" />
+        Saved Outfits
+      </Link>
+      <LookDetail look={look} sizes={profile.sizes} />
+      {look.priceSummary && (
+        // The labelled total of the items the user put on this look in Shop My Look (#43, FR-BUD-07).
+        <Card className="p-4 sm:p-6">
+          <PriceSummary summary={look.priceSummary} />
+        </Card>
+      )}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <Link href={shopHref(look.id)} className="text-sm font-medium text-plum underline">
+          Shop this look
+        </Link>
+        <RemoveLookButton outfitId={look.id} lookName={lookTitle(look)} from="detail" />
+      </div>
+      {/* New looks appear below; the saved look above stays as it was (FR-OUT-05). */}
+      <RegenerateButton outfitId={look.id} sizes={profile.sizes} />
+    </div>
+  );
+}

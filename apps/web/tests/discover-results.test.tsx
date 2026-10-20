@@ -9,7 +9,7 @@ import {
   type RecommendationResponse,
 } from '@styleme/contracts';
 
-const actions = vi.hoisted(() => ({ requestLooksAction: vi.fn() }));
+const actions = vi.hoisted(() => ({ requestLooksAction: vi.fn(), regenerateAction: vi.fn() }));
 vi.mock('@/app/actions/discover', () => actions);
 
 import { RequestForm } from '@/components/discover/RequestForm';
@@ -171,6 +171,8 @@ describe('results on the Discover page', () => {
         .map((p) => p.textContent),
     ).toEqual(FIVE.looks.map((l) => l.explanation));
     expect(within(results).queryByRole('status')).not.toBeInTheDocument();
+    // #49: regenerate is offered on the results.
+    expect(within(results).getByRole('button', { name: 'Regenerate with my current profile' })).toBeInTheDocument();
   });
 
   it('shows 2 looks with the limited-results message', async () => {

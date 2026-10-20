@@ -1,5 +1,9 @@
 import { Router, type RequestHandler } from 'express';
-import { createShortlistItemRequestSchema, shortlistListQuerySchema } from '@styleme/contracts';
+import {
+  attachShortlistItemRequestSchema,
+  createShortlistItemRequestSchema,
+  shortlistListQuerySchema,
+} from '@styleme/contracts';
 import type { ShortlistController } from '../controllers/shortlist.controller';
 import { validateBody, validateQuery } from '../middleware/validate';
 
@@ -10,5 +14,8 @@ export function shortlistRoutes(controller: ShortlistController, auth: RequestHa
   router.get('/shortlist', ...auth, validateQuery(shortlistListQuerySchema), controller.list);
   router.post('/shortlist', ...auth, validateBody(createShortlistItemRequestSchema), controller.create);
   router.delete('/shortlist/:id', ...auth, controller.remove);
+  // Attach an existing item to a slot of a saved look, or take it off again (#43).
+  router.put('/shortlist/:id/attach', ...auth, validateBody(attachShortlistItemRequestSchema), controller.attach);
+  router.delete('/shortlist/:id/attach', ...auth, controller.detach);
   return router;
 }

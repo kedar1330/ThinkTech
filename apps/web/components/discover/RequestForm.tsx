@@ -14,6 +14,7 @@ import { requestLooksAction, type LooksState } from '@/app/actions/discover';
 import type { FormState } from '@/lib/actions';
 import { uniqueLooks } from '@/lib/discover/results';
 import { LookCard } from '@/components/outfits/LookCard';
+import { RegenerateButton } from '@/components/outfits/RegenerateButton';
 import { ResultFlags } from '@/components/outfits/ResultFlags';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -48,15 +49,23 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 
 /** The looks of one request, in engine order (FR-LOOK-13), with the result flags first. */
 function Results({ result, sizes }: { result: RecommendationResponse; sizes: ProfileSizes }) {
+  const looks = uniqueLooks(result.looks);
   return (
     <section aria-labelledby="results-heading" className="space-y-4">
       <h2 id="results-heading" className="font-display text-2xl text-primary">
         Your looks
       </h2>
-      <ResultFlags result={result} />
-      {uniqueLooks(result.looks).map((look, i) => (
-        <LookCard key={look.id} look={look} position={i + 1} sizes={sizes} />
-      ))}
+      {looks.length > 0 ? (
+        // A new request starts a new regenerate state.
+        <RegenerateButton key={result.recommendationId} outfitId={looks[0]!.id} sizes={sizes}>
+          <ResultFlags result={result} />
+          {looks.map((look, i) => (
+            <LookCard key={look.id} look={look} position={i + 1} sizes={sizes} />
+          ))}
+        </RegenerateButton>
+      ) : (
+        <ResultFlags result={result} />
+      )}
     </section>
   );
 }
