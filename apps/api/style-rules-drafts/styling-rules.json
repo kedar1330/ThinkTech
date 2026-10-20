@@ -24,5 +24,34 @@
       ],
       "weight": 0.2
     }
+  },
+  {
+    "id": "STY-020",
+    "version": 1,
+    "tags": ["footwear", "work", "formal"],
+    "userAdjustable": ["occasions", "colors"],
+    "rationale": "Darker shoes in black, charcoal, navy or brown ground a shirt-and-trousers or kurta look and are the usual choice for offices and formal events, so the outfit reads as finished rather than casual.",
+    "limitations": "Light and white shoes are common in relaxed workplaces and with some ethnic wear; this is a soft preference, and the user's liked colours and the palette's own colours still come first.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "coordination",
+    "areas": ["coordination", "occasion"],
+    "coordinationAspects": ["footwear_accessory"],
+    "appliesTo": {
+      "categories": ["shoes"],
+      "occasions": ["work", "formal"]
+    },
+    "effect": {
+      "prefer": [
+        { "attribute": "color", "value": "black" },
+        { "attribute": "color", "value": "charcoal" },
+        { "attribute": "color", "value": "navy" },
+        { "attribute": "color", "value": "coffee" },
+        { "attribute": "color", "value": "chocolate" },
+        { "attribute": "color", "value": "tan" }
+      ],
+      "weight": 0.6
+    }
   }
 ]
