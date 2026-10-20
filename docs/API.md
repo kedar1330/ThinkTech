@@ -203,6 +203,12 @@ Everything here is the user's own entry and is returned with `priceBasis: "user_
 
 **`DELETE /v1/shortlist/:id`** — deletes the user's item. Returns `{ deleted: true }`.
 
+**Implemented (#38), details beyond the contract:** all three endpoints need a StyleMe password (`PASSWORD_SETUP_REQUIRED` otherwise) and are scoped to the user.
+- `GET` returns `{ items[], page, limit, total }` (`shortlistListResponseSchema`), newest first; there is no list-level total or budget status (price summaries are per saved look, FR-BUD-07). Unknown query parameters, `limit` above 50 or a malformed `outfitId` return `INVALID_REQUEST`. Another user's items are never listed.
+- `POST` returns `201` with the item. The link and the trimmed name and note are stored as entered; a note of only spaces is stored as `null`. Unknown fields (for example `category`, `currency`, `imageUrl`) return `INVALID_REQUEST`. The 201st item returns `CONFLICT` ("You can keep up to 200 items. Remove one to add another."). **Attaching is not available yet:** a request with both `outfitId` and `slotId` returns `INVALID_REQUEST` ("Adding an item to a look is not available yet"); attaching, the saved-look and slot checks, the one-item-per-slot `CONFLICT` and detaching on look deletion come with #43.
+- `DELETE` returns `NOT_FOUND` for an unknown item, an item already deleted or another user's item, and `INVALID_REQUEST` for a malformed ID.
+- `GET` (when it returns items) and `POST` responses carry the `USER_ENTERED_PRICES` warning (AC-B1). No endpoint requests, previews or rewrites a link, and item values are never logged. The per-user limit on shortlist writes (§5) is not applied yet.
+
 ### 3.7 Products (`product.ts`) — product layer
 
 **`GET /v1/products`** — filters: `category`, `department`, `colors`, `sizes`, `styles`, `occasions`, `retailerId`, `maxPrice`, `includeUnavailable` (default `false`). Returns only verified, active, non-fixture products from active retailers. Expired, out-of-stock and broken-linked products are hidden by default.

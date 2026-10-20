@@ -77,7 +77,7 @@ TD-SHP-01 #37 → TD-SHP-02 #38 → TD-SHP-03 #43 (needs #41)              (Keda
 | ID | Task | Issue | Status | Pri | Depends on | Acceptance criteria |
 |---|---|---|---|---|---|---|
 | TD-SHP-01 | Budget engine: pure functions for totals and status on user-entered prices (was KE-1) | #37 | 🟢 not started | P0 | — | FR-BUD; `itemsTotal ≤ budget` ⇒ within budget; INR limits; matches `userPriceSummarySchema` |
-| TD-SHP-02 | Shortlist of items you found: model, API and UI | #38 | ⏸ | P0 | TD-SHP-01; contract ✅ | FR-LIST; https only; link never fetched; 200-item limit; one item per `{outfitId, slotId}`; "not verified by StyleMe" labels |
+| TD-SHP-02 | Shortlist of items you found: model, API and UI | #38 | 🔄 done locally, PR pending: `shortlistItems` model, `GET`/`POST`/`DELETE /v1/shortlist`, `/shortlist` page (add, list, remove with confirmation); attaching to a look slot (and the one-item-per-slot check) comes with #43 | P0 | TD-SHP-01; contract ✅ | FR-LIST; https only; link never fetched; 200-item limit; one item per `{outfitId, slotId}`; "not verified by StyleMe" labels |
 | TD-SHP-03 | Shop My Look page and "Shop this look" entry point (was KE-3) | #43 | ⏸ | P1 | TD-SHP-01, TD-SHP-02, TD-SAV-01 | No real product, price or retailer appears; clear "product data unavailable" state |
 | TD-SHP-04 | Retailer product integration (was KE-2) | #57 | ⛔ | P2 | Written retailer permission (D-43 … D-45), D-46, D-74 | — |
 | TD-SHP-05 | Design Studio: requirements and approval gate (was KE-4) | #56 | 💤 | P2 | D-76 | No implementation before D-76 |
