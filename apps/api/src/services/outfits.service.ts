@@ -46,6 +46,14 @@ function toLook(doc: StoredOutfit): Look {
     explanationRefs: doc.explanationRefs,
     combinationSignature: doc.combinationSignature,
     aiModel: doc.aiModel ?? null,
+    ...(doc.feedback
+      ? {
+          feedback: {
+            value: doc.feedback.value,
+            ...(doc.feedback.reason ? { reason: doc.feedback.reason } : {}),
+          },
+        }
+      : {}),
   };
 }
 

@@ -2,12 +2,13 @@ import Link from 'next/link';
 import type { Look, ProfileSizes } from '@styleme/contracts';
 import { shopHref } from '@/lib/shop/look-shopper';
 import { Card } from '@/components/ui/card';
+import { FeedbackButtons } from './FeedbackButtons';
 import { SaveLookButton } from './SaveLookButton';
 import { SlotRow } from './SlotRow';
 import { WhyThisWorks } from './WhyThisWorks';
 
 /**
- * One generated look (FR-LOOK), with Save (FR-OUT-01) and Shop this look (#43). Reused by explanations
+ * One generated look (FR-LOOK), with Save (FR-OUT-01), Shop this look (#43) and Feedback (#42). Reused by explanations
  * and alternatives (#48) and slot visuals (#50).
  */
 export function LookCard({ look, position, sizes }: { look: Look; position: number; sizes: ProfileSizes }) {
@@ -33,6 +34,7 @@ export function LookCard({ look, position, sizes }: { look: Look; position: numb
             Shop this look
           </Link>
         </div>
+        <FeedbackButtons outfitId={look.id} initialFeedback={look.feedback} />
       </article>
     </Card>
   );

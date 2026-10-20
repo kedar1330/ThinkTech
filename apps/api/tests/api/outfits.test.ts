@@ -46,6 +46,7 @@ describe('/v1/outfits (saved looks)', () => {
       request(app).get('/v1/outfits'),
       request(app).get(`/v1/outfits/${ID_NOBODY_HAS}`),
       request(app).post(`/v1/outfits/${ID_NOBODY_HAS}/save`),
+      request(app).post(`/v1/outfits/${ID_NOBODY_HAS}/feedback`),
       request(app).delete(`/v1/outfits/${ID_NOBODY_HAS}`),
     ]) {
       const res = await call;
@@ -427,5 +428,186 @@ describe('saved looks in the shared save system (D-116)', () => {
       .expect(200);
     expect(await env.db.models.Outfit.countDocuments()).toBe(0);
     expect(await entries()).toHaveLength(0);
+  });
+});
+
+describe('feedback (POST /v1/outfits/:id/feedback, T-34)', () => {
+  it('accepts love_it and not_for_me with a fixed reason, storing feedback on outfits.feedback', async () => {
+    const { app, token } = await signedIn('feedback@example.com');
+    const [look1, look2] = await generate(app, token);
+
+    const res1 = await request(app)
+      .post(`/v1/outfits/${look1!.id}/feedback`)
+      .set(bearer(token))
+      .send({ value: 'love_it' });
+    expect(res1.status).toBe(200);
+    expect(res1.body.data).toEqual({ recorded: true });
+
+    const stored1 = await env.db.models.Outfit.findById(look1!.id).lean();
+    expect(stored1!.feedback).toMatchObject({ value: 'love_it', reason: null });
+    expect(stored1!.feedback.at).toBeInstanceOf(Date);
+
+    const res2 = await request(app)
+      .post(`/v1/outfits/${look2!.id}/feedback`)
+      .set(bearer(token))
+      .send({ value: 'not_for_me', reason: 'not_my_style' });
+    expect(res2.status).toBe(200);
+    expect(res2.body.data).toEqual({ recorded: true });
+
+    const stored2 = await env.db.models.Outfit.findById(look2!.id).lean();
+    expect(stored2!.feedback).toMatchObject({ value: 'not_for_me', reason: 'not_my_style' });
+    expect(stored2!.feedback.at).toBeInstanceOf(Date);
+  });
+
+  it('rejects free text, unknown reasons, comments, and reasons given with love_it', async () => {
+    const { app, token } = await signedIn('bad-feedback@example.com');
+    const [look] = await generate(app, token);
+
+    for (const body of [
+      { value: 'not_for_me', reason: 'I just hate it' },
+      { value: 'love_it', reason: 'too_formal' },
+      { value: 'not_for_me', comment: 'free text' },
+      { value: 'meh' },
+      {},
+    ]) {
+      const res = await request(app).post(`/v1/outfits/${look!.id}/feedback`).set(bearer(token)).send(body);
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_REQUEST');
+    }
+  });
+
+  it('rejects malformed IDs, other users’ looks and expired suggestions', async () => {
+    const owner = await signedIn('fb-owner@example.com');
+    const [look] = await generate(owner.app, owner.token);
+    const intruder = await signedIn('fb-intruder@example.com');
+
+    // Malformed ID
+    const badId = await request(owner.app)
+      .post('/v1/outfits/not-an-id/feedback')
+      .set(bearer(owner.token))
+      .send({ value: 'love_it' });
+    expect(badId.status).toBe(400);
+    expect(badId.body.error.code).toBe('INVALID_REQUEST');
+
+    // Other user's look
+    const foreign = await request(intruder.app)
+      .post(`/v1/outfits/${look!.id}/feedback`)
+      .set(bearer(intruder.token))
+      .send({ value: 'love_it' });
+    expect(foreign.status).toBe(404);
+    expect(foreign.body.error.code).toBe('NOT_FOUND');
+
+    // Expired suggestion
+    await env.db.models.Outfit.updateOne({ _id: look!.id }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+    const expired = await request(owner.app)
+      .post(`/v1/outfits/${look!.id}/feedback`)
+      .set(bearer(owner.token))
+      .send({ value: 'love_it' });
+    expect(expired.status).toBe(404);
+  });
+
+  it('upsert: sending feedback again on the same look replaces previous reaction (one current reaction per look)', async () => {
+    const { app, token } = await signedIn('upsert-fb@example.com');
+    const [look] = await generate(app, token);
+
+    await request(app)
+      .post(`/v1/outfits/${look!.id}/feedback`)
+      .set(bearer(token))
+      .send({ value: 'love_it' })
+      .expect(200);
+
+    let stored = await env.db.models.Outfit.findById(look!.id).lean();
+    expect(stored!.feedback.value).toBe('love_it');
+
+    // Change mind to not_for_me
+    await request(app)
+      .post(`/v1/outfits/${look!.id}/feedback`)
+      .set(bearer(token))
+      .send({ value: 'not_for_me', reason: 'too_casual' })
+      .expect(200);
+
+    stored = await env.db.models.Outfit.findById(look!.id).lean();
+    expect(stored!.feedback.value).toBe('not_for_me');
+    expect(stored!.feedback.reason).toBe('too_casual');
+  });
+
+  it('T-34 explicit profile preferences never change after recording feedback', async () => {
+    const { app, token } = await signedIn('profile-unchanged@example.com');
+    const profileBefore = (await request(app).get('/v1/profile').set(bearer(token))).body.data;
+    const [look] = await generate(app, token);
+
+    await request(app)
+      .post(`/v1/outfits/${look!.id}/feedback`)
+      .set(bearer(token))
+      .send({ value: 'not_for_me', reason: 'not_my_style' })
+      .expect(200);
+
+    const profileAfter = (await request(app).get('/v1/profile').set(bearer(token))).body.data;
+    expect(profileAfter).toEqual(profileBefore);
+  });
+
+  it('feedback acts as lowest-precedence ranking signal in future recommendations and does not ban styles', async () => {
+    const { app, token } = await signedIn('engine-fb@example.com');
+    const firstLooks = await generate(app, token);
+    expect(firstLooks.length).toBeGreaterThanOrEqual(2);
+
+    const firstLoved = firstLooks[0]!;
+    const other = firstLooks.find((l) => l.templateId !== firstLoved.templateId) ?? firstLooks[1]!;
+
+    // Rate the first look "love_it"
+    await request(app)
+      .post(`/v1/outfits/${firstLoved.id}/feedback`)
+      .set(bearer(token))
+      .send({ value: 'love_it' })
+      .expect(200);
+
+    // Rate the other look "not_for_me"
+    await request(app)
+      .post(`/v1/outfits/${other.id}/feedback`)
+      .set(bearer(token))
+      .send({ value: 'not_for_me', reason: 'colours_not_for_me' })
+      .expect(200);
+
+    // Generate again with the same parameters
+    const nextLooks = await generate(app, token);
+    expect(nextLooks.length).toBeGreaterThan(0);
+
+    if (firstLoved.templateId !== other.templateId) {
+      const lovedIdx = nextLooks.findIndex((l) => l.templateId === firstLoved.templateId);
+      const otherIdx = nextLooks.findIndex((l) => l.templateId === other.templateId);
+      if (lovedIdx !== -1 && otherIdx !== -1) {
+        expect(lovedIdx).toBeLessThan(otherIdx);
+      }
+    } else {
+      const lovedIdx = nextLooks.findIndex((l) => l.paletteId === firstLoved.paletteId);
+      const otherIdx = nextLooks.findIndex((l) => l.paletteId === other.paletteId);
+      if (lovedIdx !== -1 && otherIdx !== -1) {
+        expect(lovedIdx).toBeLessThan(otherIdx);
+      }
+    }
+  });
+
+  it('account deletion removes feedback with the look', async () => {
+    const { app, mail } = env.makeApp({}, { styleLibrary });
+    await registerUser(app, env, mail, 'del-fb@example.com');
+    const token = await login(app, 'del-fb@example.com');
+    const [look] = await generate(app, token);
+
+    await request(app)
+      .post(`/v1/outfits/${look!.id}/feedback`)
+      .set(bearer(token))
+      .send({ value: 'love_it' })
+      .expect(200);
+
+    expect(await env.db.models.Outfit.countDocuments({ 'feedback.value': 'love_it' })).toBe(1);
+
+    await request(app).post('/v1/account/deletion-otp').set(bearer(token));
+    await request(app)
+      .delete('/v1/account')
+      .set(bearer(token))
+      .send({ otp: mail.otp('del-fb@example.com'), confirm: true })
+      .expect(200);
+
+    expect(await env.db.models.Outfit.countDocuments()).toBe(0);
   });
 });

@@ -268,7 +268,7 @@ function planCategory(
       ...fromRules(
         rules,
         { color, colorFamily: family },
-        { preference: liked ? 1 : 0, rule: coordination, signal: 0 },
+        { preference: liked ? 1 : 0, rule: coordination, signal: 0, feedback: 0 },
         liked ? [{ attribute: 'likedColor', value: color }] : [],
       ),
     };

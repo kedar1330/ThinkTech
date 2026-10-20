@@ -122,6 +122,40 @@ export const OUTFIT_STATUSES = ['suggested', 'saved'] as const;
 export const outfitStatusSchema = z.enum(OUTFIT_STATUSES);
 export type OutfitStatus = z.infer<typeof outfitStatusSchema>;
 
+// --- Feedback (FR-OUT-04): no free text is collected ------------------------------------------------
+
+export const FEEDBACK_VALUES = ['love_it', 'not_for_me'] as const;
+export const feedbackValueSchema = z.enum(FEEDBACK_VALUES);
+export type FeedbackValue = z.infer<typeof feedbackValueSchema>;
+
+// Reasons describe the look, never the user's body. IDs are stable; add new ones, never rename.
+export const FEEDBACK_REASONS = [
+  { id: 'not_my_style', label: 'Not my style' },
+  { id: 'colours_not_for_me', label: 'Colours not for me' },
+  { id: 'too_formal', label: 'Too formal' },
+  { id: 'too_casual', label: 'Too casual' },
+  { id: 'not_comfortable', label: 'Doesn’t look comfortable' },
+  { id: 'wrong_occasion', label: 'Not right for the occasion' },
+] as const;
+export const FEEDBACK_REASON_IDS = FEEDBACK_REASONS.map((r) => r.id) as [
+  (typeof FEEDBACK_REASONS)[number]['id'],
+  ...(typeof FEEDBACK_REASONS)[number]['id'][],
+];
+export const feedbackReasonSchema = z.enum(FEEDBACK_REASON_IDS);
+export type FeedbackReasonId = z.infer<typeof feedbackReasonSchema>;
+
+export const lookFeedbackSchema = z
+  .object({
+    value: feedbackValueSchema,
+    reason: feedbackReasonSchema.optional(),
+  })
+  .strict()
+  .refine((f) => f.reason === undefined || f.value === 'not_for_me', {
+    message: 'A reason can only be given with "not for me"',
+    path: ['reason'],
+  });
+export type LookFeedback = z.infer<typeof lookFeedbackSchema>;
+
 export const lookSchema = z
   .object({
     id: objectIdSchema,
@@ -139,6 +173,7 @@ export const lookSchema = z
     combinationSignature: z.string().min(1),
     /** `null` unless optional AI wording was used (FR-LOOK-16). */
     aiModel: z.string().min(1).nullable(),
+    feedback: lookFeedbackSchema.nullable().optional(),
   })
   .strict();
 export type Look = z.infer<typeof lookSchema>;
@@ -227,26 +262,6 @@ export const outfitDetailSchema = lookSchema.extend({
 });
 export type OutfitDetail = z.infer<typeof outfitDetailSchema>;
 
-// --- Feedback (FR-OUT-04): no free text is collected ------------------------------------------------
-
-export const FEEDBACK_VALUES = ['love_it', 'not_for_me'] as const;
-export const feedbackValueSchema = z.enum(FEEDBACK_VALUES);
-
-// Reasons describe the look, never the user's body. IDs are stable; add new ones, never rename.
-export const FEEDBACK_REASONS = [
-  { id: 'not_my_style', label: 'Not my style' },
-  { id: 'colours_not_for_me', label: 'Colours not for me' },
-  { id: 'too_formal', label: 'Too formal' },
-  { id: 'too_casual', label: 'Too casual' },
-  { id: 'not_comfortable', label: 'Doesn’t look comfortable' },
-  { id: 'wrong_occasion', label: 'Not right for the occasion' },
-] as const;
-export const FEEDBACK_REASON_IDS = FEEDBACK_REASONS.map((r) => r.id) as [
-  (typeof FEEDBACK_REASONS)[number]['id'],
-  ...(typeof FEEDBACK_REASONS)[number]['id'][],
-];
-export const feedbackReasonSchema = z.enum(FEEDBACK_REASON_IDS);
-
 /** `POST /v1/outfits/:id/feedback`. A reason is only given with "not for me". */
 export const outfitFeedbackRequestSchema = z
   .object({ value: feedbackValueSchema, reason: feedbackReasonSchema.optional() })
@@ -257,9 +272,8 @@ export const outfitFeedbackRequestSchema = z
   });
 export type OutfitFeedbackRequest = z.infer<typeof outfitFeedbackRequestSchema>;
 
-export interface FeedbackRecordedResponse {
-  recorded: true;
-}
+export const feedbackRecordedResponseSchema = z.object({ recorded: z.literal(true) }).strict();
+export type FeedbackRecordedResponse = z.infer<typeof feedbackRecordedResponseSchema>;
 
 export interface DeletedResponse {
   deleted: true;

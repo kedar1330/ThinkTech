@@ -32,6 +32,7 @@ import { AuthService } from './services/auth.service';
 import type { GoogleVerifier } from './services/google';
 import type { EmailSender, SmsSender } from './services/messaging';
 import type { StyleLibrary } from './services/engine';
+import { FeedbackService } from './services/feedback.service';
 import { OnboardingService } from './services/onboarding.service';
 import { OutfitsService } from './services/outfits.service';
 import { PaletteService } from './services/palette.service';
@@ -138,6 +139,7 @@ export function createApp({
   const appearanceService = new AppearanceService(db.models);
   app.use('/v1', profileRoutes(new ProfileController(profileService), withPassword));
   app.use('/v1', appearanceRoutes(new AppearanceController(appearanceService), withPassword));
+  const feedbackService = new FeedbackService(db.models);
   const wording = new WordingService(
     config.AI_WORDING_ENABLED ? wordingProvider : null,
     styleLibrary,
@@ -151,9 +153,13 @@ export function createApp({
     profileService,
     appearanceService,
     wording,
+    feedbackService,
   );
   app.use('/v1', recommendationsRoutes(new RecommendationsController(recommendations), withPassword));
-  app.use('/v1', outfitsRoutes(new OutfitsController(new OutfitsService(db.models, styleLibrary)), withPassword));
+  app.use(
+    '/v1',
+    outfitsRoutes(new OutfitsController(new OutfitsService(db.models, styleLibrary), feedbackService), withPassword),
+  );
   const palettes = new PaletteService(styleLibrary, profileService, appearanceService);
   app.use('/v1', paletteRoutes(new PaletteController(palettes), withPassword));
   app.use('/v1', shortlistRoutes(new ShortlistController(new ShortlistService(db.models)), withPassword));

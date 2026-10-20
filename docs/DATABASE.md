@@ -333,7 +333,7 @@ A report never changes verified product data by itself. Created with the product
 
 ### 3.4 `outfits` (looks)
 
-One document per look. `POST /v1/recommendations` creates up to 5 looks sharing a `recommendationId`. **Implemented (#33):** model `Outfit` in `apps/api/src/models/index.ts`; indexes `{ userId, status, createdAt: -1 }` and a TTL index on `expiresAt` (`expireAfterSeconds: 0`; documents without `expiresAt` never expire). Saving and feedback (#41, #42) are not built yet.
+One document per look. `POST /v1/recommendations` creates up to 5 looks sharing a `recommendationId`. **Implemented (#33, #41, #42):** model `Outfit` in `apps/api/src/models/index.ts`; indexes `{ userId, status, createdAt: -1 }` and a TTL index on `expiresAt` (`expireAfterSeconds: 0`; documents without `expiresAt` never expire). Saving (#41) and feedback (#42) are implemented: saving sets `status: 'saved'` and removes `expiresAt`; feedback is stored on `outfits.feedback` (`{ value, reason?, recordedAt }`).
 
 | Field | Type / rule |
 |---|---|

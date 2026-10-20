@@ -177,7 +177,7 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ---
 
-## 9. Saved Outfits and feedback (PDF p3, p6) — ⬜ Placeholder
+## 9. Saved Outfits and feedback (PDF p3, p6) — 🔄 Implemented (#41, #42)
 
 **Purpose.** A personal collection of saved looks (and later palettes and designs), and feedback that improves future suggestions.
 
@@ -188,7 +188,7 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 | States | Empty collection message; removal confirmation; not-found for another user's look |
 | Depends on | M2 (`outfits` from the engine) and M3 |
 | Owner | Ankita |
-| Docs / Issues | [FRD.md](FRD.md) FR-OUT-01 … 04; issues #41 (save, list, open, remove), #42 (feedback), #50 (illustrations, blocked), #51 (tests); earlier #13 (closed). Contracts merged (`outfit.ts`: `outfitDetailSchema`, `outfitFeedbackRequestSchema`, fixed `FEEDBACK_REASONS`) |
+| Docs / Issues | [FRD.md](FRD.md) FR-OUT-01 … 04; issues #41 (save, list, open, remove — implemented), #42 (feedback and saved-look alternatives — implemented), #50 (illustrations, blocked), #51 (tests); earlier #13 (closed). Contracts merged (`outfit.ts`: `outfitDetailSchema`, `outfitFeedbackRequestSchema`, fixed `FEEDBACK_REASONS`) |
 
 **Specified (FR-SAVE, D-116).** One shared save system for every feature: styles, outfits, designs, shopping looks, products, try-on looks and palettes (palettes shown only in My Colour Palette, D-117), each clearly labelled; references to shared records, never copies; duplicate saves detected; customising never overwrites the original (Save as New Look, Duplicate). Header with search, collection selector and sort; sections All Saved, Outfits, My Designs (no Palettes section, D-117 = a); responsive cards with the source's best visual; detail view with components, colours, occasion, the original "why it was recommended", notes and dates; named collections (an item can be in several), Favourites as a flag, filters, sorting, bulk move and remove, Undo. Retired sources and unavailable products stay readable and are labelled honestly; prices are shown as historical. Private, owner-only, no sharing. Feedback (D-115) is a soft signal; the user can undo, pause or reset personalisation.
 
