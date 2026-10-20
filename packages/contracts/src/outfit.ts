@@ -167,6 +167,18 @@ export type RecommendationResponse = z.infer<typeof recommendationResponseSchema
 export const outfitListQuerySchema = paginationQuerySchema.extend({ status: outfitStatusSchema.default('saved') });
 export type OutfitListQuery = z.infer<typeof outfitListQuerySchema>;
 
+/** `GET /v1/outfits` data: one page of the user's looks, newest first, and how many there are in all. */
+export const outfitListResponseSchema = z
+  .object({
+    looks: z.array(lookSchema),
+    page: z.number().int().min(1),
+    limit: z.number().int().min(1).max(50),
+    total: z.number().int().min(0),
+  })
+  .strict()
+  .refine((list) => list.looks.length <= list.limit, { message: 'More looks than the page limit' });
+export type OutfitListResponse = z.infer<typeof outfitListResponseSchema>;
+
 /**
  * `GET /v1/outfits/:id`: the look with the user's items attached to its slots and, when any are
  * attached, a price summary computed on read (FR-OUT-02, FR-BUD-07).

@@ -140,7 +140,7 @@ describe('dashboard sections', () => {
       'Saved Outfits',
     ]);
     const available = FEATURES.filter((f) => f.href);
-    expect(available.map((f) => f.slug)).toEqual(['discover-my-style']);
+    expect(available.map((f) => f.slug)).toEqual(['discover-my-style', 'saved-outfits']);
     for (const f of FEATURES.filter((x) => !x.href)) expect(featureHref(f)).toBe(`/features/${f.slug}`);
   });
 });

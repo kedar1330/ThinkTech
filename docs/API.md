@@ -189,10 +189,14 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 **`GET /v1/outfits/:id`** — returns one look owned by the user, with `userItems[]` (the shortlist items attached to its slots) and, if any are attached, `priceSummary` (FR-BUD-07): `{ priceBasis: "user_entered", itemsTotal, pricedSlots, totalSlots, complete, budget, budgetRemaining, status, label }` plus the `USER_ENTERED_PRICES` warning. Computed on read, never stored. Error: `NOT_FOUND` (also returned for other users' looks, so their existence isn't revealed).
 
 **`POST /v1/outfits/:id/save`** — sets `status: "saved"` and removes the expiry. Returns the look.
+- **One save system (D-116, agreed on #41):** after the look is saved, its `savedItems` entry is upserted (`itemType: "outfit"`, `ref: { kind: "look", id }`, `identityKey` = SHA-256 of `outfit|look|<id>`), so saving twice keeps one entry; if that write fails the error is returned and a retry completes it. A new save beyond 1,000 saved items returns `CONFLICT` and the look stays suggested.
 
 **`POST /v1/outfits/:id/feedback`** — input `{ value: "love_it" | "not_for_me", reason? }`. `reason` is allowed only with `not_for_me` and is one of `not_my_style`, `colours_not_for_me`, `too_formal`, `too_casual`, `not_comfortable`, `wrong_occasion` (FR-OUT-04; no free text). Returns `{ recorded: true }`.
 
 **`DELETE /v1/outfits/:id`** — deletes the look and detaches any shortlist items from it (the items remain until the user deletes them). Returns `{ deleted: true }`.
+- **One save system (D-116):** deletes the look's `savedItems` entry first, then detaches the shortlist items (`outfitId` and `slotId` set to `null`), then deletes the look. Unsaving an outfit from the shared Saved page (TD-FS-SAV-02) will call the same removal: "remove" means gone.
+
+- **Implemented (#41), details beyond the contract:** `GET /v1/outfits`, `GET /v1/outfits/:id`, `POST /v1/outfits/:id/save` and `DELETE /v1/outfits/:id` (all `withPassword`). The list returns `outfitListResponseSchema` `{ looks[], page, limit, total }`, newest first by generation time (`createdAt`, then `_id`); `limit` is at most 50. Every query is scoped by `userId`: another user's look, a missing one and a suggestion past its `expiresAt` (not yet removed by the TTL index) are `NOT_FOUND`; a malformed `:id` is `INVALID_REQUEST`. Any look of the user's (suggested or saved) can be opened, saved or deleted. Saving is idempotent: it sets `status: "saved"` and removes `expiresAt` (`$unset`), and leaves the slots, explanation and references stored at generation unchanged (the snapshot, FR-OUT-05). Until Shop My Look (#43) lets items be attached, `GET /v1/outfits/:id` returns `userItems: []` and no `priceSummary`. Saving writes the look's `savedItems` entry and deleting removes it and detaches shortlist items, as agreed on #41 (D-116, [DATABASE.md](DATABASE.md) §3.10).
 
 ### 3.6 Shortlist (contract: `product.ts`) — Stage 1 (D-77 = B)
 

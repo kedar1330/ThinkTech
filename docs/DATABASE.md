@@ -261,7 +261,7 @@ The theme preference (light / dark / system) is a browser setting, not stored on
 
 ### 3.10 `savedItems` — one save system for every feature (D-116)
 
-Model declared in `apps/api/src/models/user-collections.ts`; no endpoint uses it yet.
+Model declared in `apps/api/src/models/user-collections.ts`. **Saved looks (#41, D-116 mechanism agreed on #41):** `OutfitsService.save` upserts one entry per saved look (`itemType: "outfit"`, `sourceFeature: "discover_my_style"`, `ref: { kind: "look" }`, `identityKey` = SHA-256 of `outfit|look|<outfitId>`; name, a minimal snapshot, `recommendationContext`, `origin` and `facets` filled from the look) and `OutfitsService.remove` deletes it with the look; `outfits` stays the source of truth for the look, and `/saved` reads `outfits` until the shared Saved page (TD-FS-SAV-02) exists. No other feature writes `savedItems` yet.
 
 | Field | Type / rule |
 |---|---|
