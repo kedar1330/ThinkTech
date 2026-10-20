@@ -28,6 +28,8 @@ import {
 const lifecycleFields = {
   status: { type: String, enum: CATALOGUE_STATUSES, default: 'draft', required: true },
   version: { type: Number, default: 1, required: true },
+  // Test fixture marker (issue #52, D-78).
+  isFixture: { type: Boolean, default: undefined },
   review: {
     type: new Schema(
       {

@@ -22,8 +22,18 @@ import {
 // Stage 1 account collections (DATABASE.md §3.1 – §3.1d). Collection names are explicit so they
 // match the documentation and the tombstone replay list.
 
+/**
+ * Test fixture marker (issue #52, D-78).
+ * Set to `true` on fixture documents in local, CI and staging test data.
+ * Refused in production by assertNoFixtureDocuments at startup.
+ */
+export const fixtureField = {
+  isFixture: { type: Boolean, default: undefined },
+} as const;
+
 const userSchema = new Schema(
   {
+    ...fixtureField,
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     // Null until a Google-registered user creates their StyleMe password (D-88).
     passwordHash: { type: String, default: null },
@@ -93,6 +103,7 @@ const userSchema = new Schema(
 userSchema.index({ googleSub: 1 }, { unique: true, partialFilterExpression: { googleSub: { $type: 'string' } } });
 
 const betaInviteSchema = new Schema({
+  ...fixtureField,
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   invitedAt: { type: Date, required: true },
   invitedBy: { type: Schema.Types.ObjectId, default: null },
@@ -104,6 +115,7 @@ const betaInviteSchema = new Schema({
 // `_id`, so the email_verification challenge is keyed by it. Only a password hash is stored.
 const pendingRegistrationSchema = new Schema(
   {
+    ...fixtureField,
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     name: { type: String, required: true },
     passwordHash: { type: String, required: true },
@@ -134,6 +146,7 @@ export type ChallengePurpose = (typeof CHALLENGE_PURPOSES)[number];
 
 const authChallengeSchema = new Schema(
   {
+    ...fixtureField,
     userId: { type: Schema.Types.ObjectId, required: true },
     purpose: { type: String, enum: CHALLENGE_PURPOSES, required: true },
     // The new email (email_change) or phone (phone_verification) being verified.
@@ -167,6 +180,7 @@ authChallengeSchema.index(
 authChallengeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const sessionSchema = new Schema({
+  ...fixtureField,
   sidHash: { type: String, required: true, unique: true },
   userId: { type: Schema.Types.ObjectId, required: true, index: true },
   // Remember Me (D-91): 30 days; otherwise a browser-session cookie with a 24-hour server limit.
@@ -177,6 +191,7 @@ const sessionSchema = new Schema({
 
 // Lives in the separate tombstone store, outside the main database's restore scope (D-85).
 const tombstoneSchema = new Schema({
+  ...fixtureField,
   userId: { type: Schema.Types.ObjectId, required: true, index: true },
   emailHmac: { type: String, required: true, index: true },
   deletedAt: { type: Date, required: true },
@@ -200,6 +215,7 @@ const appearanceAttributeSchema = new Schema(
 
 const appearanceProfileSchema = new Schema(
   {
+    ...fixtureField,
     userId: { type: Schema.Types.ObjectId, required: true, unique: true },
     skinTone: { type: appearanceAttributeSchema, default: null },
     undertone: { type: appearanceAttributeSchema, default: null },
@@ -244,6 +260,7 @@ const appearanceProfileSchema = new Schema(
 // upload endpoint ships, account deletion must also delete the stored objects, not only this metadata.
 const userPhotoSchema = new Schema(
   {
+    ...fixtureField,
     userId: { type: Schema.Types.ObjectId, required: true },
     kind: { type: String, enum: ['face', 'body'], required: true },
     angle: { type: String, enum: ['front', 'side', 'back'], default: null },
@@ -266,6 +283,7 @@ userPhotoSchema.index({ deleteAfter: 1 }, { partialFilterExpression: { deleteAft
 // Deleting a photo does not delete results derived from it (they are deleted separately).
 const appearanceAnalysisSchema = new Schema(
   {
+    ...fixtureField,
     userId: { type: Schema.Types.ObjectId, required: true },
     kind: { type: String, enum: ['skin_tone', 'body_shape'], required: true },
     source: { type: String, enum: ['photo', 'measurements', 'photo_and_measurements'], required: true },
@@ -292,6 +310,7 @@ appearanceAnalysisSchema.index({ userId: 1, source: 1 });
 // in Stage 1 (FR-PROF-04, FR-SIZE-06).
 const profileSchema = new Schema(
   {
+    ...fixtureField,
     userId: { type: Schema.Types.ObjectId, required: true, unique: true },
     department: { type: String, enum: ['women', 'men', 'any'], required: true },
     sizes: { type: Schema.Types.Mixed, default: () => ({}) },
@@ -339,6 +358,7 @@ const profileSchema = new Schema(
 // `lookSchema` contract before it is returned; never logged.
 const outfitSchema = new Schema(
   {
+    ...fixtureField,
     userId: { type: Schema.Types.ObjectId, required: true },
     recommendationId: { type: Schema.Types.ObjectId, required: true },
     status: { type: String, enum: ['suggested', 'saved'], required: true },
@@ -377,6 +397,7 @@ outfitSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 // set together (an item attached to one slot of a saved look) or both null.
 const shortlistItemSchema = new Schema(
   {
+    ...fixtureField,
     userId: { type: Schema.Types.ObjectId, required: true },
     outfitId: { type: Schema.Types.ObjectId, default: null },
     slotId: { type: String, default: null },
@@ -401,6 +422,7 @@ shortlistItemSchema.index(
 // rule references and attribute labels only, never personal data (AI rule 16), so it is not user-owned.
 const aiCacheSchema = new Schema(
   {
+    ...fixtureField,
     cacheKey: { type: String, required: true, unique: true },
     provider: { type: String, required: true },
     model: { type: String, required: true },

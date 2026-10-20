@@ -18,11 +18,16 @@ import {
 // the admin collections (DATABASE.md §4b). SPECIFIED 2026-10-18 (D-115, D-116, D-120) — no endpoint uses
 // them yet. Every user-owned one is keyed by `userId` and listed in USER_OWNED_COLLECTIONS.
 
+const fixtureField = {
+  isFixture: { type: Boolean, default: undefined },
+} as const;
+
 // --- Saved items: one save system for every feature (D-116) ---------------------------------------------
 
 export const savedItemSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true },
+    ...fixtureField,
     itemType: { type: String, enum: SAVED_ITEM_TYPE_IDS, required: true },
     sourceFeature: { type: String, enum: STYLEME_FEATURES, required: true },
     /** What it points at; shared records by stable ID, never copied. */
@@ -96,6 +101,7 @@ savedItemSchema.index({ userId: 1, 'ref.kind': 1, 'ref.id': 1 });
 export const savedCollectionSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true },
+    ...fixtureField,
     name: { type: String, required: true },
     /** Lower-cased name, for the per-user uniqueness check. */
     nameKey: { type: String, required: true },
@@ -109,6 +115,7 @@ savedCollectionSchema.index({ userId: 1, nameKey: 1 }, { unique: true });
 export const customPaletteSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true },
+    ...fixtureField,
     name: { type: String, required: true },
     colours: {
       type: [
@@ -138,6 +145,7 @@ customPaletteSchema.index({ userId: 1, updatedAt: -1 });
 export const userFeedbackSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true },
+    ...fixtureField,
     targetType: { type: String, enum: USER_FEEDBACK_TARGET_TYPES, required: true },
     targetId: { type: String, required: true },
     value: { type: String, enum: USER_FEEDBACK_VALUES, required: true },
@@ -158,6 +166,7 @@ userFeedbackSchema.index({ userId: 1, updatedAt: -1 });
 export const adminAccountSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true, unique: true },
+    ...fixtureField,
     role: { type: String, enum: ADMIN_ROLES, required: true },
     status: { type: String, enum: ADMIN_STATUSES, default: 'active', required: true },
     createdBy: { type: Schema.Types.ObjectId, default: null },
@@ -170,6 +179,7 @@ adminAccountSchema.index({ role: 1, status: 1 });
 /** Sanitised record of every administrative action (SECURITY.md §2.1). Retained 1 year (TTL). */
 export const adminAuditLogSchema = new Schema({
   adminId: { type: Schema.Types.ObjectId, required: true },
+  ...fixtureField,
   action: { type: String, enum: AUDIT_ACTIONS, required: true },
   targetType: { type: String, enum: AUDIT_TARGET_TYPES, required: true },
   targetId: { type: String, required: true },
