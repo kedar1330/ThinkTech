@@ -13,7 +13,7 @@ import { explain, type Explanation } from './explain';
 import { templateWearType, type StyleLibrary } from './library';
 import { resolvePreferences, type EngineSignals, type PreferenceConflict, type Preferences } from './preferences';
 import { applicableRules, ruleEffects, type ApplicableRule } from './rules';
-import { ZERO, add, compareScores, round, type Score } from './score';
+import { ZERO, add, compareScores, round, type FeedbackSignals, type Score } from './score';
 import { MIN_ALTERNATIVES, fillSlot, type Choice, type Constraint, type FilledSlot, type Match } from './slots';
 import { searchPhrase, sizeNote, swatch } from './text';
 
@@ -29,6 +29,7 @@ export interface EngineInput {
   profile: ProfileResponse;
   /** `null` when the user has no signals or has switched `useInRecommendations` off. */
   signals: EngineSignals | null;
+  feedbackSignals?: FeedbackSignals | null;
   library: StyleLibrary;
 }
 
@@ -129,10 +130,12 @@ function lookScore(
   contrast: string | null,
   request: RecommendationRequest,
   prefs: Preferences,
+  feedbackSignals?: FeedbackSignals | null,
 ) {
   const matched: Match[] = [];
   let preference = 0;
   let signal = 0;
+  let feedback = 0;
   if (!request.style) {
     for (const style of template.styles) {
       if (prefs.styles.has(style)) {
@@ -156,7 +159,11 @@ function lookScore(
       matched.push({ attribute: 'skinTone', value: palette.skinToneRange });
     }
   }
-  return { score: { preference, rule: 0, signal }, matched };
+  if (feedbackSignals) {
+    feedback += feedbackSignals.templates.get(template.id) ?? 0;
+    feedback += feedbackSignals.palettes.get(palette.id) ?? 0;
+  }
+  return { score: { preference, rule: 0, signal, feedback }, matched };
 }
 
 function buildCandidate(
@@ -197,7 +204,7 @@ function buildCandidate(
   // A look has the combination's contrast only if its worn colours do (contrast.ts); otherwise neither
   // the contrast preference nor contrast rules are claimed for it.
   const realised = combination && wearsContrast(combination, usedColours) ? combination : null;
-  const look = lookScore(template, palette, realised?.contrastLevel ?? null, request, prefs);
+  const look = lookScore(template, palette, realised?.contrastLevel ?? null, request, prefs, input.feedbackSignals);
   // Look-level rule effects: the contrast of the palette combination the look is built on (e.g. a
   // rule preferring medium contrast for work). Rules that apply to any of the look's garments count.
   const lookRules = new Map<string, ApplicableRule>();

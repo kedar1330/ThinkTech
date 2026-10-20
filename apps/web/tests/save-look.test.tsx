@@ -4,7 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Look, ProfileSizes } from '@styleme/contracts';
 
-const actions = vi.hoisted(() => ({ saveOutfitAction: vi.fn(), removeOutfitAction: vi.fn() }));
+const actions = vi.hoisted(() => ({
+  saveOutfitAction: vi.fn(),
+  removeOutfitAction: vi.fn(),
+  feedbackOutfitAction: vi.fn(),
+  getFreshAlternativesAction: vi.fn(),
+}));
 vi.mock('@/app/actions/outfits', () => actions);
 
 import { LookCard } from '@/components/outfits/LookCard';

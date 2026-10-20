@@ -4,6 +4,8 @@ import {
   USER_ENTERED_LABELS,
   WEAR_TYPES,
   createShortlistItemRequestSchema,
+  feedbackRecordedResponseSchema,
+  lookFeedbackSchema,
   lookSchema,
   outfitDetailSchema,
   outfitFeedbackRequestSchema,
@@ -201,6 +203,21 @@ describe('feedback (FR-OUT-04)', () => {
         'wrong_occasion',
       ]),
     );
+  });
+
+  it('validates feedback response and stored look feedback', () => {
+    ok(feedbackRecordedResponseSchema, { recorded: true });
+    bad(feedbackRecordedResponseSchema, { recorded: false });
+    bad(feedbackRecordedResponseSchema, { recorded: true, extra: 1 });
+
+    ok(lookFeedbackSchema, { value: 'love_it' });
+    ok(lookFeedbackSchema, { value: 'not_for_me', reason: 'too_casual' });
+    bad(lookFeedbackSchema, { value: 'love_it', reason: 'too_casual' });
+    bad(lookFeedbackSchema, { value: 'not_for_me', reason: 'unknown_reason' });
+
+    ok(lookSchema, { ...look, feedback: { value: 'love_it' } });
+    ok(lookSchema, { ...look, feedback: { value: 'not_for_me', reason: 'not_my_style' } });
+    ok(lookSchema, { ...look, feedback: null });
   });
 });
 

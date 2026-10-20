@@ -4,7 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Look, ProfileSizes } from '@styleme/contracts';
 
-const actions = vi.hoisted(() => ({ saveOutfitAction: vi.fn(), removeOutfitAction: vi.fn() }));
+const actions = vi.hoisted(() => ({
+  saveOutfitAction: vi.fn(),
+  removeOutfitAction: vi.fn(),
+  feedbackOutfitAction: vi.fn(),
+  getFreshAlternativesAction: vi.fn(),
+}));
 vi.mock('@/app/actions/outfits', () => actions);
 
 import { SavedLookCard } from '@/components/outfits/SavedLookCard';
@@ -62,6 +67,8 @@ function expectEverySwatchNamed(container: HTMLElement) {
 beforeEach(() => {
   actions.saveOutfitAction.mockReset();
   actions.removeOutfitAction.mockReset();
+  actions.feedbackOutfitAction.mockReset();
+  actions.getFreshAlternativesAction.mockReset();
 });
 
 describe('saved look card', () => {

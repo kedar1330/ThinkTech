@@ -3,6 +3,7 @@ import type { Look, RecommendationRequest, RecommendationResponse, WarningCode }
 import type { Models } from '../models/index';
 import type { AppearanceService } from './appearance.service';
 import { generateLooks, signalsFromAppearance, type StyleLibrary } from './engine';
+import type { FeedbackService } from './feedback.service';
 import type { ProfileService } from './profile.service';
 import type { WordingService } from './wording.service';
 
@@ -27,15 +28,21 @@ export class RecommendationsService {
     private readonly profiles: ProfileService,
     private readonly appearance: AppearanceService,
     private readonly wording: WordingService,
+    private readonly feedback?: FeedbackService,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
   async recommend(userId: Types.ObjectId, request: RecommendationRequest): Promise<RecommendationResult> {
-    const [profile, appearance] = await Promise.all([this.profiles.get(userId), this.appearance.get(userId)]);
+    const [profile, appearance, feedbackSignals] = await Promise.all([
+      this.profiles.get(userId),
+      this.appearance.get(userId),
+      this.feedback ? this.feedback.getSignals(userId) : Promise.resolve(null),
+    ]);
     const result = generateLooks({
       request,
       profile,
       signals: signalsFromAppearance(appearance),
+      feedbackSignals,
       library: this.library,
     });
 
