@@ -29,7 +29,7 @@
 | `profiles` | Preferences, category sizes, fit | Per user | 1 |
 | `appearanceProfiles` | Self-reported appearance signals (estimates later) | Per user | 1 |
 | `outfits` | Suggested and saved looks | Per user | 1 |
-| `aiCache` | Cached optional AI wording | System | 1 (only if AI wording is enabled) |
+| `aiCache` | Cached optional AI wording | System | 1 (only if AI wording is enabled) — model and TTL index implemented (#55) |
 | `shortlistItems` | Items the user found elsewhere, with prices they entered (not verified by StyleMe) | Per user | 1 (D-77 = B) |
 | `retailers` | Retailer registry, access level and disclosure | Shared | Product layer |
 | `products` | Verified real product listings | Shared | Product layer |
@@ -351,6 +351,7 @@ One document per look. `POST /v1/recommendations` creates up to 5 looks sharing 
 | `combinationSignature` | hash of template, palette and key attributes |
 | `defaultsApplied[]`, `conflicts[]`, `warnings[]` | as returned (FR-LOOK-09, -10) |
 | `aiModel` | `null` unless optional AI wording was used |
+| `aiPromptVersion` | Prompt version of the AI wording (e.g. `wording-v1`); `null` unless optional AI wording was used (#55) |
 | `feedback` | `{ value: "love_it" \| "not_for_me", reason? (fixed list), at }` or null |
 | `priceSummary` | **not stored for user-entered prices**: computed on read from the user's shortlist items (FR-BUD-07). Product layer: stored with the snapshot as `{ itemsTotal, priceBasis: "verified", budget?, budgetRemaining?, label }` |
 | `weatherContext` | Stage 2: `{ source, observedAt, summary, bands }` or manual; never location |
@@ -379,7 +380,7 @@ Items the user attaches to a slot are linked from `shortlistItems` (`outfitId`, 
 | `response` | cached, validated output |
 | `createdAt`, `expiresAt` | TTL index on `expiresAt` (explanation wording: 7 days) |
 
-The input to the optional AI wording step contains only rule references and attribute tags, never personal data (AI rule 16), so cached entries hold no personal data.
+The input to the optional AI wording step contains only rule references and attribute tags, never personal data (AI rule 16), so cached entries hold no personal data. **Implemented (#55):** `requestType: "explanation-wording"`, `response: { text, promptVersion }`; not user-owned, so not in `USER_OWNED_COLLECTIONS`. Written only while AI wording is on.
 
 ### 3.6 `shortlistItems` (Stage 1, D-77 = B)
 

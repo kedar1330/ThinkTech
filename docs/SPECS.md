@@ -113,12 +113,12 @@ Ports: web `3000`, API `4000`. The API exposes `/health` and `/v1/*` only.
 | M-07 | Style vocabulary | **Partial** — 8 occasions, 8 styles, 3 wear types, 6 slot types, 7 size groups, 11 categories (10 Stage 1 + dress Stage 2), 63 colours, 22 fabrics, 9 silhouettes, 3 fits, 8 necklines, 17 patterns (incl. 5 Indian techniques, D-99), coverage lists, Monk 1–10, 6 proportion descriptors. **Missing (D-97, D-98, #63 Part 1):** formality, 8 broad categories with garment types | `contracts/src/style-vocabulary.ts` | — | — | D-09, D-96 … D-101 | Shreya |
 | M-08 | Style knowledge base tooling | **Implemented** (schemas, loader, linter, coverage, scale test) | `apps/api/src/style-rules/*`, `scripts/style-rules.ts` | — | Repository JSON, not MongoDB | FR-STY-01 … 12 | Shreya |
 | M-09 | Styling content | **Partial** — C0 (8 palettes, 8 templates, 8 styling rules, 6 fabric rules) founder-approved by Shreya Sharma on 2026-10-19 (version 2), in the working tree (PR pending). C1 not started | `style-rules/data/*.json` | — | — | D-57, D-62 | Shreya (founder approves) |
-| M-10 | Look engine and recommendations | **Implemented (#33, not yet merged)**; verified on fixtures and on approved C0. AI wording (#55) not built | `contracts/src/outfit.ts`; `services/engine/*`, `services/recommendations.service.ts` | `POST /v1/recommendations` | `outfits` | FR-LOOK-01 … 15, -17 … -19 | Shreya (#33) |
+| M-10 | Look engine and recommendations | **Implemented (#33, not yet merged)**; verified on fixtures and on approved C0. AI wording (#55) built, off by default (PR pending) | `contracts/src/outfit.ts`; `services/engine/*`, `services/recommendations.service.ts` | `POST /v1/recommendations` | `outfits` | FR-LOOK-01 … 15, -17 … -19 | Shreya (#33) |
 | M-11 | Palettes | **Ranking and endpoint implemented (#33, not yet merged)**; UI not built | `contracts/src/palette.ts`; `services/engine/palettes.ts`, `services/palette.service.ts` | `GET /v1/style/palettes` | — | FR-PAL-01 … 03 | Shreya (ranking), Ankita (UI #39, #40) |
 | M-12 | Saved looks and feedback | **Contract only** | `outfit.ts` (`outfitDetailSchema`, `outfitFeedbackRequestSchema`, `FEEDBACK_REASONS`) | `/v1/outfits*` (planned) | `outfits` (planned) | FR-OUT-01 … 07 | Ankita (#41, #42) |
 | M-13 | Shortlist and budget engine | **Contract only** | `contracts/src/product.ts` (`createShortlistItemRequestSchema`, `userShortlistItemSchema`, `userPriceSummarySchema`, `SHORTLIST_LIMITS`, `USER_ENTERED_LABELS`) | `/v1/shortlist*` (planned) | `shortlistItems` (planned; already in `USER_OWNED_COLLECTIONS`) | FR-LIST-01 … 07, FR-BUD-01 … 07, D-77, D-80, D-82 | Kedar (#37, #38, #43) |
 | M-14 | Outfit Categories gallery | **Specified** (FRD §4.19, D-109 … D-114); not built | — | [API.md](API.md) §3.11 F1 – F7 | shared catalogue ([DATABASE.md](DATABASE.md) §4a) | FR-OCAT-01 … 26 | Johita |
-| M-15 | Optional AI wording | **Proposed** (#55), off by default | `integrations/ai/` (empty) | — | `aiCache` (planned) | FR-LOOK-16, D-12, D-67 | Shreya |
+| M-15 | Optional AI wording | **Implemented, off by default (#55, PR pending)**; enabling is a separate step (D-67) | `integrations/ai/wording-client.ts`, `integrations/ai/prompts/v1.ts`, `services/wording.service.ts` | Inside `POST /v1/recommendations` | `outfits.aiModel`, `outfits.aiPromptVersion`, `aiCache` (7-day TTL) | FR-LOOK-16, D-12, D-67 | Shreya |
 | M-16 | Product layer (retailers, products, matching, quality) | **Blocked** (D-43 … D-46, D-74) | — | [API.md](API.md) §3.7 | `retailers`, `products`, `reviewEvidence` | FR-PROD, FR-MATCH, FR-QUAL | Kedar |
 | M-17 | Weather | **Deferred** (Stage 2, D-60) | — | [API.md](API.md) §3.8 | — | FR-WX-01 … 09 | Shreya |
 | M-18 | Design Studio, Style Assistant, photo analysis, avatar, tailor PDF | **Deferred** (D-76) | Empty folders; `contracts/src/design.ts`, `chat.ts` intentionally empty and not exported | [API.md](API.md) §3.9 | `designs`, `chatMessages` | FRD §4.16 | Kedar (Design Studio), Shreya (Assistant) |
@@ -230,7 +230,7 @@ Specified in [SECURITY.md](SECURITY.md); summary of what the code enforces:
 | SMTP email | Implemented boundary; provider undecided (D-84) | `services/messaging.ts` (`SMTP_URL`, dev outbox) |
 | SMS | Boundary only; no provider (`SMS_PROVIDER=none`, D-92) | `services/messaging.ts` |
 | Google sign-in | Implemented (optional, `GOOGLE_CLIENT_ID`) | `services/google.ts`, `app/api/oauth/google/*` |
-| AI provider | None installed; optional wording proposed (#55) | `integrations/ai/` (empty) |
+| AI provider | Gemini `generateContent` client for optional wording, off by default (#55); no SDK, `fetch` only | `integrations/ai/` |
 | Retailers | Blocked (D-43 … D-45) | `integrations/retailers/` (not created) |
 | Weather | Deferred (D-60) | `integrations/weather/` (not created) |
 | Cloudinary, MediaPipe, PDF, try-on | Deferred / future | empty placeholder folders |
@@ -277,7 +277,7 @@ The release acceptance criteria are AC-01 … AC-25, AC-B1 … B4 ([MVP.md](MVP.
 | TAC-03 | Every new endpoint has a Zod contract in `packages/contracts`, uses the envelope, and is scoped to the user | Review; API tests |
 | TAC-04 | New user-owned collections are in `USER_OWNED_COLLECTIONS`; deletion and tombstone replay tests cover them | API tests |
 | TAC-05 | No logs of bodies, personal data, codes, tokens, photos or image URLs | log-privacy tests |
-| TAC-06 | No AI call on the core path; AI failures fall back with `AI_ENHANCEMENT_SKIPPED` | T-25 (#34); T-26 is added with the AI wording module (#55) |
+| TAC-06 | No AI call on the core path; AI failures fall back with `AI_ENHANCEMENT_SKIPPED` | T-25, T-26 (#34, #55) |
 | TAC-07 | No product, price, retailer or availability in generated looks while the product layer is off | T-24 (#34); strict contracts already reject these fields |
 | TAC-08 | Engine determinism: same input + content version → same looks | T-12 (#34) |
 | TAC-09 | A "Coming soon" section is turned on only when its page works end to end | Review of `lib/features.ts` |

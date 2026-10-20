@@ -31,6 +31,33 @@ interface ExplainInput {
 
 const unique = (values: string[]) => [...new Set(values)];
 
+/** Attributes that come from self-reported appearance signals (never sent to an AI provider, AI rule 16). */
+export const SIGNAL_ATTRIBUTES: readonly string[] = ['undertone', 'skinTone'];
+
+/**
+ * The sentences citing appearance signals. Optional AI wording never sees them, so a reworded
+ * explanation keeps these exactly as written here.
+ */
+export function signalSentences(matched: readonly Match[]): { text: string; attributes: Match[] }[] {
+  const of = (attribute: string) => unique(matched.filter((m) => m.attribute === attribute).map((m) => m.value));
+  const sentences: { text: string; attributes: Match[] }[] = [];
+  const undertones = of('undertone');
+  if (undertones.length > 0) {
+    sentences.push({
+      text: `The palette is one suggested for a ${joinList(undertones.map((id) => label(UNDERTONES, id).toLowerCase()))} undertone, from the details you shared.`,
+      attributes: undertones.map((value) => ({ attribute: 'undertone', value })),
+    });
+  }
+  const ranges = of('skinTone');
+  if (ranges.length > 0) {
+    sentences.push({
+      text: 'The palette is one suggested for the skin tone range you shared.',
+      attributes: ranges.map((value) => ({ attribute: 'skinTone', value })),
+    });
+  }
+  return sentences;
+}
+
 export function explain(input: ExplainInput): Explanation {
   const sentences: { text: string; ruleId?: string; attributes: Match[] }[] = [];
   const values = (attribute: string) =>
@@ -70,17 +97,7 @@ export function explain(input: ExplainInput): Explanation {
       values('coverage').map((value) => ({ attribute: 'coverage', value })),
     );
   }
-  sentence(
-    'undertone',
-    (l) => `The palette is one suggested for a ${l} undertone, from the details you shared.`,
-    (id) => label(UNDERTONES, id),
-  );
-  if (values('skinTone').length > 0) {
-    say(
-      'The palette is one suggested for the skin tone range you shared.',
-      values('skinTone').map((value) => ({ attribute: 'skinTone', value })),
-    );
-  }
+  for (const s of signalSentences(input.matched)) say(s.text, s.attributes);
 
   const strongest = [...input.supporting.entries()]
     .sort(([a, wa], [b, wb]) => wb - wa || a.localeCompare(b))

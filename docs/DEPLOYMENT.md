@@ -60,7 +60,8 @@ These are the planned platforms. **Hosting is postponed by the founder (D-81):**
 | `DEV_OUTBOX_DIR` | 1 (local only) | Folder where local development writes emails and SMS as JSON instead of sending them (default `.dev-outbox`, git-ignored). Never used outside `APP_ENV=local` |
 | `SMS_PROVIDER` | 1 | `none` (no SMS provider integrated yet, D-92): phone verification reports "not available" outside local development |
 | `GOOGLE_CLIENT_ID` | 1 (optional) | Google OAuth client ID; the API verifies ID tokens against it (D-88). Empty disables Google sign-in |
-| `GEMINI_API_KEY` | 1 (optional) | Only if AI wording is enabled |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | 1 (optional) | Required only when `AI_WORDING_ENABLED=true` (the API refuses to start without them then). The model is chosen and recorded when enabling (D-12) |
+| `AI_WORDING_TIMEOUT_MS` | 1 (optional) | Timeout of one AI wording call, 500 – 30 000 ms (default 4000); on timeout the template text is used |
 | `PRODUCT_LAYER_ENABLED` | Product layer | `false` until an authorised source and D-74 allow the Stage 3 release |
 | `FLIPKART_AFFILIATE_ID`, `FLIPKART_AFFILIATE_TOKEN` | Product layer | Only after Flipkart approves access (D-44) |
 | `WEATHER_API_KEY` | 2 | Only if the chosen provider needs one (D-60) |
