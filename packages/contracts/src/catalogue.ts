@@ -290,3 +290,51 @@ export const compareStylesQuerySchema = z.object({
   ids: z.string().min(1),
 });
 export type CompareStylesQuery = z.infer<typeof compareStylesQuerySchema>;
+
+export interface CatalogueCategoryItem {
+  key: string;
+  name: string;
+  description: string;
+  level: CatalogueLevel;
+  department: CatalogueDepartment;
+  sortOrder?: number;
+  wearTypes?: string[];
+  garmentTypes?: string[];
+  attributeIds?: string[];
+}
+
+export interface ClothingStyleItem {
+  styleId: string;
+  slug: string;
+  name: string;
+  description: string;
+  department: CatalogueDepartment;
+  categoryKey: string;
+  definingAttribute?: { attributeId: string; valueId: string };
+  attributes?: Array<{ attributeId: string; valueId: string }>;
+  wearTypes?: string[];
+  occasions?: string[];
+  styles?: string[];
+  stylingGoals?: string[];
+  bodyShapes?: string[];
+  explanation?: {
+    summary: string;
+    benefits: string[];
+    tradeOffs: string[];
+    stylingTips: string[];
+  };
+  illustrations?: Array<{
+    illustrationId?: string;
+    kind?: string;
+    url?: string;
+    alt?: string;
+  }>;
+}
+
+export interface ClothingStylesResponse {
+  items: ClothingStyleItem[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}

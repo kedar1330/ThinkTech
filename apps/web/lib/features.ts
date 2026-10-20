@@ -32,6 +32,7 @@ export const FEATURES: Feature[] = [
     slug: 'outfit-categories',
     label: 'Outfit Categories',
     icon: 'shirt',
+    href: '/categories',
     summary: 'Browse looks by occasion and category — Indian, fusion and western — each with a reason it suits you.',
   },
   {
