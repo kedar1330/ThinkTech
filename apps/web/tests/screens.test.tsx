@@ -174,13 +174,9 @@ describe('app top navigation', () => {
     expect(more).toHaveAttribute('aria-expanded', 'false');
     await user.click(more);
     const menu = document.getElementById('nav-more')!;
-    for (const name of [
-      'Outfit Categories',
-      'Virtual Try-On',
-      'Design Studio',
-      'Style Assistant',
-    ]) {
+    for (const name of ['Outfit Categories', 'Virtual Try-On', 'Design Studio', 'Style Assistant']) {
       expect(within(menu).getByRole('link', { name: new RegExp(name) })).toHaveTextContent('Coming soon');
+    }
     expect(within(menu).getByRole('link', { name: 'My Colour Palette' })).toHaveAttribute('href', '/palette');
     expect(within(menu).getByRole('link', { name: 'Shop My Look' })).toHaveAttribute('href', '/shop');
     expect(within(menu).getByRole('link', { name: 'Saved Outfits' })).toHaveAttribute('href', '/saved');
