@@ -23,6 +23,8 @@ export interface ImportOptions {
   includeDrafts?: boolean;
   /** Test fixture libraries only; the import script never sets it. */
   allowFixtures?: boolean;
+  /** Environment; fixture imports are refused in production (T-29). */
+  appEnv?: string;
 }
 
 export interface ImportCounts {
@@ -117,6 +119,7 @@ async function upsert<R extends StyleRecord>(
     const existing = await model.findOne({ recordId: record.id });
     const fields = {
       recordId: record.id,
+      isFixture: (record as { isFixture?: boolean }).isFixture ? true : undefined,
       ...describe(record),
       record,
       tags: record.tags,
@@ -142,13 +145,16 @@ async function upsert<R extends StyleRecord>(
 /**
  * Imports a style library into the catalogue collections. Throws CatalogueImportError, and writes
  * nothing, when any record fails the schema or linter (an unapproved record is only an issue without
- * `includeDrafts`, and then it is simply not imported).
+ * `includeDrafts`, and then it is simply not imported). Fixture libraries are refused when appEnv is production (T-29).
  */
 export async function importStyleLibrary(
   models: Models,
   raw: RawLibrary,
   options: ImportOptions = {},
 ): Promise<ImportResult> {
+  if (options.allowFixtures && options.appEnv === 'production') {
+    throw new Error('Fixture style libraries are never imported in production (T-29)');
+  }
   const lint = lintLibrary(raw, { allowFixtures: options.allowFixtures });
   const blocking = lint.issues.filter((i) => i.code !== 'NOT_APPROVED');
   if (blocking.length > 0) throw new CatalogueImportError(blocking);

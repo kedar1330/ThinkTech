@@ -16,6 +16,7 @@ import { loadConfig } from '../src/config/env';
 import { connectDatabase } from '../src/db';
 import { createLogger } from '../src/logger';
 import { adminSeedFromEnv, seedAdmin } from '../src/services/admin-seed';
+import { assertNotProduction } from './lib/guard';
 
 const MESSAGES = {
   created: 'Admin account created. Log in at /login with the seeded email and password.\n',
@@ -25,6 +26,7 @@ const MESSAGES = {
 
 async function main() {
   const config = loadConfig();
+  assertNotProduction(config);
   const input = adminSeedFromEnv();
   const db = await connectDatabase(config.MONGODB_URI, config.TOMBSTONE_STORE_URI);
   try {
