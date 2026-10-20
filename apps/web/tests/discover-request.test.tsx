@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProfileResponse } from '@styleme/contracts';
 
-const actions = vi.hoisted(() => ({ requestLooksAction: vi.fn() }));
+const actions = vi.hoisted(() => ({ requestLooksAction: vi.fn(), regenerateAction: vi.fn() }));
 vi.mock('@/app/actions/discover', () => actions);
 
 import { ProfileSummary } from '@/components/discover/ProfileSummary';

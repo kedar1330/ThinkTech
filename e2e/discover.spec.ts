@@ -100,3 +100,28 @@ test('responsive: the form and the looks fit at 320, 390, 768 and 1366 px', asyn
     });
   }
 });
+
+test('regenerate: after a profile change, new looks say what changed (#49)', async ({ page, context }) => {
+  await signUpAndSkipOnboarding(page);
+  const results = await requestLooks(page, 'Work');
+  await expect(results.getByRole('article')).not.toHaveCount(0);
+
+  await test.step('change the profile in another tab', async () => {
+    const profile = await context.newPage();
+    await profile.goto('/profile');
+    await profile.getByRole('radio', { name: 'Show me everything' }).check();
+    await profile.locator('select[name="color_maroon"]').selectOption('avoid');
+    await profile.getByRole('button', { name: 'Save style profile' }).click();
+    await expect(profile.getByText('Your style profile has been saved.')).toBeVisible();
+    await profile.close();
+  });
+
+  await test.step('regenerate with the current profile', async () => {
+    await results.getByRole('button', { name: 'Regenerate with my current profile' }).click();
+    const regenerated = page.getByRole('region', { name: 'Regenerated looks' });
+    await expect(regenerated.getByText('What changed')).toBeVisible();
+    await expect(regenerated.getByText('You chose a department: Show me everything.')).toBeVisible();
+    await expect(regenerated.getByText('Your avoided colours now include maroon.')).toBeVisible();
+    await expect(regenerated.getByRole('article')).not.toHaveCount(0);
+  });
+});

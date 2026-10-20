@@ -157,14 +157,50 @@ describe('/v1/outfits (saved looks)', () => {
 
     const suggested = await request(app).get(`/v1/outfits/${look!.id}`).set(bearer(token));
     expect(suggested.status).toBe(200);
-    expect(outfitDetailSchema.parse(suggested.body.data)).toEqual({ ...look, userItems: [] });
+    const stored = { request: { occasion: 'everyday', paletteMode: 'suggested' }, inputsUsed: expect.any(Object) };
+    expect(outfitDetailSchema.parse(suggested.body.data)).toEqual({ ...look, ...stored, userItems: [] });
 
     await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
     const saved = await request(app).get(`/v1/outfits/${look!.id}`).set(bearer(token));
     const detail = outfitDetailSchema.parse(saved.body.data);
-    expect(detail).toEqual({ ...look, status: 'saved', userItems: [] });
+    expect(detail).toEqual({ ...look, ...stored, status: 'saved', userItems: [] });
     expect(saved.body.data).not.toHaveProperty('priceSummary');
     expect(saved.body.warnings).toBeUndefined();
+  });
+
+  it('#49 a look carries its request and inputs; regenerating after a profile change leaves the saved look as it was', async () => {
+    const { app, token } = await signedIn('regenerate@example.com');
+    await request(app)
+      .put('/v1/profile')
+      .set(bearer(token))
+      .send({ department: 'women', likedColors: ['navy'] })
+      .expect(200);
+    const [look] = await generate(app, token, 'work');
+    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
+    const before = outfitDetailSchema.parse(
+      (await request(app).get(`/v1/outfits/${look!.id}`).set(bearer(token))).body.data,
+    );
+    expect(before.request).toEqual({ occasion: 'work', paletteMode: 'suggested' });
+    expect(before.inputsUsed).toMatchObject({ department: 'women', likedColors: ['navy'], dislikedColors: [] });
+
+    // The user changes the profile, then regenerates: the stored request runs again.
+    await request(app)
+      .put('/v1/profile')
+      .set(bearer(token))
+      .send({ department: 'women', likedColors: ['navy'], dislikedColors: ['cream'] })
+      .expect(200);
+    const again = await request(app).post('/v1/recommendations').set(bearer(token)).send(before.request);
+    expect(again.status).toBe(200);
+    const [fresh] = again.body.data.looks as Look[];
+    const regenerated = outfitDetailSchema.parse(
+      (await request(app).get(`/v1/outfits/${fresh!.id}`).set(bearer(token))).body.data,
+    );
+    expect(regenerated.status).toBe('suggested');
+    expect(regenerated.inputsUsed.dislikedColors).toEqual(['cream']);
+
+    // FR-OUT-05: the saved look is a snapshot and is unchanged.
+    const after = await request(app).get(`/v1/outfits/${look!.id}`).set(bearer(token));
+    expect(outfitDetailSchema.parse(after.body.data)).toEqual(before);
   });
 
   it('T-04 another user’s look is NOT_FOUND on get, save and delete, and never listed', async () => {

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { objectIdSchema, type OutfitDetail, type ProfileResponse } from '@styleme/contracts';
 import { LookDetail } from '@/components/outfits/LookDetail';
+import { RegenerateButton } from '@/components/outfits/RegenerateButton';
 import { RemoveLookButton } from '@/components/outfits/RemoveLookButton';
 import { ApiError, apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
@@ -13,7 +14,8 @@ export const metadata: Metadata = { title: 'Saved look' };
 
 /**
  * One look (FR-OUT-02). Another user's look, a removed one and a malformed ID all show the 404 page.
- * Regenerate (#49) and "Shop this look" (#43) are added here by their issues.
+ * "Regenerate with my current profile" (#49) shows new looks below it; "Shop this look" (#43) is added
+ * by its issue.
  */
 export default async function SavedLookPage({ params }: { params: Promise<{ id: string }> }) {
   const { accessToken } = await requireOnboarded();
@@ -43,6 +45,8 @@ export default async function SavedLookPage({ params }: { params: Promise<{ id: 
       </Link>
       <LookDetail look={look} sizes={profile.sizes} />
       <RemoveLookButton outfitId={look.id} lookName={lookTitle(look)} from="detail" />
+      {/* New looks appear below; the saved look above stays as it was (FR-OUT-05). */}
+      <RegenerateButton outfitId={look.id} sizes={profile.sizes} />
     </div>
   );
 }
