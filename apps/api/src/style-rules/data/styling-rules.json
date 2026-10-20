@@ -239,5 +239,372 @@
       ],
       "weight": 0.3
     }
+  },
+  {
+    "id": "STY-009",
+    "version": 2,
+    "tags": ["kurta-kurti", "fit", "ethnic-tops"],
+    "userAdjustable": ["fit"],
+    "rationale": "A regular fit through the body lets a kurta or kurti hang straight from the shoulder and keeps the side slits and hem falling evenly, which suits occasion and work wear.",
+    "limitations": "Fit is personal: a user's saved fit preference for ethnic tops always takes priority, and slim and relaxed fits remain available.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "fit",
+    "areas": ["fit"],
+    "appliesTo": {
+      "categories": ["kurta", "kurti"],
+      "occasions": ["work", "formal", "festive", "wedding", "party"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "fit",
+          "value": "regular"
+        }
+      ],
+      "weight": 0.3
+    }
+  },
+  {
+    "id": "STY-010",
+    "version": 2,
+    "tags": ["lehenga", "size", "semi-stitched"],
+    "userAdjustable": ["silhouettes", "fit"],
+    "rationale": "Lehengas are often sold semi-stitched and finished by a tailor, and A-line and flared skirts leave the most room for that adjustment at the waist. The size note shown to the user is never changed by this rule.",
+    "limitations": "Sizing and stitching vary by retailer; StyleMe does not check product sizes. Straight and fitted lehenga skirts remain available, and the user's silhouette preferences come first.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "size",
+    "areas": ["size", "fit"],
+    "appliesTo": {
+      "categories": ["lehenga"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "silhouette",
+          "value": "a_line"
+        },
+        {
+          "attribute": "silhouette",
+          "value": "flared"
+        }
+      ],
+      "weight": 0.2
+    }
+  },
+  {
+    "id": "STY-011",
+    "version": 2,
+    "tags": ["budget", "base-pieces", "repeat-wear"],
+    "userAdjustable": ["colors", "styles"],
+    "rationale": "Solid bottoms in a neutral colour pair with many different tops, so a few base pieces cover more looks and a shortlist can stay smaller.",
+    "limitations": "StyleMe does not know prices; budget totals come only from the items and prices the user enters in their shortlist. Printed and coloured bottoms remain available.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "budget",
+    "areas": ["budget", "coordination"],
+    "coordinationAspects": ["colour"],
+    "appliesTo": {
+      "categories": ["trousers", "jeans"],
+      "occasions": ["everyday", "work", "travel"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "pattern",
+          "value": "solid"
+        },
+        {
+          "attribute": "colorFamily",
+          "value": "neutral"
+        }
+      ],
+      "weight": 0.2
+    }
+  },
+  {
+    "id": "STY-012",
+    "version": 2,
+    "tags": ["alternatives", "festive", "drape"],
+    "userAdjustable": ["fabrics"],
+    "rationale": "Silk, brocade, georgette, organza and net give sarees and lehengas clearly different weight, drape and sheen, so alternatives drawn from these fabrics differ meaningfully rather than only in colour.",
+    "limitations": "A user's avoided fabrics are always excluded first. Fabric names describe the typical fabric, not any particular product.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "alternatives",
+    "areas": ["alternatives", "occasion"],
+    "appliesTo": {
+      "categories": ["saree", "lehenga"],
+      "occasions": ["festive", "wedding", "party"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "fabric",
+          "value": "silk"
+        },
+        {
+          "attribute": "fabric",
+          "value": "brocade"
+        },
+        {
+          "attribute": "fabric",
+          "value": "georgette"
+        },
+        {
+          "attribute": "fabric",
+          "value": "organza"
+        },
+        {
+          "attribute": "fabric",
+          "value": "net"
+        }
+      ],
+      "weight": 0.2
+    }
+  },
+  {
+    "id": "STY-013",
+    "version": 2,
+    "tags": ["pattern-mixing", "festive", "embellishment"],
+    "userAdjustable": ["styles"],
+    "rationale": "When the top carries embroidery, zari or mirror work, a solid bottom keeps the embellished piece as the focal point and lets the detail stand out.",
+    "limitations": "Printed or embellished bottoms are also worn at celebrations; this is a gentle default, not a restriction on wearing more than one pattern.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "coordination",
+    "areas": ["coordination"],
+    "coordinationAspects": ["pattern_mixing"],
+    "appliesTo": {
+      "categories": ["trousers", "jeans"],
+      "occasions": ["festive", "wedding", "party"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "pattern",
+          "value": "solid"
+        }
+      ],
+      "weight": 0.4
+    }
+  },
+  {
+    "id": "STY-014",
+    "version": 2,
+    "tags": ["streetwear", "proportion", "t-shirt"],
+    "userAdjustable": ["silhouettes", "fit", "styles"],
+    "rationale": "An oversized or relaxed T-shirt over straight or wide-leg bottoms keeps one easy, roomy line from top to bottom, the balance most streetwear outfits are built on.",
+    "limitations": "Fit is personal: a user's saved fit and silhouette preferences always take priority, and fitted T-shirts remain available.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "proportion",
+    "areas": ["coordination", "preference"],
+    "coordinationAspects": ["proportion_balance"],
+    "appliesTo": {
+      "categories": ["t_shirt"],
+      "styles": ["streetwear"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "silhouette",
+          "value": "oversized"
+        },
+        {
+          "attribute": "silhouette",
+          "value": "relaxed"
+        }
+      ],
+      "weight": 0.3
+    }
+  },
+  {
+    "id": "STY-015",
+    "version": 2,
+    "tags": ["festive", "accessories", "metallic"],
+    "userAdjustable": ["colors"],
+    "rationale": "Gold, antique gold, silver and copper accessories echo zari and other metallic detailing on festive outfits, which links the accessories to the rest of the look.",
+    "limitations": "Many people prefer coloured, beaded or minimal accessories for celebrations; this only gives a small lift to metallic shades. Metallic names are colour swatches, not claims about metal quality.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "coordination",
+    "areas": ["coordination"],
+    "coordinationAspects": ["footwear_accessory"],
+    "appliesTo": {
+      "categories": ["accessory"],
+      "occasions": ["festive", "wedding"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "colorFamily",
+          "value": "metallic"
+        }
+      ],
+      "weight": 0.3
+    }
+  },
+  {
+    "id": "STY-016",
+    "version": 2,
+    "tags": ["boho", "prints", "handcraft"],
+    "userAdjustable": ["styles"],
+    "rationale": "Hand-block prints, kalamkari, leheriya, bandhani and florals give the relaxed, crafted look that a boho style is built around.",
+    "limitations": "Boho is a broad style and plain pieces fit it too; this is a soft preference that the user's own pattern choices override.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "preference",
+    "areas": ["preference"],
+    "appliesTo": {
+      "categories": ["kurta", "kurti", "shirt"],
+      "styles": ["boho"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "pattern",
+          "value": "block_print"
+        },
+        {
+          "attribute": "pattern",
+          "value": "kalamkari"
+        },
+        {
+          "attribute": "pattern",
+          "value": "leheriya"
+        },
+        {
+          "attribute": "pattern",
+          "value": "bandhani"
+        },
+        {
+          "attribute": "pattern",
+          "value": "floral"
+        }
+      ],
+      "weight": 0.4
+    }
+  },
+  {
+    "id": "STY-017",
+    "version": 2,
+    "tags": ["shirts", "fit", "formal"],
+    "userAdjustable": ["fit"],
+    "rationale": "A slim or regular fit keeps a shirt neat at the waist when tucked in, which matches the structured look expected at formal events and many workplaces.",
+    "limitations": "Fit is personal: a user's saved fit preference for tops always takes priority, and relaxed fits remain available.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "fit",
+    "areas": ["fit", "occasion"],
+    "appliesTo": {
+      "categories": ["shirt"],
+      "occasions": ["work", "formal"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "fit",
+          "value": "slim"
+        },
+        {
+          "attribute": "fit",
+          "value": "regular"
+        }
+      ],
+      "weight": 0.3
+    }
+  },
+  {
+    "id": "STY-018",
+    "version": 2,
+    "tags": ["alternatives", "kurta-kurti", "bottoms"],
+    "userAdjustable": ["silhouettes"],
+    "rationale": "Wide-leg trousers under a kurta or kurti change the outline of the whole outfit, so offering them alongside straight cuts gives alternatives that differ meaningfully.",
+    "limitations": "A user's silhouette preferences come first. This only gives a small lift to wide-leg cuts and does not remove straight or tapered ones.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-19",
+    "type": "alternatives",
+    "areas": ["alternatives", "coordination"],
+    "coordinationAspects": ["proportion_balance"],
+    "appliesTo": {
+      "categories": ["trousers"],
+      "styles": ["boho", "fusion"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "silhouette",
+          "value": "wide_leg"
+        }
+      ],
+      "weight": 0.2
+    }
+  },
+  {
+    "id": "STY-019",
+    "version": 3,
+    "tags": ["size", "travel", "comfort"],
+    "userAdjustable": ["fit", "comfort"],
+    "rationale": "Jersey-knit T-shirts have some natural stretch, which gives a little more ease within the user's saved size on long journeys. The size note shown to the user is never changed by this rule.",
+    "limitations": "Stretch varies by product and blend; StyleMe does not check product sizes or fabric content. A user's avoided fabrics are always excluded first, and other fabrics remain available.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-20",
+    "type": "size",
+    "areas": ["size", "preference"],
+    "appliesTo": {
+      "categories": ["t_shirt"],
+      "occasions": ["travel"]
+    },
+    "effect": {
+      "prefer": [
+        {
+          "attribute": "fabric",
+          "value": "jersey_knit"
+        }
+      ],
+      "weight": 0.2
+    }
+  },
+  {
+    "id": "STY-020",
+    "version": 1,
+    "tags": ["footwear", "work", "formal"],
+    "userAdjustable": ["occasions", "colors"],
+    "rationale": "Darker shoes in black, charcoal, navy or brown ground a shirt-and-trousers or kurta look and are the usual choice for offices and formal events, so the outfit reads as finished rather than casual.",
+    "limitations": "Light and white shoes are common in relaxed workplaces and with some ethnic wear; this is a soft preference, and the user's liked colours and the palette's own colours still come first.",
+    "reviewStatus": "approved",
+    "reviewedBy": "Shreya Sharma",
+    "reviewedAt": "2026-10-20",
+    "type": "coordination",
+    "areas": ["coordination", "occasion"],
+    "coordinationAspects": ["footwear_accessory"],
+    "appliesTo": {
+      "categories": ["shoes"],
+      "occasions": ["work", "formal"]
+    },
+    "effect": {
+      "prefer": [
+        { "attribute": "color", "value": "black" },
+        { "attribute": "color", "value": "charcoal" },
+        { "attribute": "color", "value": "navy" },
+        { "attribute": "color", "value": "coffee" },
+        { "attribute": "color", "value": "chocolate" },
+        { "attribute": "color", "value": "tan" }
+      ],
+      "weight": 0.6
+    }
   }
 ]

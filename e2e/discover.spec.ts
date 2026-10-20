@@ -68,8 +68,8 @@ test('no department: the summary and the results say no department filter is app
 
 test('INSUFFICIENT_MATCHES: a request with no matching looks says what to change', async ({ page }) => {
   await signUpAndSkipOnboarding(page);
-  // On the shipped library there are no fusion looks for festive occasions.
-  const results = await requestLooks(page, 'Festive', { wearType: 'Fusion' });
+  // On the shipped library (C0 + C1) there are no fusion looks for work.
+  const results = await requestLooks(page, 'Work', { wearType: 'Fusion' });
   await expect(
     results.getByText('No looks matched this request. Choose another wear type, or none to see all three.'),
   ).toBeVisible();

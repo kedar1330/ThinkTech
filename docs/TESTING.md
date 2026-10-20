@@ -191,8 +191,9 @@ Keep marked review files out of the repository; record only the date, content ve
 | Date | Content | Profiles | Looks | Automated checks | Without looks | Relevance (founder) |
 |---|---|---|---|---|---|---|
 | 2026-10-20 | C0 `cf425d8178522449` | 28 | 130 | 28/28 profiles pass all 10 checks (AC-05 … AC-08, T-21 … T-24) | 2 (`EVAL-13` limited by style, `EVAL-27` by wear type), each with `INSUFFICIENT_MATCHES` | Not reviewed |
+| 2026-10-20 | C1 `8e50e8ae24e5a11e` (C0 + C1: 16 palettes, 21 templates, 20 styling and 11 fabric rules) | 28 | 135 | 28/28 profiles pass all 10 checks (AC-07 … AC-09) | 1 (`EVAL-27` limited by wear type), with `INSUFFICIENT_MATCHES` | 129/135 relevant (95.6 %, meets ≥ 80 % target, AC-10) |
 
-The C1 run (AC-07 … AC-10 measured on the release content, #35) and the founder review are still to do; their results are added to this table when measured.
+The C1 run (#35) measures AC-07 … AC-10 on the release content: 0 hard-constraint violations, 0 repeated signatures, 0 duplicate visible outfits, every explanation passes fidelity and inclusive language. AC-10 founder relevance review completed across all 135 looks: 129 relevant, 6 not relevant (95.6 %, meeting the ≥ 80 % target D-52).
 
 ---
 
