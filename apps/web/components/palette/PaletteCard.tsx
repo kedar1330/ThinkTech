@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { PaletteSummary } from '@styleme/contracts';
+import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ColourSwatch } from './ColourSwatch';
 import { paletteFamilies } from '@/lib/palette/palette-utils';
@@ -25,6 +26,17 @@ export function PaletteCard({ palette }: { palette: PaletteSummary }) {
             </Link>
           </h2>
         </header>
+
+        {palette.suggestedBecause.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5" aria-label="Why this is recommended">
+            <span className="text-xs font-medium text-plum">Recommended:</span>
+            {palette.suggestedBecause.map((reason) => (
+              <Badge key={reason} className="text-[11px] border-plum/30 bg-plum/10 text-plum font-normal">
+                {reason}
+              </Badge>
+            ))}
+          </div>
+        )}
 
         <p className="text-sm text-muted-foreground line-clamp-3">{palette.rationale}</p>
 

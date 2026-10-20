@@ -5,6 +5,8 @@ import { paletteListResponseSchema, paletteSummarySchema, type PaletteSummary } 
 import { ColourSwatch } from '@/components/palette/ColourSwatch';
 import { PaletteCard } from '@/components/palette/PaletteCard';
 import { PaletteDetail } from '@/components/palette/PaletteDetail';
+import { ViewToggle } from '@/components/palette/ViewToggle';
+import { WhyThesePalettes } from '@/components/palette/WhyThesePalettes';
 import { contrastLevelLabel, paletteFamilies, relativeLuminance, textContrastColor } from '@/lib/palette/palette-utils';
 
 // Mocks for server page tests
@@ -200,6 +202,102 @@ describe('PaletteCard component', () => {
     expect(screen.getByText('Mustard')).toBeInTheDocument();
     expect(screen.getByText('Olive')).toBeInTheDocument();
   });
+
+  it('renders rationale badges as returned by the API when suggestedBecause is present', () => {
+    render(<PaletteCard palette={FIXTURE_PALETTE} />);
+    expect(screen.getByText('undertone')).toBeInTheDocument();
+    expect(screen.getByText('skinTone')).toBeInTheDocument();
+  });
+
+  it('renders custom rationale like "Includes 3 of your liked colours" as returned by the API', () => {
+    const customPalette: PaletteSummary = {
+      ...FIXTURE_PALETTE,
+      suggestedBecause: ['Includes 3 of your liked colours'],
+    };
+    render(<PaletteCard palette={customPalette} />);
+    expect(screen.getByText('Includes 3 of your liked colours')).toBeInTheDocument();
+  });
+
+  it('omits recommendation rationale badges when suggestedBecause is empty (view=all)', () => {
+    render(<PaletteCard palette={FIXTURE_PALETTE_2} />);
+    expect(screen.queryByLabelText('Why this is recommended')).toBeNull();
+  });
+});
+
+describe('ViewToggle component', () => {
+  it('renders Recommended for You and Explore All Palettes links with correct URLs', () => {
+    render(<ViewToggle currentView="suggested" />);
+    const suggestedLink = screen.getByRole('link', { name: 'Recommended for You' });
+    const allLink = screen.getByRole('link', { name: 'Explore All Palettes' });
+
+    expect(suggestedLink).toHaveAttribute('href', '/palette?view=suggested');
+    expect(allLink).toHaveAttribute('href', '/palette?view=all');
+    expect(suggestedLink).toHaveAttribute('aria-current', 'page');
+    expect(allLink).not.toHaveAttribute('aria-current');
+  });
+
+  it('marks Explore All Palettes as active when currentView is all', () => {
+    render(<ViewToggle currentView="all" />);
+    const suggestedLink = screen.getByRole('link', { name: 'Recommended for You' });
+    const allLink = screen.getByRole('link', { name: 'Explore All Palettes' });
+
+    expect(suggestedLink).not.toHaveAttribute('aria-current');
+    expect(allLink).toHaveAttribute('aria-current', 'page');
+  });
+});
+
+describe('WhyThesePalettes component', () => {
+  it('shows personalised factors when both signals and preferences are present', () => {
+    render(<WhyThesePalettes palettes={[FIXTURE_PALETTE]} view="suggested" />);
+    expect(screen.getByText('Why am I seeing these?')).toBeInTheDocument();
+    expect(screen.getByText('Personalised for you')).toBeInTheDocument();
+    expect(screen.getByText('Undertone suitability')).toBeInTheDocument();
+    expect(screen.getByText('Skin tone suitability')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
+  });
+
+  it('with appearance signals off, never uses signals and explains so with fallback label (T-10, FR-PAL-07)', () => {
+    const signalsOffPalette: PaletteSummary = {
+      ...FIXTURE_PALETTE,
+      suggestedBecause: ['likedColors'],
+    };
+    render(<WhyThesePalettes palettes={[signalsOffPalette]} view="suggested" />);
+    expect(screen.getByText('Why am I seeing these?')).toBeInTheDocument();
+    expect(screen.getByText('General, not personalised')).toBeInTheDocument();
+    expect(screen.getByText(/Appearance signals \(skin tone and undertone\) are not used/)).toBeInTheDocument();
+    // Signals are never used or cited in the factors list
+    expect(screen.queryByText('Undertone suitability')).toBeNull();
+    expect(screen.queryByText('Skin tone suitability')).toBeNull();
+    expect(screen.getByText('Liked colours')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
+  });
+
+  it('shows fallback explanation with "General, not personalised" label when preferences/signals missing (FR-PAL-07)', () => {
+    const unrankedPalette: PaletteSummary = {
+      ...FIXTURE_PALETTE,
+      suggestedBecause: [],
+    };
+    render(<WhyThesePalettes palettes={[unrankedPalette]} view="suggested" />);
+    expect(screen.getByText('Why am I seeing these?')).toBeInTheDocument();
+    expect(screen.getByText('General, not personalised')).toBeInTheDocument();
+    expect(screen.getByText(/Colour preferences and appearance signals are missing/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
+  });
+
+  it('honours explicit isFallback prop override', () => {
+    render(<WhyThesePalettes palettes={[FIXTURE_PALETTE]} view="suggested" isFallback={true} />);
+    expect(screen.getByText('Why am I seeing these?')).toBeInTheDocument();
+    expect(screen.getByText('General, not personalised')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
+  });
+
+  it('shows catalog explanation when view is all', () => {
+    render(<WhyThesePalettes palettes={[FIXTURE_PALETTE]} view="all" />);
+    expect(screen.getByText('Why am I seeing these?')).toBeInTheDocument();
+    expect(screen.getByText('General, not personalised')).toBeInTheDocument();
+    expect(screen.getByText(/Showing all approved colour palettes in standard catalog order/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
+  });
 });
 
 describe('PaletteDetail component', () => {
@@ -245,15 +343,64 @@ describe('Palette pages (server components)', () => {
     serverMocks.notFound.mockReset();
   });
 
-  it('renders grid of palette cards on /palette', async () => {
+  it('renders grid of palette cards on /palette (view=suggested default)', async () => {
     serverMocks.apiRequest.mockResolvedValue(FIXTURES_RESPONSE);
 
     const page = await PalettePage();
     render(page);
 
+    expect(serverMocks.apiRequest).toHaveBeenCalledWith('/v1/style/palettes?view=suggested', {
+      token: 'test-token',
+    });
     expect(screen.getByRole('heading', { level: 1, name: 'Curated colour palettes' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Recommended for You' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Explore All Palettes' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByText('Why am I seeing these?')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Warm earth' })).toHaveAttribute('href', '/palette/PAL-001');
     expect(screen.getByRole('link', { name: 'Cool coastal' })).toHaveAttribute('href', '/palette/PAL-002');
+  });
+
+  it('renders view=all when requested via searchParams', async () => {
+    serverMocks.apiRequest.mockResolvedValue(FIXTURES_RESPONSE);
+
+    const page = await PalettePage({ searchParams: Promise.resolve({ view: 'all' }) });
+    render(page);
+
+    expect(serverMocks.apiRequest).toHaveBeenCalledWith('/v1/style/palettes?view=all', {
+      token: 'test-token',
+    });
+    expect(screen.getByRole('link', { name: 'Explore All Palettes' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Recommended for You' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByText('General, not personalised')).toBeInTheDocument();
+  });
+
+  it('with appearance signals off, ranking never uses signals in UI (FR-PAL-06, T-10)', async () => {
+    const signalsOffResponse = {
+      palettes: [{ ...FIXTURE_PALETTE, suggestedBecause: ['likedColors'] }],
+    };
+    serverMocks.apiRequest.mockResolvedValue(signalsOffResponse);
+
+    const page = await PalettePage({ searchParams: Promise.resolve({ view: 'suggested' }) });
+    render(page);
+
+    expect(screen.getByText(/Appearance signals \(skin tone and undertone\) are not used/)).toBeInTheDocument();
+    expect(screen.queryByText('Undertone suitability')).toBeNull();
+    expect(screen.queryByText('Skin tone suitability')).toBeNull();
+    expect(screen.getByText('General, not personalised')).toBeInTheDocument();
+  });
+
+  it('shows fallback explanation and "General, not personalised" label when preferences are missing (FR-PAL-07)', async () => {
+    const fallbackResponse = {
+      palettes: [{ ...FIXTURE_PALETTE, suggestedBecause: [] }],
+    };
+    serverMocks.apiRequest.mockResolvedValue(fallbackResponse);
+
+    const page = await PalettePage({ searchParams: Promise.resolve({ view: 'suggested' }) });
+    render(page);
+
+    expect(screen.getByText('General, not personalised')).toBeInTheDocument();
+    expect(screen.getByText(/Colour preferences and appearance signals are missing/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
   });
 
   it('shows honest empty state while no palettes are approved; never placeholders', async () => {
