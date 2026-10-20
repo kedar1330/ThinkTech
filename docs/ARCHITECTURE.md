@@ -41,6 +41,7 @@ Hosting platforms are planned (D-40); accounts, plans and costs are decided at t
 - **2D try-on (D-119).** Rendered in the browser from SVG layers; the API only serves catalogue metadata and stores configurations. No jobs, queues or GPUs.
 - **Admin panel (D-120).** A route group `(admin)/admin/*` in the existing Next.js app, behind the same BFF and session cookie, calling `/v1/admin/*`. The API enforces roles and permissions on every request and writes `adminAuditLogs`. No separate app, database or direct database access.
 - **Hand-offs (D-127).** Features link to each other with stable IDs in URL parameters; each page fetches what it needs from the owning endpoint.
+  - *Shop this look* (#43): `/shop?outfitId=<lookId>`, optionally `&slotId=<slotId>` for one part (the `{ outfitId, slotId }` reference, D-82). Used by the Discover results and the saved-look page; built by `shopHref()` in `apps/web/lib/shop/look-shopper.ts`.
 
 ---
 

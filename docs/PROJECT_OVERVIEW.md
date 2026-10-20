@@ -194,7 +194,9 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ---
 
-## 10. Shop My Look (PDF p17) — ⬜ Placeholder; product data ⛔
+## 10. Shop My Look (PDF p17) — 🔄 Stage 1 page in review (#43); product data ⛔
+
+**Today (#43, PR open):** `/shop` lists saved looks; `/shop?outfitId=…` (the "Shop this look" link on Discover results and saved looks) shows each part with the user's saved size and the shortlist item they put on it, a labelled total against their budget per look, and filters by category, size group and price. A "Product data unavailable" notice explains that StyleMe lists no shop products yet.
 
 **Stage 1 (D-77 = B):** a **shortlist of items the user found themselves** — name, optional https link, the price they enter, optional note — attached to a look slot, with a budget summary. Every user-entered price is labelled "not verified by StyleMe"; StyleMe never fetches the link.
 

@@ -288,15 +288,158 @@ describe('/v1/shortlist (FR-LIST, API.md §3.6)', () => {
     expect((await list(app, token)).body.data.total).toBe(3);
   });
 
-  it('attaching an item to a look at creation is not available yet (#43)', async () => {
-    const { app, token } = await signedIn('attach@example.com');
-    const res = await add(app, token, { ...ITEM, outfitId: new Types.ObjectId().toHexString(), slotId: 'top' });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
-      code: 'INVALID_REQUEST',
-      message: 'Adding an item to a look is not available yet',
+  // --- Attaching to saved looks (#43, AC-B4) ----------------------------------------------------------
+
+  /** A look with known slots, stored directly so the slot IDs are fixed (two of the same type, B-09). */
+  async function storedLook(userId: Types.ObjectId, status: 'saved' | 'suggested' = 'saved') {
+    const slot = (slotId: string, type: string) => ({
+      slotId,
+      slot: type,
+      lookSpec: {},
+      swatches: [],
+      alternatives: [],
     });
-    expect(await env.db.models.ShortlistItem.countDocuments()).toBe(0);
+    const doc = await env.db.models.Outfit.create({
+      userId,
+      recommendationId: new Types.ObjectId(),
+      status,
+      templateId: 'OUT-001',
+      paletteId: 'PAL-001',
+      slots: [slot('top', 'top'), slot('accessory-1', 'accessory'), slot('accessory-2', 'accessory')],
+      explanation: 'Synthetic look for shortlist tests.',
+      explanationRefs: { ruleIds: [], attributes: [] },
+      combinationSignature: new Types.ObjectId().toHexString(),
+      contentVersion: 'test',
+      request: { occasion: 'work', paletteMode: 'suggested' },
+      inputsUsed: {},
+    });
+    return String(doc._id);
+  }
+  const attach = (app: App, token: string, id: string, body: object) =>
+    request(app).put(`/v1/shortlist/${id}/attach`).set(bearer(token)).send(body);
+  const detach = (app: App, token: string, id: string) =>
+    request(app).delete(`/v1/shortlist/${id}/attach`).set(bearer(token));
+
+  it('B-03 attaching at creation needs the user’s own saved look, an existing slot and a free slot', async () => {
+    const { app, token, userId } = await signedIn('attach@example.com');
+    const other = await signedIn('other@example.com');
+    const look = await storedLook(userId);
+
+    const res = await add(app, token, { ...ITEM, outfitId: look, slotId: 'top' });
+    expect(res.status).toBe(201);
+    expect(userShortlistItemSchema.parse(res.body.data)).toMatchObject({ outfitId: look, slotId: 'top' });
+
+    const second = await add(app, token, { name: 'Another kurta', priceEntered: 999, outfitId: look, slotId: 'top' });
+    expect(second.status).toBe(409);
+    expect(second.body.error.code).toBe('CONFLICT');
+    const unknownSlot = await add(app, token, { ...ITEM, outfitId: look, slotId: 'bottom' });
+    expect(unknownSlot.status).toBe(400);
+    expect(unknownSlot.body.error.code).toBe('INVALID_REQUEST');
+    for (const notMine of [await storedLook(userId, 'suggested'), await storedLook(other.userId)]) {
+      const res = await add(app, token, { ...ITEM, outfitId: notMine, slotId: 'top' });
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    }
+    expect(await env.db.models.ShortlistItem.countDocuments({ userId })).toBe(1);
+  });
+
+  it('B-10 outfitId without slotId, or the reverse, is a half-attachment and rejected', async () => {
+    const { app, token, userId } = await signedIn('half@example.com');
+    const look = await storedLook(userId);
+    for (const body of [
+      { ...ITEM, outfitId: look },
+      { ...ITEM, slotId: 'top' },
+    ]) {
+      expect((await add(app, token, body)).status).toBe(400);
+    }
+    const { body } = await add(app, token, ITEM).expect(201);
+    expect((await attach(app, token, body.data.id, { outfitId: look })).status).toBe(400);
+  });
+
+  it('attaches an existing item, moves it to another slot and takes it off again', async () => {
+    const { app, token, userId } = await signedIn('move@example.com');
+    const look = await storedLook(userId);
+    const kurta = (await add(app, token, ITEM).expect(201)).body.data.id as string;
+    const juttis = (await add(app, token, { name: 'Juttis', priceEntered: 1500 }).expect(201)).body.data.id as string;
+
+    const put = await attach(app, token, kurta, { outfitId: look, slotId: 'top' });
+    expect(put.status).toBe(200);
+    expect(put.body.data).toMatchObject({ id: kurta, outfitId: look, slotId: 'top' });
+    expect(put.body.warnings).toEqual(['USER_ENTERED_PRICES']);
+    // Attaching the same item to its own slot again is harmless.
+    expect((await attach(app, token, kurta, { outfitId: look, slotId: 'top' })).status).toBe(200);
+
+    expect((await attach(app, token, juttis, { outfitId: look, slotId: 'top' })).status).toBe(409);
+    await attach(app, token, kurta, { outfitId: look, slotId: 'accessory-1' }).expect(200);
+    await attach(app, token, juttis, { outfitId: look, slotId: 'top' }).expect(200);
+
+    const off = await detach(app, token, kurta);
+    expect(off.status).toBe(200);
+    expect(off.body.data).toMatchObject({ id: kurta, outfitId: null, slotId: null });
+    const { body } = await list(app, token).expect(200);
+    expect(body.data.items.map((i: { id: string }) => i.id).sort()).toEqual([kurta, juttis].sort());
+  });
+
+  it('attach and detach act only on the user’s own items and saved looks', async () => {
+    const { app, token, userId } = await signedIn('mine@example.com');
+    const other = await signedIn('theirs@example.com');
+    const myLook = await storedLook(userId);
+    const theirItem = (await add(other.app, other.token, ITEM).expect(201)).body.data.id as string;
+    const myItem = (await add(app, token, ITEM).expect(201)).body.data.id as string;
+
+    expect((await attach(app, token, theirItem, { outfitId: myLook, slotId: 'top' })).status).toBe(404);
+    expect((await detach(app, token, theirItem)).status).toBe(404);
+    const theirLook = await storedLook(other.userId);
+    expect((await attach(app, token, myItem, { outfitId: theirLook, slotId: 'top' })).status).toBe(404);
+    const unsaved = await storedLook(userId, 'suggested');
+    expect((await attach(app, token, myItem, { outfitId: unsaved, slotId: 'top' })).status).toBe(404);
+    expect((await attach(app, token, 'not-an-id', { outfitId: myLook, slotId: 'top' })).status).toBe(400);
+    const anonymous = await request(app)
+      .put(`/v1/shortlist/${myItem}/attach`)
+      .send({ outfitId: myLook, slotId: 'top' });
+    expect(anonymous.status).toBe(401);
+  });
+
+  it('B-05 B-07 B-09 a look shows its attached items and the price summary against the budget', async () => {
+    const { app, token, userId } = await signedIn('summary@example.com');
+    const look = await storedLook(userId);
+    const open = () => request(app).get(`/v1/outfits/${look}`).set(bearer(token));
+
+    const before = await open().expect(200);
+    expect(before.body.data.userItems).toEqual([]);
+    expect(before.body.data).not.toHaveProperty('priceSummary');
+    expect(before.body.warnings).toBeUndefined();
+
+    // Two slots of the same type each take their own item (B-09).
+    const bangles = { name: 'Silver bangles', priceEntered: 450.25, outfitId: look, slotId: 'accessory-1' };
+    const bag = { name: 'Potli bag', priceEntered: 549.75, outfitId: look, slotId: 'accessory-2' };
+    await add(app, token, bangles).expect(201);
+    await add(app, token, bag).expect(201);
+
+    const partial = await open().expect(200);
+    expect(partial.body.warnings).toEqual(['USER_ENTERED_PRICES']);
+    expect(partial.body.data.userItems.map((i: { slotId: string }) => i.slotId)).toEqual([
+      'accessory-1',
+      'accessory-2',
+    ]);
+    expect(partial.body.data.priceSummary).toEqual({
+      priceBasis: 'user_entered',
+      itemsTotal: 1000,
+      pricedSlots: 2,
+      totalSlots: 3,
+      complete: false,
+      budget: null,
+      budgetRemaining: null,
+      status: 'no_budget',
+      label: 'Total of prices you entered — not verified by StyleMe; not a checkout price',
+    });
+
+    const setBudget = (budgetPreference: number) =>
+      request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women', budgetPreference }).expect(200);
+    await setBudget(1000);
+    expect((await open()).body.data.priceSummary).toMatchObject({ status: 'within_budget', budgetRemaining: 0 });
+    await setBudget(900);
+    expect((await open()).body.data.priceSummary).toMatchObject({ status: 'over_budget', budgetRemaining: -100 });
   });
 
   it('B-08 account deletion removes the items, and tombstone replay removes them from a restored copy', async () => {

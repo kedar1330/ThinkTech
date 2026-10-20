@@ -37,6 +37,7 @@ export const FEATURES: Feature[] = [
     slug: 'shop-my-look',
     label: 'Shop My Look',
     icon: 'bag',
+    href: '/shop',
     summary: 'Save items you find in any store, with their prices, and compare the total with your budget per look.',
   },
   {
