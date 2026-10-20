@@ -291,7 +291,7 @@ The release acceptance criteria are AC-01 … AC-25, AC-B1 … B4 ([MVP.md](MVP.
 | FR-PROF, FR-SIZE-01 … 04 | `profile.ts` | `profile.service.ts`, `ProfileForm.tsx` | `profile.test.ts`, `profile-form.test.ts` | #4 | Implemented (no `preferredWearTypes`) |
 | FR-SIG | `appearance.ts` | `appearance.service.ts`, `AppearanceForm.tsx` | `appearance.test.ts`, `appearance-log-privacy.test.ts`, `appearance-form.test.ts` | #5 | Implemented |
 | FR-STY | (`style-vocabulary.ts`) | `style-rules/*` | `style-rules.test.ts`, `style-rules-scale.test.ts`, `style-vocabulary.test.ts` | #2, #3, #30, #63, #32, #35 | Tooling implemented; content draft |
-| FR-LOOK | `outfit.ts` | `services/engine/*`, `recommendations.service.ts` | `outfit.test.ts`; `unit/engine/*.test.ts`, `api/recommendations.test.ts` | #33, #34, #45 … #49 | Engine and endpoint merged (#33); named engine tests and evaluation entry point (#34, PR pending); UI not built |
+| FR-LOOK | `outfit.ts` | `services/engine/*`, `recommendations.service.ts` | `outfit.test.ts`; `unit/engine/*.test.ts`, `api/recommendations.test.ts` | #33, #34, #45 … #49 | Engine and endpoint merged (#33); named engine tests and evaluation entry point (#34, merged in PR #74 and PR #87); optional AI wording off by default (#55, PR #87); UI not built |
 | FR-PAL | `palette.ts` | `services/engine/palettes.ts`, `palette.service.ts` | `outfit.test.ts`; `unit/engine.test.ts`, `api/recommendations.test.ts` | #33, #39, #40 | Ranking and endpoint (#33); UI not built |
 | FR-OUT | `outfit.ts` | — | `outfit.test.ts` (contract only) | #41, #42 | Contract only |
 | FR-LIST, FR-BUD | `product.ts` | — | `outfit.test.ts` (shortlist and price-summary contracts) | #37, #38, #43 | Contract only |
