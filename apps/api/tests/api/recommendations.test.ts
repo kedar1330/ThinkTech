@@ -5,6 +5,7 @@ import { paletteListResponseSchema, recommendationResponseSchema } from '@stylem
 import { SUGGESTED_LOOK_TTL_MS } from '../../src/services/recommendations.service';
 import { loadStyleLibrary } from '../../src/style-rules';
 import { buildEngineFixtureLibrary } from '../fixtures/style-library';
+import { FakeWordingProvider, type FakeReply } from '../fixtures/wording';
 import {
   bearer,
   googleToken,
@@ -292,5 +293,200 @@ describe('POST /v1/recommendations: named scenarios (#34)', () => {
     } finally {
       fetchSpy.mockRestore();
     }
+  });
+});
+
+// Optional AI wording end to end (#55, FR-LOOK-16) with a fake provider (D-39: no key, no network).
+describe('POST /v1/recommendations: optional AI wording (T-25 … T-27)', () => {
+  const AI_ON = {
+    AI_WORDING_ENABLED: true,
+    GEMINI_API_KEY: 'unused',
+    GEMINI_MODEL: 'unused',
+    AI_WORDING_TIMEOUT_MS: 500,
+  };
+
+  async function withWording(email: string, reply: FakeReply, enabled = true) {
+    const wording = new FakeWordingProvider(reply);
+    const { app, mail } = env.makeApp(enabled ? AI_ON : {}, { styleLibrary, wording });
+    await registerUser(app, env, mail, email);
+    const token = await login(app, email);
+    return { app, token, wording };
+  }
+  const ask = (app: Parameters<typeof request>[0], token: string) =>
+    request(app).post('/v1/recommendations').set(bearer(token)).send({ occasion: 'everyday' });
+  const explanations = (body: { data: { looks: { explanation: string }[] } }) =>
+    body.data.looks.map((l) => l.explanation);
+
+  it('T-25 a provider configured while AI_WORDING_ENABLED is false is never called', async () => {
+    const { app, token, wording } = await withWording('t25off@example.com', { kind: 'ok' }, false);
+    const res = await ask(app, token);
+    expect(res.status).toBe(200);
+    expect(wording.payloads).toEqual([]);
+    expect(res.body.warnings ?? []).not.toContain('AI_ENHANCEMENT_SKIPPED');
+    expect(res.body.data.looks.every((l: { aiModel: unknown }) => l.aiModel === null)).toBe(true);
+  });
+
+  it('a valid rewording is used: aiModel and the prompt version are stored; references are unchanged', async () => {
+    const off = await withWording('aion-off@example.com', { kind: 'ok' }, false);
+    const expected = (await ask(off.app, off.token)).body.data.looks;
+    const { app, token, wording } = await withWording('aion@example.com', { kind: 'ok' });
+    const res = await ask(app, token);
+    const data = recommendationResponseSchema.parse(res.body.data);
+    expect(wording.payloads.length).toBe(data.looks.length);
+    expect(res.body.warnings ?? []).not.toContain('AI_ENHANCEMENT_SKIPPED');
+    for (const [i, look] of data.looks.entries()) {
+      expect(look.aiModel).toBe('fake-wording-model');
+      expect(look.explanationRefs).toEqual(expected[i].explanationRefs);
+      expect(look.combinationSignature).toBe(expected[i].combinationSignature);
+    }
+    const user = await env.db.models.User.findOne({ email: 'aion@example.com' }).lean();
+    const stored = await env.db.models.Outfit.find({ userId: user!._id }).lean();
+    expect(stored.length).toBe(data.looks.length);
+    expect(stored.every((o) => o.aiModel === 'fake-wording-model' && o.aiPromptVersion === 'wording-v1')).toBe(true);
+  });
+
+  const failures: [string, FakeReply][] = [
+    ['times out', { kind: 'hang' }],
+    ['rate-limits', { kind: 'fail', cause: 'rate_limited' }],
+    ['errors', { kind: 'fail', cause: 'provider_error' }],
+    ['returns invalid output', { kind: 'reply', body: () => ({ text: 42 }) }],
+  ];
+  for (const [name, reply] of failures) {
+    it(`T-26 provider ${name}: 200, template explanations, aiModel null, AI_ENHANCEMENT_SKIPPED`, async () => {
+      const slug = name.replace(/ /g, '-');
+      const off = await withWording(`off-${slug}@example.com`, { kind: 'ok' }, false);
+      const expected = explanations((await ask(off.app, off.token)).body);
+      const { app, token } = await withWording(`t26-${slug}@example.com`, reply);
+      const res = await ask(app, token);
+      expect(res.status).toBe(200);
+      expect(res.body.warnings).toContain('AI_ENHANCEMENT_SKIPPED');
+      expect(explanations(res.body)).toEqual(expected);
+      expect(res.body.data.looks.every((l: { aiModel: unknown }) => l.aiModel === null)).toBe(true);
+      expect(await env.db.models.Outfit.countDocuments({ aiModel: { $ne: null } })).toBe(0);
+      // The cause is logged without personal data or text.
+      const logs = logTextForPrivacyChecks(env.logLines);
+      expect(logs).toContain('ai_wording_skipped');
+      expect(logs).not.toMatch(/explanation|rationale|Fixture/i);
+    });
+  }
+
+  it('aiCache (D-13): repeated looks reuse validated wording; entries expire in 7 days and hold no personal data', async () => {
+    const { app, token, wording } = await withWording('cache@example.com', { kind: 'ok' });
+    const first = await ask(app, token);
+    const calls = wording.payloads.length;
+    expect(calls).toBe(first.body.data.looks.length);
+    const again = await ask(app, token);
+    expect(wording.payloads.length).toBe(calls);
+    expect(explanations(again.body)).toEqual(explanations(first.body));
+    const entries = await env.db.models.AiCache.find().lean();
+    expect(entries.length).toBe(calls);
+    const user = await env.db.models.User.findOne({ email: 'cache@example.com' }).lean();
+    for (const entry of entries) {
+      expect(entry).toMatchObject({
+        provider: 'fake',
+        model: 'fake-wording-model',
+        requestType: 'explanation-wording',
+      });
+      expect(entry.cacheKey).toMatch(/^[0-9a-f]{64}$/);
+      const ttl = entry.expiresAt.getTime() - Date.now();
+      expect(ttl).toBeGreaterThan(7 * 24 * 3600 * 1000 - 60_000);
+      expect(ttl).toBeLessThanOrEqual(7 * 24 * 3600 * 1000);
+      expect(JSON.stringify(entry)).not.toContain(String(user!._id));
+      expect(JSON.stringify(entry)).not.toContain('cache@example.com');
+    }
+    const ttlIndex = (await env.db.models.AiCache.collection.indexes()).find((i) => i.key.expiresAt === 1);
+    expect(ttlIndex?.expireAfterSeconds).toBe(0);
+  });
+
+  it('T-27 the outbound payload holds only references and attribute tags: no identity, signals, sizes or budget', async () => {
+    const { app, token, wording } = await withWording('t27on@example.com', { kind: 'ok' });
+    await request(app)
+      .put('/v1/profile')
+      .set(bearer(token))
+      .send({
+        department: 'women',
+        likedColors: ['lavender'],
+        budgetPreference: 4321,
+        sizes: { ethnicTops: { letter: 'M' }, shoes: { uk: 6 }, bottoms: { waistIn: 31 } },
+      })
+      .expect(200);
+    await request(app)
+      .put('/v1/appearance')
+      .set(bearer(token))
+      .send({
+        undertone: { value: 'cool' },
+        skinTone: { value: { monkRange: '3-4' } },
+        bodyProportions: { value: 'hips_wider_than_shoulders' },
+      })
+      .expect(200);
+    const res = await request(app)
+      .post('/v1/recommendations')
+      .set(bearer(token))
+      .send({ occasion: 'everyday', style: 'casual' });
+    expect(res.status).toBe(200);
+    expect(wording.payloads.length).toBeGreaterThan(0);
+    const user = await env.db.models.User.findOne({ email: 't27on@example.com' }).lean();
+    const sent = JSON.stringify(wording.payloads);
+    for (const value of [
+      't27on',
+      'example.com',
+      String(user!._id),
+      '4321',
+      '"M"',
+      'waist',
+      '31',
+      '"cool"', // the undertone value (the fixture palette's name, "Fixture cool", is library content)
+      '3-4',
+      'hips',
+      'undertone',
+      'skin',
+      'STY-003',
+    ]) {
+      expect(sent, value).not.toContain(value);
+    }
+    // The signals still shape the user's own explanation, as template text that never left the API.
+    const text = res.body.data.looks.map((l: { explanation: string }) => l.explanation).join(' ');
+    expect(text).toContain('from the details you shared');
+  });
+});
+
+describe('GET /v1/style/palettes (FR-PAL-01 … 03, API.md §3.4)', () => {
+  it('requires a signed-in user and a valid view', async () => {
+    const { app, token } = await signedIn('pal@example.com');
+    expect((await request(app).get('/v1/style/palettes')).status).toBe(401);
+    for (const query of ['view=popular', 'view=all&sort=name']) {
+      const res = await request(app).get(`/v1/style/palettes?${query}`).set(bearer(token));
+      expect(res.status, query).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_REQUEST');
+    }
+  });
+
+  it('view=all lists every approved palette with nothing suggested', async () => {
+    const { app, token } = await signedIn('all@example.com');
+    const res = await request(app).get('/v1/style/palettes?view=all').set(bearer(token));
+    expect(res.status).toBe(200);
+    const { palettes } = paletteListResponseSchema.parse(res.body.data);
+    expect(palettes.map((p) => p.id)).toEqual(['PAL-001', 'PAL-002', 'PAL-003']);
+    expect(palettes.every((p) => p.suggestedBecause.length === 0)).toBe(true);
+  });
+
+  it('suggested (the default) uses the undertone only while signals are on', async () => {
+    const { app, token } = await signedIn('tone@example.com');
+    await request(app)
+      .put('/v1/profile')
+      .set(bearer(token))
+      .send({ department: 'women', likedColors: ['emerald'] });
+    await request(app)
+      .put('/v1/appearance')
+      .set(bearer(token))
+      .send({ undertone: { value: 'cool' } });
+
+    const on = await request(app).get('/v1/style/palettes').set(bearer(token));
+    expect(on.body.data.palettes[0]).toMatchObject({ id: 'PAL-002', suggestedBecause: ['undertone'] });
+
+    await request(app).put('/v1/appearance').set(bearer(token)).send({ useInRecommendations: false });
+    const off = await request(app).get('/v1/style/palettes').set(bearer(token));
+    expect(off.body.data.palettes[0]).toMatchObject({ id: 'PAL-003', suggestedBecause: ['likedColors'] });
+    expect(JSON.stringify(off.body.data)).not.toContain('undertone');
   });
 });

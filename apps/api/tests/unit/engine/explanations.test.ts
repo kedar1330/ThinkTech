@@ -158,5 +158,6 @@ describe('T-25 template explanations (AI wording off by default, D-67)', () => {
     }
   });
 
-  // T-26 and T-27 with AI wording on need the optional AI wording step; they are added with it (#55).
+  // T-26 and T-27 with AI wording on are tested where the AI step lives: tests/unit/wording.test.ts (each
+  // failure cause, the payload) and tests/api/recommendations.test.ts (end to end).
 });
