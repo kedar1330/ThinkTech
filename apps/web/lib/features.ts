@@ -25,6 +25,7 @@ export const FEATURES: Feature[] = [
     slug: 'colour-palette',
     label: 'My Colour Palette',
     icon: 'palette',
+    href: '/palette',
     summary: 'Colour palettes shaped by the colours you love and avoid, and your optional appearance signals.',
   },
   {
