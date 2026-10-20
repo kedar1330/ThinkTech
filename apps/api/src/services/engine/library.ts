@@ -20,6 +20,8 @@ export interface StyleLibrary {
   readonly contentVersion: string;
   readonly palettes: readonly Palette[];
   getPalette(id: string): Palette | undefined;
+  /** For naming saved looks (D-116); a template retired since the look was made returns undefined. */
+  getTemplate(id: string): Template | undefined;
   getRule(id: string): Rule | undefined;
   /** Templates for an occasion, optional style and department (`any` sees all; others also see `any`). */
   findTemplates(query: { occasion: Occasion; style?: Style; department: Department }): Template[];

@@ -1,8 +1,9 @@
 import { Types } from 'mongoose';
 import request from 'supertest';
 import type { Express } from 'express';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { lookSchema, outfitDetailSchema, outfitListResponseSchema, type Look } from '@styleme/contracts';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SAVED_LIMITS, lookSchema, outfitDetailSchema, outfitListResponseSchema, type Look } from '@styleme/contracts';
+import { lookIdentityKey } from '../../src/services/outfits.service';
 import { SUGGESTED_LOOK_TTL_MS } from '../../src/services/recommendations.service';
 import { loadStyleLibrary } from '../../src/style-rules';
 import { buildEngineFixtureLibrary } from '../fixtures/style-library';
@@ -249,5 +250,146 @@ describe('/v1/outfits (saved looks)', () => {
     const logs = logTextForPrivacyChecks(env.logLines);
     expect(logs).not.toContain(look!.explanation);
     expect(logs).not.toContain(look!.slots[0]!.searchPhrase);
+  });
+});
+
+// One save system (D-116, mechanism agreed on #41): a saved look also has one `savedItems` entry.
+describe('saved looks in the shared save system (D-116)', () => {
+  const entries = (userId?: Types.ObjectId) => env.db.models.SavedItem.find(userId ? { userId } : {}).lean();
+
+  async function userIdOf(email: string) {
+    return (await env.db.models.User.findOne({ email }).lean())!._id;
+  }
+
+  it('saving creates exactly one entry with the agreed fields; saving again keeps one', async () => {
+    const { app, token } = await signedIn('mirror@example.com');
+    const [look] = await generate(app, token);
+    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
+    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
+
+    const items = await entries(await userIdOf('mirror@example.com'));
+    expect(items).toHaveLength(1);
+    const item = items[0]!;
+    const template = styleLibrary.getTemplate(look!.templateId)!;
+    const palette = styleLibrary.getPalette(look!.paletteId)!;
+    expect(item).toMatchObject({
+      itemType: 'outfit',
+      sourceFeature: 'discover_my_style',
+      ref: { kind: 'look', id: look!.id },
+      identityKey: lookIdentityKey(look!.id),
+      name: `Everyday look: ${template.name}`.slice(0, 80),
+      notes: null,
+      isFavourite: false,
+      collectionIds: [],
+      customization: null,
+      derivedFromId: null,
+      origin: { templateId: look!.templateId, paletteId: look!.paletteId },
+      recommendationContext: {
+        explanation: look!.explanation,
+        ruleIds: look!.explanationRefs.ruleIds,
+        attributes: look!.explanationRefs.attributes,
+      },
+    });
+    expect(item.snapshot).toEqual({
+      templateName: template.name,
+      paletteName: palette.name,
+      slots: look!.slots.map((s) => ({ slotId: s.slotId, category: s.lookSpec.category, swatches: s.swatches })),
+    });
+    expect(item.facets).toEqual({
+      occasions: ['everyday'],
+      styles: [],
+      categories: [...new Set(look!.slots.map((s) => s.lookSpec.category))],
+      colorIds: [...new Set(look!.slots.flatMap((s) => s.swatches.map((w) => w.colorId)))],
+    });
+    // A reference plus a minimum snapshot, never a copy of the look (D-116).
+    expect(item.snapshot).not.toHaveProperty('explanation');
+  });
+
+  it('deleting a saved look removes both records and detaches the user’s shortlist items', async () => {
+    const { app, token } = await signedIn('both@example.com');
+    const [look] = await generate(app, token);
+    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
+    const userId = await userIdOf('both@example.com');
+    // Attaching arrives with #43, so the attached item is written directly.
+    const item = await env.db.models.ShortlistItem.create({
+      userId,
+      outfitId: new Types.ObjectId(look!.id),
+      slotId: look!.slots[0]!.slotId,
+      name: 'Navy kurta',
+      priceEntered: 1299,
+    });
+
+    await request(app).delete(`/v1/outfits/${look!.id}`).set(bearer(token)).expect(200);
+    expect(await env.db.models.Outfit.exists({ _id: new Types.ObjectId(look!.id) })).toBeNull();
+    expect(await entries(userId)).toHaveLength(0);
+    const kept = await env.db.models.ShortlistItem.findById(item._id).lean();
+    expect(kept).toMatchObject({ outfitId: null, slotId: null, name: 'Navy kurta' });
+  });
+
+  it('when the entry cannot be written, save returns an error and a retry completes it', async () => {
+    const { app, token } = await signedIn('retry@example.com');
+    const [look] = await generate(app, token);
+    const spy = vi.spyOn(env.db.models.SavedItem, 'updateOne').mockRejectedValueOnce(new Error('write failed'));
+    const failed = await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token));
+    expect(failed.status).toBe(500);
+    expect(failed.body.error.code).toBe('INTERNAL_ERROR');
+    spy.mockRestore();
+
+    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
+    expect(await entries(await userIdOf('retry@example.com'))).toHaveLength(1);
+  });
+
+  it('another user’s look never gets an entry', async () => {
+    const owner = await signedIn('owner@example.com');
+    const [look] = await generate(owner.app, owner.token);
+    const intruder = await signedIn('intruder@example.com');
+
+    const res = await request(intruder.app).post(`/v1/outfits/${look!.id}/save`).set(bearer(intruder.token));
+    expect(res.status).toBe(404);
+    expect(await entries()).toHaveLength(0);
+  });
+
+  it('a new save beyond 1,000 saved items is CONFLICT and the look stays suggested', async () => {
+    const { app, token } = await signedIn('full@example.com');
+    const [look, second] = await generate(app, token);
+    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
+    const userId = await userIdOf('full@example.com');
+    await env.db.models.SavedItem.insertMany(
+      Array.from({ length: SAVED_LIMITS.itemsPerUser - 1 }, (_, i) => ({
+        userId,
+        itemType: 'clothing_style',
+        sourceFeature: 'outfit_categories',
+        ref: { kind: 'clothing_style', id: `CST-${String(i).padStart(4, '0')}` },
+        identityKey: `seed-${i}`,
+        name: `Style ${i}`,
+      })),
+    );
+
+    const res = await request(app).post(`/v1/outfits/${second!.id}/save`).set(bearer(token));
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('CONFLICT');
+    const stored = await env.db.models.Outfit.findById(second!.id).lean();
+    expect(stored?.status).toBe('suggested');
+    expect(stored?.expiresAt).toBeInstanceOf(Date);
+    // Re-saving a look that already has its entry is not a new save.
+    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
+  });
+
+  it('account deletion clears saved looks and their entries', async () => {
+    const { app, mail } = env.makeApp({}, { styleLibrary });
+    await registerUser(app, env, mail, 'wipe@example.com');
+    const token = await login(app, 'wipe@example.com');
+    const [look] = await generate(app, token);
+    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
+    expect(await entries()).toHaveLength(1);
+
+    await request(app).post('/v1/account/deletion-otp').set(bearer(token));
+    await request(app)
+      .delete('/v1/account')
+      .set(bearer(token))
+      .send({ otp: mail.otp('wipe@example.com'), confirm: true })
+      .expect(200);
+    expect(await env.db.models.Outfit.countDocuments()).toBe(0);
+    expect(await entries()).toHaveLength(0);
   });
 });
