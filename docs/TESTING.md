@@ -172,6 +172,28 @@ All automated suites run in CI on every pull request and push to `main` (D-42). 
 
 **Issue #34 acceptance status (2026-10-19).** (1) *Named tests:* T-12 … T-25, T-27 with AI wording off (no outbound call), T-28 and T-38 exist, are named with their IDs and pass (§4 status). **Open dependency:** T-26, and T-27 with AI wording on, test the optional AI wording step, which only #55 builds; #55 is on hold until #54 and the founder evaluation are done, so #34 stays open until those tests land with #55. (2) *AC-05 … AC-08 on C0:* verified and recorded in the issue ([#34 comment](https://github.com/kedar1330/ThinkTech/issues/34#issuecomment-6270614982)): 160/160 profiles, 723 looks, 0 hard-constraint violations. (3) *Evaluation entry point:* documented in this section for the #54 owner. The D-70 coverage target in TODO.md TD-STY-04 is met (above).
 
+### 6.2 Stage 1 evaluation set (#54)
+
+**Profiles:** 28 synthetic profiles in `apps/api/tests/evaluation/profiles/stage1.json` (`EVAL-01` … `EVAL-28`), in the `--profiles` format above. They cover every occasion; departments women, men, "show me everything" and not saved; requested styles and wear types; explore mode; liked and disliked colours; a colour liked and disliked and a fabric liked and avoided (conflicts); an occasion with nothing else (missing inputs); coverage and comfort preferences; sizes; self-reported signals on and off; and requests nothing can satisfy.
+
+**Automated checks in CI:** `apps/api/tests/evaluation/evaluation.test.ts` runs the set on the shipped library and on the synthetic engine fixture library and requires every check to pass for every profile (100 %), and that the set still covers the list above. It runs with `pnpm test`.
+
+**Founder relevance review (D-52):**
+
+1. Export: `pnpm --filter @styleme/api evaluate --profiles tests/evaluation/profiles/stage1.json --export-review review.csv`. One row per look: content version, profile ID, look number, template, palette, combination signature, items (garment and colours), explanation, and an empty `relevant` column. Profiles are named by ID only; their values are in `stage1.json`.
+2. The founder opens the CSV in a spreadsheet and marks each look `yes` (relevant to the profile and occasion) or `no`, without changing the other columns.
+3. Import: the same command with `--import-review review.csv` prints the relevance rate. Marks are matched to looks by profile and combination signature; marks made on another content version are rejected, because the looks may have changed. The ≥ 80 % target is compared only when every look is marked; until then the report says the review is incomplete.
+
+Keep marked review files out of the repository; record only the date, content version and numbers here and in #54.
+
+**Recorded results:**
+
+| Date | Content | Profiles | Looks | Automated checks | Without looks | Relevance (founder) |
+|---|---|---|---|---|---|---|
+| 2026-10-20 | C0 `cf425d8178522449` | 28 | 130 | 28/28 profiles pass all 10 checks (AC-05 … AC-08, T-21 … T-24) | 2 (`EVAL-13` limited by style, `EVAL-27` by wear type), each with `INSUFFICIENT_MATCHES` | Not reviewed |
+
+The C1 run (AC-07 … AC-10 measured on the release content, #35) and the founder review are still to do; their results are added to this table when measured.
+
 ---
 
 ## 7. End-to-End (Playwright)
