@@ -21,7 +21,7 @@ export default async function DiscoverLooksPage() {
         </p>
       </header>
       <ProfileSummary profile={profile} />
-      <RequestForm />
+      <RequestForm sizes={profile.sizes} />
     </div>
   );
 }
