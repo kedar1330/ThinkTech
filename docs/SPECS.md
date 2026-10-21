@@ -50,7 +50,7 @@ Versions are the ranges declared in each `package.json` on 2026-10-18. Exact res
 | Lint / format | ESLint `^10.12.0` + `typescript-eslint` `^8.71.1`, `@next/eslint-plugin-next` `16.4.0`, `eslint-plugin-react-hooks`; Prettier `^3.9.10` (single quotes, width 120, trailing commas) | — | root |
 | CI | GitHub Actions | — | `.github/workflows/ci.yml` |
 | Container | Docker (API image only); Docker Compose runs the API against local MongoDB | — | `apps/api/Dockerfile`, `docker-compose.yml` |
-| Hosting definition | `render.yaml` (not connected to any account, D-81) | — | root |
+| Hosting definition | `render.yaml` (updated at HC-1: free tier, staging and production defined, D-81) | — | root |
 
 **Not installed** (listed in planning documents only): Zustand, Gemini/any AI SDK, Cloudinary, MediaPipe, Three.js, PDFKit, Redis, BullMQ, any weather or retailer client. Their folders (`apps/api/src/integrations/*`, `apps/web/app/{analyze,avatar,chat,design,outfits,products,tailor,tryon}`, `apps/web/stores`) contain only `.gitkeep`.
 
@@ -227,7 +227,7 @@ Specified in [SECURITY.md](SECURITY.md); summary of what the code enforces:
 
 | Integration | State | Boundary |
 |---|---|---|
-| SMTP email | Implemented boundary; provider undecided (D-84) | `services/messaging.ts` (`SMTP_URL`, dev outbox) |
+| SMTP email | Implemented boundary; provider decided at HC-1 (Resend/Brevo free tier, D-84) | `services/messaging.ts` (`SMTP_URL`, dev outbox) |
 | SMS | Boundary only; no provider (`SMS_PROVIDER=none`, D-92) | `services/messaging.ts` |
 | Google sign-in | Implemented (optional, `GOOGLE_CLIENT_ID`) | `services/google.ts`, `app/api/oauth/google/*` |
 | AI provider | Gemini `generateContent` client for optional wording, off by default (#55); no SDK, `fetch` only | `integrations/ai/` |
@@ -313,20 +313,20 @@ The release acceptance criteria are AC-01 … AC-25, AC-B1 … B4 ([MVP.md](MVP.
 | U-04 | Route and navigation label for look results vs. the style-profile editor, both called "Discover My Style" | **Resolved (D-109):** Discover My Style is its own page; the editor moves to My Profile | — |
 | U-05 | Outfit Categories requirement | **Resolved:** FRD §4.19 | — |
 | U-06 | Save a palette; request a copy of my data | Save a palette **resolved** (FR-PAL-19 … 21); data export **approved** (D-105, FR-MYP-17), not built | — |
-| U-07 | Hosting, email provider, tombstone store location, backup retention | HC-1 (D-81, D-84, D-85, D-79) | Founder |
-| U-08 | Demo deployment proposal (#66) vs D-75 "no demo release" | Open issue | Founder |
+| U-07 | Hosting, email provider, tombstone store location, backup retention | **Resolved at HC-1 (2026-10-21):** D-81 (100% Free Stack: Vercel Hobby + Render Free + Atlas M0), D-84 (Resend/Brevo Free), D-85 (Separate Atlas M0 cluster), D-79 (30 days confirmed) | — |
+| U-08 | Demo deployment proposal (#66) vs D-75 "no demo release" | **Resolved (2026-10-21):** Superseded by D-81 100% Free Stack; #66 closed | — |
 | U-09 | Virtual Try-On approach (D-48; #58 deferred vs #65 self-hosted proposal) | Pending | Founder, privacy review |
 | U-10 | Deferred features order (D-76) | Pending | Founder |
 | U-11 | Weather provider (D-60), retailer permissions (D-43 … D-45), legal review (D-74) | Deferred / blocked | Founder, external parties |
-| U-12 | Rate-limit store if more than one API instance runs (D-38) | In-memory today | HC-1 |
+| U-12 | Rate-limit store if more than one API instance runs (D-38) | Single free-tier instance on Render (`singapore`), in-memory rate limiting | — |
 | U-13 | Single definition of shared ID schemas (contracts vs style-rules) | Duplicated | Shreya |
 | U-14 | My Profile scope: measurements, photo analysis, age group, export (D-102 … D-105) | Approved 2026-10-18; dormant schema added; release gates per D-103, D-104 | — |
 | U-15 | Home redesign (D-106) and feedback as a preference signal (D-108) | Approved (D-106 2026-10-18; D-108 via D-115) | — |
-| U-16 | Private object storage provider for photos (D-107) | Deferred to HC-1 | Founder |
+| U-16 | Private object storage provider for photos (D-107) | **Resolved at HC-1 (2026-10-21):** Cloudflare R2 Free Tier ($0.00/mo, zero egress) | — |
 | U-17 | How photo analysis runs on device vs own server, accuracy evaluation before confidence labels ship | Not designed | Shreya, privacy review |
 | U-18 | Under-18 users under DPDP (D-104) | Needs legal review (D-74) | Founder |
 | U-19 | Saved palettes in Saved Outfits too, or only in My Colour Palette (D-117) | Resolved 2026-10-18: only in My Colour Palette | — |
 | U-20 | Gemini for full-body photo analysis vs AI rule 16 (D-122) | Approved (option b) 2026-10-18; privacy review still to be recorded before release | Founder, privacy review |
 | U-21 | Engine index refresh across several API instances after a publish (D-110) | Single instance: in-process refresh; several: short polling | HC-1 |
 | U-22 | Measurement-ratio thresholds for body-shape classification (D-112) | To calibrate and have reviewed | Shreya, founder |
-| U-23 | Admin MFA method (D-121) | HC-1 | Founder |
+| U-23 | Admin MFA method (D-121) | **Resolved at HC-1 (2026-10-21):** TOTP Authenticator App ($0.00, RFC 6238) | — |

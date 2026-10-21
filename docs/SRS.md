@@ -35,16 +35,17 @@ StyleMe is a web application (Next.js web app, Express API, MongoDB Atlas) for p
 ### 2.1 System context
 
 ```
-User (browser) ──HTTPS──► Next.js web (Vercel, planned) ──server-side──► Express API (Render, planned) ──► MongoDB Atlas (planned)
-                                                                   │
-                                     account deletion, restore ───┤──► Tombstone store (separate; D-85)
-                                     public launch (HC-2) ────────┤──► Transactional email provider (D-84)
-                                     optional, time-limited ──────┤──► AI provider (wording only; off by default)
-                                     Stage 2, optional ───────────┤──► Weather provider (D-60)
-                                     scripts, product layer ──────┘──► Authorised retailer source (none approved)
+User (browser) ──HTTPS──► Next.js web (Vercel Hobby, D-81) ──server-side──► Express API (Render Free, D-81) ──► MongoDB Atlas M0 (D-81)
+                                                                           │
+                                             account deletion, restore ───┤──► Tombstone store (separate Atlas M0; D-85)
+                                             email verification, reset ───┤──► Transactional email provider (Resend/Brevo Free; D-84)
+                                             user photo uploads (D-103) ──┤──► Cloudflare R2 Free (10GB, $0 egress; D-107)
+                                             optional, time-limited ──────┤──► AI provider (wording only; off by default)
+                                             Stage 2, optional ───────────┤──► Weather provider (D-60)
+                                             scripts, product layer ──────┘──► Authorised retailer source (none approved)
 ```
 
-Platforms marked "planned" are not configured: no hosting account, plan or credential exists until the hosting checkpoint HC-1 (D-81). Until then everything runs locally and in CI.
+Hosting accounts and plans decided at HC-1 (2026-10-21, D-81): 100% Free Tier (Vercel Hobby, Render Free, MongoDB Atlas M0 Free, Resend/Brevo Free, Cloudflare R2 Free). Staging environment defined in `render.yaml`.
 
 ### 2.2 Components
 
@@ -208,7 +209,7 @@ Summary only; full detail in [SECURITY.md](SECURITY.md).
 | Legal | Public launch and the product layer need a qualified legal review (D-74). India's DPDP Rules, 2025 phase in; notice and consent obligations (Rule 3 and most others) are reported by secondary sources to start 18 months after publication, around 13–14 May 2027. These dates and whether and how the Rules apply to StyleMe are provisional until the qualified legal review (D-74) confirms them (not legal advice) |
 | Weather licence | No provider selected; Open-Meteo's free tier is non-commercial only (D-60) |
 | Content | Styling content needs founder review. Founder hours pace Stage 1 (C1) and especially Stage 2 (C2, 100+ palettes and templates) ([ImplementationPlan.md](ImplementationPlan.md) §5.2) |
-| Hosting | Accounts, plans and costs are postponed to the hosting checkpoint (D-81); until then development runs locally and in CI |
+| Hosting | Decided at HC-1 (2026-10-21, D-81): Option 1 — 100% Free Stack ($0.00/mo) across Vercel Hobby, Render Free (`singapore`), Atlas M0 Free, Resend/Brevo Free, Cloudflare R2 Free |
 | Public access | Closed beta until every public-launch blocker in [ImplementationPlan.md](ImplementationPlan.md) §11 is met, including D-74 recorded complete and self-service email reset working (D-63, D-84) |
 | Measurements | No calibration; no claimed body measurements |
 | Estimates | Early estimates only ([ImplementationPlan.md](ImplementationPlan.md) §5.1) |
@@ -219,13 +220,14 @@ Summary only; full detail in [SECURITY.md](SECURITY.md).
 
 | Interface | Purpose | Stage | Status |
 |---|---|---|---|
-| MongoDB Atlas (Mongoose) | Persistent data | 1 | Deferred to the hosting checkpoint (D-81); local MongoDB until then |
+| MongoDB Atlas (Mongoose) | Persistent data | 1 | Decided at HC-1 (D-81): Atlas M0 Free (512MB, `ap-southeast-1`), separate M0 cluster for tombstones (D-85) |
 | GitHub Actions | CI | 1 | Uses the existing repository |
-| Vercel, Render | Hosting | 1 | Deferred to the hosting checkpoint (D-81) |
+| Vercel, Render | Hosting | 1 | Decided at HC-1 (D-81): Vercel Hobby ($0) + Render Free ($0, `plan: free`, `singapore`), staging defined in `render.yaml` |
 | Gemini API | Optional explanation wording | 1 (optional, off) | Not needed |
 | Authorised retailer source (e.g. Flipkart Affiliate API) | Verified products | Product layer | No access approved |
 | User-entered links | Outbound links on shortlist items; never fetched by the server | 1 | — |
-| Transactional email provider | Self-service password reset emails | Public launch | Not chosen; decided at HC-2 (D-84) |
+| Transactional email provider | Verification and reset emails | 1 | Decided at HC-1 (D-84): Free tier of Resend (3k/mo) or Brevo (300/day) ($0.00/mo) |
+| Cloudflare R2 | Private photo object storage | 1 | Decided at HC-1 (D-107): Free tier (10 GB storage, $0.00 egress fees forever) |
 | Retailer listing pages | Outbound links | Product layer | — |
 | Weather provider | Conditions and city search | 2 | Not selected (D-60) |
 | Cloudinary, MediaPipe, PDFKit, Groq | Deferred features | D-76 | Not used |
