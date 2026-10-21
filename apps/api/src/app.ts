@@ -140,7 +140,7 @@ export function createApp({
   const requireAuth = authenticate(db.models, authService.sessions);
   const withPassword = [requireAuth, requirePasswordSet];
   const controller = new AuthController(authService, accountService, new OnboardingService(db.models));
-  app.use('/v1', authRoutes(controller, requireAuth, withPassword, createAuthRateLimits()));
+  app.use('/v1', authRoutes(controller, requireAuth, withPassword, rateLimits));
   const profileService = new ProfileService(db.models);
   const appearanceService = new AppearanceService(db.models);
   app.use('/v1', profileRoutes(new ProfileController(profileService), withPassword));
@@ -161,14 +161,24 @@ export function createApp({
     wording,
     feedbackService,
   );
-  app.use('/v1', recommendationsRoutes(new RecommendationsController(recommendations), withPassword));
   app.use(
     '/v1',
-    outfitsRoutes(new OutfitsController(new OutfitsService(db.models, styleLibrary), feedbackService), withPassword),
+    recommendationsRoutes(new RecommendationsController(recommendations), withPassword, rateLimits.recommendations),
+  );
+  app.use(
+    '/v1',
+    outfitsRoutes(
+      new OutfitsController(new OutfitsService(db.models, styleLibrary), feedbackService),
+      withPassword,
+      { feedback: rateLimits.feedback },
+    ),
   );
   const palettes = new PaletteService(styleLibrary, profileService, appearanceService);
   app.use('/v1', paletteRoutes(new PaletteController(palettes), withPassword));
-  app.use('/v1', shortlistRoutes(new ShortlistController(new ShortlistService(db.models)), withPassword));
+  app.use(
+    '/v1',
+    shortlistRoutes(new ShortlistController(new ShortlistService(db.models)), withPassword, rateLimits.shortlistWrite),
+  );
   const catalogue = new CatalogueService(db.models);
   app.use('/v1', catalogueRoutes(new CatalogueController(catalogue), withPassword));
 

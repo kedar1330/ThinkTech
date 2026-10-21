@@ -49,10 +49,10 @@ describe('T-36: Rate limits (D-38, SECURITY.md §5, §11)', () => {
       error: {
         code: 'RATE_LIMITED',
         message: 'Too many requests — please try again later',
+        retryAfterSeconds: 60,
       },
     });
-    expect(res3.headers['ratelimit-limit']).toBeDefined();
-    expect(res3.headers['ratelimit-remaining']).toBe('0');
+    expect(res3.headers['retry-after']).toBe('60');
   });
 
   it('enforces per-user rate limit on recommendations and shortlist writes', async () => {
