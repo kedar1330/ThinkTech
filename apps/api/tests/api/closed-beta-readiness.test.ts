@@ -1,4 +1,3 @@
-import type { Connection } from 'mongoose';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OCCASION_IDS } from '@styleme/contracts';
@@ -103,7 +102,7 @@ describe('Issue #61: Closed-beta readiness', () => {
 
       // Step 2-3: Simulate taking a backup snapshot
       const backupCollections = ['users', 'profiles', 'shortlistItems', 'betaInvites', 'sessions', 'authChallenges'];
-      const snapshot: Record<string, any[]> = {};
+      const snapshot: Record<string, Array<Record<string, unknown>>> = {};
       for (const name of backupCollections) {
         snapshot[name] = await env.db.main.collection(name).find().toArray();
       }
@@ -133,8 +132,9 @@ describe('Issue #61: Closed-beta readiness', () => {
       // Step 3: Isolated restore into new database
       const restored = env.db.main.useDb('styleme_staging_restored');
       for (const name of backupCollections) {
-        if (snapshot[name]?.length) {
-          await restored.collection(name).insertMany(snapshot[name]);
+        const docs = snapshot[name];
+        if (docs && docs.length > 0) {
+          await restored.collection(name).insertMany(docs);
         }
       }
 
@@ -259,11 +259,11 @@ describe('Issue #61: Closed-beta readiness', () => {
       }
 
       latencies.sort((a, b) => a - b);
-      const p50 = latencies[Math.floor(latencies.length * 0.5)];
-      const p90 = latencies[Math.floor(latencies.length * 0.9)];
-      const p95 = latencies[Math.floor(latencies.length * 0.95)];
-      const p99 = latencies[Math.floor(latencies.length * 0.99)];
-      const max = latencies[latencies.length - 1];
+      const p50 = latencies[Math.floor(latencies.length * 0.5)] ?? 0;
+      const p90 = latencies[Math.floor(latencies.length * 0.9)] ?? 0;
+      const p95 = latencies[Math.floor(latencies.length * 0.95)] ?? 0;
+      const p99 = latencies[Math.floor(latencies.length * 0.99)] ?? 0;
+      const max = latencies[latencies.length - 1] ?? 0;
 
       console.info(
         `\n=== AC-18 Latency Benchmark Results (POST /v1/recommendations without AI) ===\n` +
