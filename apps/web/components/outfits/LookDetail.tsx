@@ -9,7 +9,7 @@ import { lookTitle, slotLabel, specAttributes, vocabLabel } from '@/lib/outfits/
 import { FeedbackButtons } from './FeedbackButtons';
 import { SavedAlternatives } from './SavedAlternatives';
 import { SizeNote } from './SizeNote';
-import { SwatchList } from './SwatchList';
+import { SlotVisual } from './SlotVisual';
 
 // A look's details (FR-OUT-02, issue #42): every piece with its named colours, what to look for,
 // a phrase to search anywhere, the size note, why the look works, feedback buttons and an
@@ -78,7 +78,7 @@ export function LookDetail({ look, sizes }: { look: Look; sizes: ProfileSizes })
                       </p>
                       <h3 className="font-medium">{vocabLabel(CATEGORIES, slot.lookSpec.category)}</h3>
                     </div>
-                    <SwatchList swatches={slot.swatches} />
+                    <SlotVisual swatches={slot.swatches} illustration={slot.illustration} />
                     <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                       {specAttributes(slot.lookSpec).map(({ term, value }) => (
                         <div key={term} className="contents">
