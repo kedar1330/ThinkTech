@@ -131,7 +131,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 <Link href="/#how-it-works">How it works</Link>
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Closed beta · registration by invitation</p>
+            <p className="text-xs text-muted-foreground">Open public beta · free to get started</p>
           </div>
           <div className="relative mx-auto grid w-full max-w-md grid-cols-2 gap-4">
             <div className="relative mt-10 aspect-[2/3] overflow-hidden rounded-[2rem] shadow-xl">

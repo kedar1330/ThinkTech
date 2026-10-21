@@ -11,6 +11,17 @@
 | #74 | `feature/34-engine-tests` | test: named engine suite (#34) — `tests/unit/engine/` split by area with every test named by its ID (T-10, T-12 … T-25, T-27 with AI wording off, T-28, T-32, T-33, T-38; T-26 and T-27 with AI wording on came with #55 in PR #87), profile builders (`tests/fixtures/profiles.ts`), `runEvaluation` with 10 automated checks and `pnpm --filter @styleme/api evaluate`; AC-05 … AC-08 pass on C0 (160 profiles); `test:coverage` with `@vitest/coverage-v8` for the D-70 target; `.gitattributes` (LF checkouts on every OS) | Merged 2026-10-19 |
 | #71 | `feature/33-matching-engine` | feat: deterministic look engine (#33) — `services/engine/` (filterTemplates, fillSlots, rules and tiered ranking, signatures, explanations, alternatives, search phrases, palette ranking), `outfits` model with 7-day TTL, `POST /v1/recommendations`, `GET /v1/style/palettes`, `validateQuery`, library `contentVersion`, look-level contrast rules; C0 content (#32) approved by the founder on 2026-10-19 (30 records, version 2) after two correction rounds and moved to the shipped library; real AC5 test on the shipped library replaces the simulated-approval test | Merged 2026-10-19 |
 
+## 2026-10-21
+
+| PR | Change |
+|---|---|
+| — | feat(ops): closed-beta readiness, backups, restore rehearsal, rollback, monitoring and sign-up policy (#61) — D-63 founder decision approved (Open Public Beta, `PUBLIC_SIGNUP_ENABLED=true` default, landing hero and FAQ aligned); full 7-step staging restore rehearsal with tombstone replay verified (T-43, T-45); rollback rehearsal verified (backward-compatible migrations); external monitoring configured (Better Stack Free on `/health`, D-69, D-81); AC-18 latency benchmark measured (p95 = 46.06 ms < 2000 ms target); operational runbooks and Stage 1 acceptance criteria documented in `docs/RELEASE.md`; formal legal review reminder recorded (D-74) |
+| #101 | test: Stage 1 full E2E smoke and security checklist walk-through (#59) |
+| #100 | feat(ops): complete hosting checkpoint HC-1 with 100% free stack (#60) |
+| #99 | feat(web): labelled style illustrations with licence-cleared fallback (#50) |
+| #98 | test: palette and saved outfits authorisation, deletion, UI and E2E flows (#51) |
+| #97 | feat: feedback on looks, permitted preference signals and saved-look alternatives (#42) |
+
 ## 2026-10-18
 
 | PR | Change |

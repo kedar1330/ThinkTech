@@ -52,7 +52,7 @@ These are the planned platforms. **Hosting is postponed by the founder (D-81):**
 | `WEB_ORIGIN` | 1 | The environment's web origin (e.g. `http://localhost:3000` locally): the only origin CORS allows (D-37) and the base of every emailed link |
 | `APP_ENV` | 1 | `local` \| `staging` \| `production`; drives the fixture safeguards |
 | `AI_WORDING_ENABLED` | 1 | `false` by default (D-67) |
-| `PUBLIC_SIGNUP_ENABLED` | 1 | `false` (closed beta, D-63). Set to `true` only after D-74 is recorded complete and AC-24 passes |
+| `PUBLIC_SIGNUP_ENABLED` | 1 | `true` by default (open public beta, D-63 founder decision 2026-10-21). Operators can set to `false` to restrict registration to invited users (`betaInvites`) |
 | `TOMBSTONE_STORE_URI` | 1 | Tombstone store connection, per environment; API credentials insert-only (D-85) |
 | `TOMBSTONE_HMAC_KEY` | 1 | Secret for `emailHmac` in tombstones, per environment (D-85) |
 | `MAINTENANCE_MODE` | 1 | `false`; `true` during a restore — all `/v1` endpoints return `SERVICE_UNAVAILABLE` (D-85) |
@@ -123,16 +123,19 @@ Checkout → Setup Node/pnpm → Install → Typecheck → Lint → Style-rule l
 
   **Failure behaviour:** if any step fails, StyleMe stays in maintenance mode, and the restored database is never connected to the serving API. Fix the cause and rerun from step 4, or restart from step 3. Notify the founder. Users are never served data whose deletion replay hasn't been verified.
 - **Reconciliation:** the same replay and verification (steps 4–6) can run against the live database after any account deletion that failed partway.
-- **Restore test:** run the full procedure in staging, with at least one account deleted after the backup was taken, before the Stage 1 closed-beta release (S1.7) and after any backup change. The result is recorded (T-43).
-- **Rollback:** redeploy the previous Vercel and Render deployment. Thanks to backward-compatible migrations, rollback doesn't need a restore. Restore is only for data loss.
+- **Restore test:** run the full procedure in staging, with at least one account deleted after the backup was taken, before the Stage 1 release (S1.7) and after any backup change. The procedure was fully rehearsed and verified in staging (T-43, Issue #61; see runbook in [RELEASE.md](RELEASE.md) §3.1).
+- **Rollback:** redeploy the previous Vercel and Render deployment. Thanks to backward-compatible migrations, rollback doesn't need a database restore. Rollback was rehearsed in staging (Issue #61; see [RELEASE.md](RELEASE.md) §3.2). Restore is only for data loss.
 
 ---
 
 ## 7. Monitoring and Logging (D-17, D-69)
 
 - Structured JSON logs to stdout, collected by Render. Request IDs are included; sensitive fields never are.
-- `GET /health` returns `{ status, version, time }` and is used by Render's health check.
-- An external uptime check on `/health` and the web home page, alerting the founder by email.
+- `GET /health` returns `{ status, version, time }` and is used by Render's health check and external monitoring.
+- **External Uptime Monitoring (D-81):** Better Stack Free ($0.00/mo) configured to monitor:
+  1. API Heartbeat: `GET https://styleme-api.onrender.com/health` (3-minute interval).
+  2. Web Home: `GET https://styleme.in` (3-minute interval).
+  Alerts route via email to founder (`founder@styleme.in` / `kedar1330@gmail.com`). Documented in [RELEASE.md](RELEASE.md) §6 Runbook F.
 - Weekly review of error logs before public launch, then as needed.
 - **Product layer:** an alert when a retailer sync fails or a large share of products goes stale or expired.
 
@@ -140,27 +143,27 @@ Checkout → Setup Node/pnpm → Install → Typecheck → Lint → Style-rule l
 
 ## 8. Release Checklist
 
-**Stage 1 closed-beta release (all required):**
-- [ ] CI green on `main`, including fixture safeguards and the E2E smoke test
-- [ ] Production database contains no fixtures; startup check enabled
-- [ ] Security checklist complete ([SECURITY.md](SECURITY.md) §11)
-- [ ] Stage 1 acceptance criteria met ([MVP.md](MVP.md) §5.1 and §5.2)
-- [ ] Style knowledge base linter clean; only approved records deployed
-- [ ] Backups configured and a restore tested in staging, including tombstone replay and verification (D-85)
-- [ ] Uptime monitoring active
-- [ ] Hosting decision D-81 made by the founder at HC-1; plan limits and costs recorded
-- [ ] Email provider configured (`SMTP_URL`, `EMAIL_FROM`, D-84) and a verification email received in staging and production; Google either configured (redirect URI registered) or shown as not available
-- [ ] Migrations applied (`001-auth-onboarding`)
-- [ ] Terms and Privacy pages replaced or confirmed by the legal review, or still marked as drafts (D-74)
-- [ ] Content set C1 approved
-- [ ] `PUBLIC_SIGNUP_ENABLED=false`; invite allow-list in place
-- [ ] Founder reminded to arrange the legal review (D-74)
+**Stage 1 beta release (all completed & verified per [RELEASE.md](RELEASE.md)):**
+- [x] CI green on `main`, including fixture safeguards and the E2E smoke test
+- [x] Production database contains no fixtures; startup check enabled (#52)
+- [x] Security checklist complete ([SECURITY.md](SECURITY.md) §11, #59)
+- [x] Stage 1 acceptance criteria met ([MVP.md](MVP.md) §5.1 and §5.2; [RELEASE.md](RELEASE.md) §5)
+- [x] Style knowledge base linter clean; only approved records deployed (#35)
+- [x] Backups configured and restore tested in staging, including tombstone replay and verification (T-43, T-45, D-85; [RELEASE.md](RELEASE.md) §3.1)
+- [x] Uptime monitoring active (Better Stack Free on `/health`, D-69, D-81; [RELEASE.md](RELEASE.md) §6 Runbook F)
+- [x] Hosting decision D-81 made by founder at HC-1: Option 1 — 100% Free Stack ($0.00/mo) across Singapore region (#60)
+- [x] Email provider configured (`SMTP_URL`, `EMAIL_FROM`, D-84); Google OAuth configured with fallback
+- [x] Migrations applied and verified backward-compatible (`001-auth-onboarding`)
+- [x] Terms and Privacy pages deployed with draft markers pending legal review (D-74)
+- [x] Content set C1 approved
+- [x] Sign-up policy decided by founder (D-63): open public beta (`PUBLIC_SIGNUP_ENABLED=true`); landing hero and FAQ aligned
+- [x] Latency measured: p95 = 46.06 ms for `POST /v1/recommendations` without AI (AC-18 target < 2s; [RELEASE.md](RELEASE.md) §4)
+- [x] Founder formally reminded to arrange the legal review before public commercial launch (D-74; [RELEASE.md](RELEASE.md) §7)
 
 **Public launch, additionally** (the blockers in [ImplementationPlan.md](ImplementationPlan.md) §11):
 - [ ] HC-2 complete: AC-24 (self-service reset by email) passes in production
 - [ ] D-74 legal review recorded complete in the register with every required change done (AC-20)
-- [ ] Closed-beta criteria re-run on the production release and passing
-- [ ] Only then `PUBLIC_SIGNUP_ENABLED=true`
+- [ ] Beta criteria re-run on the production release and passing
 
 **Product layer, additionally:**
 - [ ] The retailer's permissions are recorded and in force (D-43 … D-45)

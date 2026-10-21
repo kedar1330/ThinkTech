@@ -221,7 +221,7 @@ Specified in [SECURITY.md](SECURITY.md); summary of what the code enforces:
 | Logging | No bodies, passwords, codes, tokens, signals, photos or image URLs; tests T-57 and `appearance-log-privacy.test.ts` |
 | Privacy | Signals optional, self-reported, switchable and clearable; no photos collected; deletion immediate with tombstones (D-85) |
 | AI rule 16 | Personal photos, measurements and appearance signals are never sent to an external AI provider. Sole exception: full-body photos to Gemini under D-122, after the privacy review |
-| **Open conflict** | D-63 requires `PUBLIC_SIGNUP_ENABLED=false` until the legal review; the code defaults to `true` ([PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) §15 #1) |
+| **Resolved conflict** | D-63 resolved 2026-10-21: Open Public Beta (`PUBLIC_SIGNUP_ENABLED=true` default; email verification code required); invite gating available via `false` |
 
 ## 10. Integrations
 
@@ -307,7 +307,7 @@ The release acceptance criteria are AC-01 … AC-25, AC-B1 … B4 ([MVP.md](MVP.
 
 | # | Question | Where it stands | Needed from |
 |---|---|---|---|
-| U-01 | Public sign-up default (`PUBLIC_SIGNUP_ENABLED`) vs D-63 closed beta | Code `true`, register `false` | Founder |
+| U-01 | Public sign-up default (`PUBLIC_SIGNUP_ENABLED`) vs D-63 closed beta | **Resolved (2026-10-21):** Founder approved Open Public Beta (`PUBLIC_SIGNUP_ENABLED=true` default per D-63); landing page hero and FAQ aligned | — |
 | U-02 | How drafts are reviewed locally when the API refuses to start with unapproved records | No documented procedure | Shreya + founder |
 | U-03 | Exact IDs and labels for formality, broad categories and garment types (D-97, D-98) | Decided in principle; not implemented (#63 closed) | Shreya, founder approval |
 | U-04 | Route and navigation label for look results vs. the style-profile editor, both called "Discover My Style" | **Resolved (D-109):** Discover My Style is its own page; the editor moves to My Profile | — |

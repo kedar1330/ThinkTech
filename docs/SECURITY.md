@@ -43,11 +43,11 @@ Browser → Next.js server (BFF, first-party HttpOnly session cookie) → Expres
 - Accounts are found by Google ID first. Linking by email happens only on login with a Google-verified email. If the matching account never verified its email, its password, sessions and pending codes are discarded first, so someone who pre-registered another person's address can't keep access. A Google ID can belong to one account only (unique index).
 - Sign-up with an existing email is refused (log in instead). Google sign-ups must create a StyleMe password before using the app.
 
-### 1.3 Closed beta (D-63)
+### 1.3 Beta sign-up policy (D-63)
 
-Registration — by email or Google — requires an invite while `PUBLIC_SIGNUP_ENABLED` is `false`. It stays `false` until every public-launch blocker in [ImplementationPlan.md](ImplementationPlan.md) §11 is met, including D-74 recorded complete.
+Registration — by email or Google — requires an invite when `PUBLIC_SIGNUP_ENABLED` is `false`.
 
-**Conflict (verified 2026-10-18):** since PR #25 the code defaults `PUBLIC_SIGNUP_ENABLED` to `true` (`apps/api/src/config/env.ts`), and the landing page's FAQ says anyone can sign up. Until the founder resolves this ([PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) §15 #1), any hosted environment must set `PUBLIC_SIGNUP_ENABLED=false` explicitly to honour D-63.
+**Resolution (2026-10-21):** The founder resolved D-63 and TD-DOC-03 by approving Open Public Beta: `PUBLIC_SIGNUP_ENABLED` defaults to `true` across environments (`apps/api/src/config/env.ts`, `render.yaml`), public registration with email verification code (argon2id hash, 5-minute code, single-use, 24-hour cleanup of pending registrations) is active, and landing page hero and FAQ are aligned. Operators retain the capability to set `PUBLIC_SIGNUP_ENABLED=false` at any time to restrict registration strictly to invited addresses (`betaInvites`). Formal legal review (D-74) remains required before commercial marketing launch.
 
 ## 2. Authorization and Data Isolation
 

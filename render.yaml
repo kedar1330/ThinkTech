@@ -17,7 +17,7 @@ services:
       - key: APP_ENV
         value: production
       - key: PUBLIC_SIGNUP_ENABLED
-        value: 'false'
+        value: 'true'
       - key: SMS_PROVIDER
         value: none
       - key: MAINTENANCE_MODE
@@ -61,7 +61,7 @@ services:
       - key: APP_ENV
         value: staging
       - key: PUBLIC_SIGNUP_ENABLED
-        value: 'false'
+        value: 'true'
       - key: SMS_PROVIDER
         value: none
       - key: MAINTENANCE_MODE

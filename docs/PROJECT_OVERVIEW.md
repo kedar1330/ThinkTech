@@ -266,7 +266,7 @@ Recorded for founder review. Rows marked **Resolved** cite the decision that set
 
 | # | Topic | PDF | Recorded decision / code | Needed |
 |---|---|---|---|---|
-| 1 | Who can register | — | D-63: invite-only closed beta until the legal review (D-74). Code since PR #25: `PUBLIC_SIGNUP_ENABLED` defaults to `true`. The landing page says both "Closed beta · registration by invitation" (hero) and "Can anyone sign up? Yes" (FAQ) | Confirm whether D-63 is revised or production must set `PUBLIC_SIGNUP_ENABLED=false`; then align the landing copy |
+| 1 | Who can register | — | **Resolved (2026-10-21):** Founder decided D-63 to Open Public Beta. `PUBLIC_SIGNUP_ENABLED` defaults to `true` (email verification code required); landing hero ("Open public beta") and FAQ ("Can anyone sign up? Yes") aligned; closed-beta gating available via `PUBLIC_SIGNUP_ENABLED=false` | — |
 | 2 | Photos and measurements | p1, p4, p11, p16, p18 | D-76, FR-SIZE-06, AI rule 16 | **Resolved 2026-10-18:** measurements and photo analysis approved (D-102, D-103); Gemini for full-body photos approved (D-122), behind the privacy review |
 | 3 | Kids department | p1 (unverified) | **Resolved (D-101):** no kids department in Stage 1 | A later addition needs a legal review (D-74), a kids size system and founder approval |
 | 4 | Retailer products | p1, p17 | D-43 … D-45 blocked; no scraping | Retailer permission in writing |
