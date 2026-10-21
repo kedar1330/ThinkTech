@@ -7,6 +7,7 @@ import type { FormState } from '@/lib/actions';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { FieldPrivacyNote } from '@/components/profile/FieldPrivacyNote';
 
 const select =
   'flex h-11 w-full rounded-lg border border-input bg-surface px-3 text-sm focus-visible:border-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30';
@@ -34,11 +35,11 @@ export function AppearanceForm({ initial }: { initial: AppearanceResponse }) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        All optional. If you share them, StyleMe uses them as gentle suggestions for colour palettes and cuts — never as
-        restrictions, and never to decide your size. They are used only while &ldquo;Use in recommendations&rdquo; is
-        on, are never sent to any AI service, and you can change or delete them at any time.
-      </p>
+      <FieldPrivacyNote
+        usedFor="Gentle suggestions for colour palettes and cuts — never as restrictions, and never to decide your size. Used only while “Use in recommendations” is turned on."
+        whoSees="Private to you. Never shared with other users and never sent to any external AI service."
+        howToDelete="You can change, turn off, or clear these signals at any time. They are permanently removed if you delete your account."
+      />
 
       <form action={saveAction} className="space-y-5">
         <fieldset className="space-y-2">

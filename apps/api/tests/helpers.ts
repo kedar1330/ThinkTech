@@ -3,6 +3,7 @@ import request from 'supertest';
 import type { Express } from 'express';
 import { createApp } from '../src/app';
 import type { Config } from '../src/config/env';
+import type { AppRateLimits } from '../src/middleware/rate-limit';
 import { connectDatabase, type Database } from '../src/db';
 import type { WordingProvider } from '../src/integrations/ai/wording-client';
 import { createLogger } from '../src/logger';
@@ -113,6 +114,8 @@ export interface AppOptions {
   styleLibrary?: StyleLibrary;
   /** A fake AI wording provider (tests/fixtures/wording.ts); used only with AI_WORDING_ENABLED: true. */
   wording?: WordingProvider;
+  /** Custom rate limits (for rate limit tests). */
+  rateLimits?: AppRateLimits;
 }
 
 export interface TestEnv {
@@ -152,6 +155,7 @@ export async function startTestEnv(): Promise<TestEnv> {
         googleVerifier: options.google === undefined ? fakeGoogleVerifier : options.google,
         styleLibrary: options.styleLibrary,
         wordingProvider: options.wording ?? null,
+        rateLimits: options.rateLimits,
       });
       return { ...app, config, mail, sms };
     },

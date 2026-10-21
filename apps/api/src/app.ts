@@ -19,7 +19,7 @@ import { authenticate, requirePasswordSet } from './middleware/authenticate';
 import { clientIp } from './middleware/client-ip';
 import './middleware/context';
 import { errorHandler, notFound } from './middleware/error-handler';
-import { createAuthRateLimits } from './middleware/rate-limit';
+import { createRateLimits, type AppRateLimits } from './middleware/rate-limit';
 import { appearanceRoutes } from './routes/appearance.routes';
 import { authRoutes } from './routes/auth.routes';
 import { catalogueRoutes } from './routes/catalogue.routes';
@@ -60,6 +60,8 @@ export interface AppDeps {
   styleLibrary?: StyleLibrary;
   /** Optional AI wording provider (#55). Used only while AI_WORDING_ENABLED is true; tests pass a fake. */
   wordingProvider?: WordingProvider | null;
+  /** Rate limits across auth, recommendations, feedback and shortlist. Defaults to D-38 in-memory stores. */
+  rateLimits?: AppRateLimits;
 }
 
 export interface App {
@@ -77,6 +79,7 @@ export function createApp({
   googleVerifier = null,
   styleLibrary = loadStyleLibrary(SHIPPED_LIBRARY, { appEnv: config.APP_ENV }),
   wordingProvider = null,
+  rateLimits = createRateLimits(),
 }: AppDeps): App {
   const app = express();
   app.disable('x-powered-by');

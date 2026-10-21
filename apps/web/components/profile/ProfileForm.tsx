@@ -23,6 +23,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FieldPrivacyNote } from '@/components/profile/FieldPrivacyNote';
 
 // Style profile form (FR-PROF-02 … 05, FR-SIZE-01/02). Every field explains why it is asked and how it
 // is used (FR-PROF-04). Only the department is required.
@@ -377,6 +378,11 @@ export function ProfileForm({
           step={1}
           defaultValue={initial.budgetPreference ?? undefined}
           aria-label="Budget per look in rupees"
+        />
+        <FieldPrivacyNote
+          usedFor="Comparing against the total of prices you enter for items you find yourself. It never limits which looks you see."
+          whoSees="Private to you. Never shared with other users and never sent to external AI."
+          howToDelete="You can change or clear this at any time by editing your profile. It is permanently removed if you delete your account."
         />
       </Section>
 
