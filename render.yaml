@@ -1,9 +1,7 @@
-# Render blueprint for the API (D-40). NOT connected to any Render account: hosting accounts, plans
-# and costs are decided by the founder at the hosting checkpoint HC-1 (D-81). Until then this file is
-# only a definition. Add `plan:` and a staging copy of this service at HC-1.
-#
-# Every secret is `sync: false`, so values are entered in Render, never committed.
+# Render blueprint for the API (D-40). Updated at HC-1 (issue #60, D-81).
+# Every secret is `sync: false`, so values are entered in Render dashboards, never committed.
 services:
+  # Production API (deployed manually or from main upon release approval)
   - type: web
     name: styleme-api
     runtime: docker
@@ -11,6 +9,8 @@ services:
     dockerContext: .
     healthCheckPath: /health
     autoDeploy: false
+    plan: free
+    region: singapore
     envVars:
       - key: NODE_ENV
         value: production
@@ -38,6 +38,48 @@ services:
       - key: WEB_ORIGIN
         sync: false
       # Email is required outside local development (the API will not start without it).
+      - key: SMTP_URL
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+  # Staging API (created per HC-1 D-81 decision, auto-deploys main for preview verification)
+  - type: web
+    name: styleme-api-staging
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    plan: free
+    region: singapore
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: staging
+      - key: PUBLIC_SIGNUP_ENABLED
+        value: 'false'
+      - key: SMS_PROVIDER
+        value: none
+      - key: MAINTENANCE_MODE
+        value: 'false'
+      - key: AI_WORDING_ENABLED
+        value: 'false'
+      - key: MONGODB_URI
+        sync: false
+      - key: TOMBSTONE_STORE_URI
+        sync: false
+      - key: TOMBSTONE_HMAC_KEY
+        sync: false
+      - key: AUTH_ACCESS_TOKEN_SECRET
+        sync: false
+      - key: BFF_SHARED_SECRET
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
       - key: SMTP_URL
         sync: false
       - key: EMAIL_FROM

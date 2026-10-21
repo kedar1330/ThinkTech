@@ -171,65 +171,111 @@ Checkout → Setup Node/pnpm → Install → Typecheck → Lint → Style-rule l
 
 ## 9. Hosting Decisions and Setup Steps (for the hosting checkpoint, D-81)
 
-Nothing in this section is done until the founder decides at HC-1. At that point the implementer presents the options below with **current** limits and prices, checked on the providers' sites at that time (NFR-COST-03). Prices are not recorded here because they change.
+This section presents the hosting options with current plan limits and checked prices for the founder checkpoint HC-1 (issue #60), together with the founder's recorded decisions (D-81, D-84, D-85, D-107, D-121).
 
-**Open issues (2026-10-18):** HC-1 is tracked in #60 and closed-beta readiness in #61. Issue #66 proposes a free demo deployment (Vercel, Render Free, MongoDB Atlas M0, Brevo SMTP) for a pitch; it is labelled needs-founder-approval and conflicts with D-75 ("There is no demo release") and D-81 (hosting postponed). Nothing in #66 is approved, and the free-tier constraints in §9.1 apply to it ([PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) §15 #10).
+**Open issues (2026-10-21):** HC-1 is resolved (issue #60 closed); closed-beta readiness is tracked in #61. Issue #66 (free demo deployment proposal) is superseded by D-81 (Option 1: 100% Free Stack).
 
-### 9.1 Known plan constraints (checked 2026-10-10; re-check at HC-1)
+### 9.1 Current plan limits and prices (verified 2026-10-21)
 
-These facts were checked on the providers' own pages because they affect requirements already in these documents. They are not a recommendation, and plans change.
+| Service | Plan / Tier | Current Price | Limits & Constraints | Architectural Impact |
+|---|---|---|---|---|
+| **Vercel** (Web) | **Hobby** (Free)<br>*(Decided)* | $0 / month | Non-commercial personal use terms; 100 GB bandwidth, 1M edge requests, 100 edge invocations/day | Zero cost. Closed beta suitable; upgrade to Pro ($20/mo) at public launch if commercial terms dictate |
+| **Vercel** (Web) | **Pro** | $20 / seat-mo | Commercial use allowed; preview deployment protection; 1 TB bandwidth, 1M edge config reads | Suitable for commercial production scale |
+| **Render** (API) | **Free**<br>*(Decided)* | $0 / month | 512 MB RAM, 0.5 CPU; spins down after 15 minutes idle (~50s cold start wake-up); 750 free instance hours/month. **Outbound SMTP ports 25, 465, and 587 are blocked** on the free tier | API is stateless (NFR-SCL-03). Emails must route via provider HTTPS REST API (port 443) or use the local dev outbox for non-prod. Cold start affects the first request after idle |
+| **Render** (API) | **Starter** | $7 / service-mo | 512 MB RAM, 0.5 CPU; **always on (no spin-down/cold starts)**; outbound SMTP ports open; metrics and alerting | Eliminates 50s idle cold-start delay; latency measurement (AC-18) meets target |
+| **MongoDB Atlas** (Database) | **M0 Free**<br>*(Decided)* | $0 / month | 512 MB shared RAM/storage; 100 operations/second; no automated continuous backups (manual or scheduled `mongodump` only); 1 free cluster per project | Backups and restore (D-79) use scheduled `mongodump`. Tombstone store (D-85) lives in a separate free cluster |
+| **MongoDB Atlas** (Database) | **M10 Dedicated** | ~$57 / month | 10 GB dedicated storage, 2 GB RAM; automated continuous cloud backups with point-in-time recovery; no sleep | Production-grade continuous backup retention (D-79) |
+| **Photo Object Storage** (D-107, D-103) | **Cloudflare R2**<br>*(Decided)* | **$0.00 / month** (Free allowance: 10 GB storage, 1M write ops, 10M read ops) | $0.015 / GB-mo storage thereafter; **$0.00 data egress fee forever**; S3-compatible API | Private bucket, server-side AES-256 encryption, 15-minute presigned URLs. Zero egress fees forever make this ideal for user photos (face & full-body) |
+| **Admin Step-Up MFA** (D-121) | **TOTP App**<br>*(Decided)* | **$0.00** | Standard RFC 6238 TOTP (Google Authenticator, Microsoft Authenticator, 1Password) | Protects sensitive Super Admin operations in the admin panel (D-120). Offline, instant verification, zero transactional email consumption |
+| **Email Provider** (D-84) | **Resend / Brevo Free**<br>*(Decided)* | **$0.00 / month** | Resend: 3,000 emails/month (100/day); Brevo: 300 emails/day (9,000/mo) | Free tier handles beta volumes. Configured via HTTPS or SMTP; link and open tracking disabled to protect tokens |
+| **Monitoring** | **Better Stack Free**<br>*(Decided)* | **$0.00 / month** | 10 uptime monitors, 3-minute check intervals, email and webhook alerts | Checks `/health` endpoint and web app availability (D-69) at zero cost |
 
-| Service | Constraint | Why it matters to StyleMe | Source |
+---
+
+### 9.2 Hosting options evaluated
+
+| Dimension | Option 1: 100% Free Stack<br>*(Approved by Founder)* | Option 2: Low-Cost Hybrid | Option 3: Paid Foundation |
 |---|---|---|---|
-| Vercel Hobby (free) | "Hobby teams are restricted to non-commercial personal use only. All commercial usage of the platform requires either a Pro or Enterprise plan." Commercial usage includes any deployment used for the financial gain of anyone involved in producing it, including a paid developer | StyleMe is a business product; whether the closed beta and later production can use Hobby is part of D-81 | [Vercel fair use guidelines](https://vercel.com/docs/limits/fair-use-guidelines) |
-| Render free web service | Spins down after 15 minutes without inbound traffic; waking takes about a minute; 750 free instance hours per workspace per month; local filesystem is wiped on spin-down | Incompatible with the proposed p95 target (AC-18, D-68) for the first request after idle; the API is already stateless (NFR-SCL-03) | [Render: Deploy for Free](https://render.com/docs/free) |
-| MongoDB Atlas Free (M0) | 0.5 GB storage including indexes; backups can't be enabled (only `mongodump`); 100 operations per second; one free cluster per project; may be paused after 30 days with no connections | Backups and restore (D-79) would rely on scheduled `mongodump`; the tombstone store (D-85) must be a separate deployment outside the main database's restore scope | [Atlas free cluster limits](https://www.mongodb.com/docs/atlas/reference/free-shared-limitations/) |
-| Gemini API (only if AI wording is enabled) | Google's pricing page: free-tier content is used to improve Google's products; paid-tier content is not | The wording input has no personal data (AI rule 16), but the tier is chosen with this in mind (D-12) | [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing) |
-| Open-Meteo (Stage 2 candidate) | The free API may be used only for non-commercial purposes; commercial use needs a paid plan | Can't be assumed for weather (D-60) | [Open-Meteo terms](https://open-meteo.com/en/terms) |
+| **Monthly Cost** | **$0.00 / month** | ~$14.00 / month | ~$84.00 – $104.00 / month |
+| **Web Tier** | Vercel Hobby ($0) | Vercel Hobby ($0) | Vercel Pro ($20/mo) |
+| **API Tier** | Render Free ($0, Singapore) | Render Starter ($7 prod + $7 staging) | Render Starter ($7 prod + $7 staging) |
+| **Database Tier** | MongoDB Atlas M0 Free ($0, Singapore) | MongoDB Atlas M0 Free ($0) | MongoDB Atlas M10 ($57/mo) |
+| **Tombstone Store (D-85)** | Separate Atlas M0 Free cluster ($0) | Separate Atlas M0 Free cluster ($0) | Separate Atlas M0/Flex cluster ($0) |
+| **Photo Storage (D-107)** | Cloudflare R2 Free (10 GB, $0 egress) | Cloudflare R2 Free ($0) | Cloudflare R2 ($0–$5/mo) |
+| **Admin MFA (D-121)** | TOTP Authenticator App ($0) | TOTP Authenticator App ($0) | TOTP Authenticator App ($0) |
+| **Transactional Email (D-84)** | Resend / Brevo Free ($0) | Resend / Brevo Free ($0) | Resend / Brevo Paid ($20/mo) |
+| **Backups (D-79)** | Scheduled `mongodump` to R2 ($0) | Scheduled `mongodump` to R2 ($0) | Automated Atlas Cloud Backups (30 days) |
+| **Cold Starts** | Yes (~50s after 15m idle) | None (always-on API) | None (always-on API) |
+| **Target Phase** | Closed Beta & Initial Testing | Low-cost Beta with Fast Latency | Production Commercial Launch |
 
-### 9.2 Decisions the founder makes at HC-1
+---
 
-| Service | Decision | What it affects |
-|---|---|---|
-| MongoDB Atlas | Tier for production and for staging | Storage, performance, and whether built-in backups exist; without them, scheduled `mongodump` is used (D-79) |
-| Render (API) | Instance type for production and staging | Whether the service sleeps when idle (slow first request) and its memory and CPU; latency is then measured on the chosen plan (AC-18) |
-| Vercel (web) | Plan | Usage limits, deployment protection for previews, and whether the plan's terms allow the intended commercial use |
-| Staging | Full staging, or the cheaper fallback of disabling API access from previews (§2) | Cost versus safety of testing before production |
-| Monitoring | Which uptime-check service | Alerts for `/health` and the web app (D-69) |
-| Tombstone store (D-85) | Where it lives — it must be outside the main database's backup and restore scope (for example a separate small database deployment), with its own credentials | Whether a restore can safely re-apply deletions; its cost |
-| Backup retention | Confirm or change the proposed 30 days (D-79) | How long deleted data stays in backups; the tombstone retention follows it (+ 7 days) |
-| API instance count | One instance, or more | More than one instance needs a shared rate-limit store, because the in-memory limits are per instance (D-38) |
-| Email provider (D-84, moved here from HC-2) | Transactional email service and sender domain | Registration can't be completed without it (verification, D-89) |
-| Google OAuth client (D-88) | Google Cloud project, consent screen, redirect URI | Whether Google sign-in is offered |
-| SMS provider (D-92) | Optional; any provider for Indian numbers | Whether phone verification is available |
-| Who owns the accounts | Founder-owned accounts, with access granted to developers | Credentials stay with the founder |
+### 9.3 Founder decisions recorded at HC-1 (2026-10-21)
 
-### 9.3 Setup steps once decided
-1. The founder creates (or authorises) the accounts and grants access. Credentials are never committed or sent in chat.
-2. Create separate Atlas projects or clusters for staging and production; least-privilege database users; network access per D-20.
-3. Create the Render services from `render.yaml` (staging, production); set API variables (§3.1) per environment, including `APP_ENV` and `PUBLIC_SIGNUP_ENABLED=false`.
-4. Create the Vercel project (root `apps/web`); set web variables (§3.2); point previews at the staging API and production at the production API; enable deployment protection for previews.
-5. Configure backups (Atlas or `mongodump`) and the tombstone store; run the full restore procedure in staging, including tombstone replay and verification (§6, D-79, D-85).
-6. Set up the uptime check and email alerts.
-7. Verify: `/health` green in both environments, the fixture startup check passes in production, E2E smoke passes against staging.
-8. Record the decision, plans and costs in D-81.
+| Decision | Question | Resolution | Status |
+|---|---|---|---|
+| **D-81 Hosting Accounts & Plans** | Which hosting tier bundle for staging and production? | **Founder decision (2026-10-21): Option 1 — 100% Free Stack ($0.00 / month).**<br>• Web: Vercel Hobby ($0)<br>• API: Render Free (`plan: free`, `region: singapore`, $0)<br>• DB: MongoDB Atlas M0 Free cluster (512 MB, Singapore `ap-southeast-1`, $0)<br>• Tombstones: Separate Atlas M0 Free cluster (D-85, $0)<br>• Storage: Cloudflare R2 Free tier (D-107, $0)<br>• Admin MFA: TOTP App (D-121, $0)<br>• Email: Resend/Brevo Free (D-84, $0)<br>• Monitoring: Better Stack Free ($0) | **Approved** |
+| **D-107 Photo Object Storage** | Which provider and parameters for user photos (FR-MYP-04..11, D-103)? | **Founder decision (2026-10-21): Cloudflare R2 Free Tier ($0.00 / month).**<br>• Storage: 10 GB free allowance ($0.015/GB thereafter)<br>• Bandwidth: **$0.00 egress fee** forever<br>• Operations: 1M Class A (write) / 10M Class B (read) free per month<br>• Security: Private bucket, server-side encryption AES-256, 15-minute presigned URL lifetime<br>• Deletion: Account deletion purges all stored photo objects | **Approved** |
+| **D-121 Super Admin MFA** | Emailed step-up code or TOTP app for sensitive admin operations? | **Founder decision (2026-10-21): TOTP Authenticator App ($0.00).**<br>• Standard RFC 6238 TOTP (Google Authenticator, Microsoft Authenticator, 1Password, Aegis)<br>• Fully offline, instant verification, zero transactional email volume or third-party dependency | **Approved** |
+| **D-84 Transactional Email Provider** | Which email service for verification codes and links? | **Founder decision (2026-10-21): Free Tier of Resend or Brevo ($0.00 / month).**<br>• Resend Free (3,000 emails/month, 100/day) or Brevo Free (300 emails/day, 9,000/mo)<br>• Custom sender domain with SPF, DKIM, DMARC; link/open tracking disabled to protect security tokens | **Approved** |
+| **D-85 Tombstone Store Location** | Where does the tombstone store live? | **Founder decision (2026-10-21): Separate MongoDB Atlas M0 Free Cluster ($0.00).**<br>• Physically separate cluster outside the main database's backup and restore scope<br>• Dedicated least-privilege user with insert-only permissions (custom role: `insert` and `find`, no `update` or `remove`) | **Approved** |
+| **D-79 Backup Retention** | Backup retention period? | **30 days confirmed.** Tombstone retention set to 37 days (backup retention + 7 days). Backups via scheduled `mongodump` | **Approved** |
 
-### 9.3a Bringing an Atlas database live (after HC-1 only)
+---
+
+### 9.4 Staging environment topology and configuration
+
+Staging is isolated from production (D-78):
+- **Web:** Vercel preview deployments for branches / pull requests, pointing to the Staging API.
+- **API:** Render web service `styleme-api-staging` running `render.yaml` with `APP_ENV=staging`, `PUBLIC_SIGNUP_ENABLED=false`, `autoDeploy: true`, `plan: free`, `region: singapore`.
+- **Database:** Dedicated Atlas staging database `styleme` (separate cluster or database user), never containing real user data.
+- **Tombstone Store:** Separate staging tombstone collection with insert-only staging credentials.
+- **Outbox / Email:** Staging uses the chosen transactional email provider or a dedicated staging domain / test inbox.
+
+Secrets are configured directly in provider dashboards and never committed to Git:
+- **Render Dashboard:** `MONGODB_URI`, `TOMBSTONE_STORE_URI`, `TOMBSTONE_HMAC_KEY`, `AUTH_ACCESS_TOKEN_SECRET`, `BFF_SHARED_SECRET`, `WEB_ORIGIN`, `SMTP_URL`, `EMAIL_FROM`, `GOOGLE_CLIENT_ID`.
+- **Vercel Dashboard:** `API_BASE_URL` (points to `https://styleme-api-staging.onrender.com`), `BFF_SHARED_SECRET`, `AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+
+---
+
+### 9.5 Setup steps once decided
+
+1. The founder creates (or authorises) the accounts (Vercel, Render, MongoDB Atlas, Cloudflare, Email provider) owned by the founder's organization. Credentials are never committed or sent in chat.
+2. In Atlas, create the staging project and cluster in `ap-southeast-1` (Singapore); configure database users (`readWrite` for API, separate custom role with `insert` only for tombstones); configure IP access list for Render.
+3. In Render, deploy the blueprint `render.yaml`: provision `styleme-api` and `styleme-api-staging`. Populate environment variables in Render dashboard.
+4. In Vercel, connect the GitHub repository, set root directory to `apps/web`, configure environment variables, and verify preview deployment protection.
+5. In Cloudflare, create private R2 bucket `styleme-photos-staging` with default AES-256 encryption.
+6. Verify staging deployment:
+   - `GET https://<staging-api>/health` returns `{ status: "ok", ... }`.
+   - Run numbered migrations: `pnpm --filter @styleme/api migrate`.
+   - Import styling catalogue: `pnpm --filter @styleme/api catalogue:import`.
+   - Seed initial admin: `pnpm --filter @styleme/api seed`.
+7. Run the E2E verification suite against staging:
+   ```sh
+   BASE_URL=https://<staging-web-domain> pnpm e2e:run
+   ```
+8. Record the decision in `docs/ImplementationPlan.md` §8.
+
+---
+
+### 9.6 Bringing an Atlas database live (after HC-1 only)
 
 Steps for step 2 above, per environment (staging first, then production). Nothing here is done before the founder decides HC-1.
 
-1. **Cluster:** in the founder-owned Atlas organisation, create one project per environment and a cluster on the tier chosen at HC-1, in a region close to the Render API region.
-2. **Main database user:** `readWrite` on the `styleme` database only, with a generated password. **Tombstone store (D-85):** a separate deployment (not the main cluster's backup scope) with its own user, which may only insert into `deletionTombstones` (a custom role with `insert` and `find`, no `update` or `remove`).
+1. **Cluster:** In the founder-owned Atlas organisation, create one project per environment and a cluster on the tier chosen at HC-1, in a region close to the Render API region (`ap-southeast-1` Singapore).
+2. **Main database user:** `readWrite` on the `styleme` database only, with a generated high-entropy password. **Tombstone store (D-85):** a separate deployment (not the main cluster's backup scope) with its own user, which may only insert into `deletionTombstones` (a custom role with `insert` and `find`, no `update` or `remove`).
 3. **Network access (D-20):** allow only the Render service's outbound addresses. Never `0.0.0.0/0` in production.
 4. **Connection strings:** copy the `mongodb+srv://…/styleme?retryWrites=true&w=majority` URI into Render's environment as `MONGODB_URI`, and the tombstone URI as `TOMBSTONE_STORE_URI`. Never into `.env` files in git, chat or the web app.
-5. **Schema:** the API creates every collection and index on startup (`connectDatabase` runs `Model.init()`). Then run, from a machine allowed by step 3, with the environment's variables loaded:
+5. **Schema & Data:** the API creates every collection and index on startup (`connectDatabase` runs `Model.init()`). Then run, from an authorized machine:
    - `pnpm --filter @styleme/api migrate` (applies the numbered migrations)
    - `pnpm --filter @styleme/api catalogue:import` (approved styling content only; `--include-drafts` is refused in production)
    - `pnpm --filter @styleme/api seed` (admin account, D-95; then remove `SEED_ADMIN_PASSWORD`)
-6. **Backups:** turn on Atlas backups if the tier has them, otherwise schedule `mongodump` (§6, D-79).
+6. **Backups:** turn on Atlas automated cloud backups if M10 is used; otherwise schedule `mongodump` (§6, D-79).
 7. **Verify:** `/health` is green, the startup fixture check passes, and a test sign-up and account deletion work in staging.
 
-### 9.4 HC-2 — public-launch checkpoint (D-84)
+---
+
+### 9.7 HC-2 — public-launch checkpoint (D-84)
 
 Raised only when the founder wants to prepare public launch, after the closed beta is running. The email provider is already chosen at HC-1 (D-84) and D-86 is decided (D-89). The implementer reminds the founder about the legal review (D-74), confirms the email plan's volume limits suit public sign-up, and verifies AC-24. `PUBLIC_SIGNUP_ENABLED` stays `false` until every public-launch blocker in [ImplementationPlan.md](ImplementationPlan.md) §11 is met.
 
@@ -237,4 +283,4 @@ Raised only when the founder wants to prepare public launch, after the closed be
 
 ## 10. Decisions
 
-Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-01, D-17, D-20, D-40 … D-42, D-44, D-60, D-63, D-67, D-69, D-74, D-77, D-78, D-79, D-81, D-83, D-84, D-85, D-88, D-89, D-92.
+Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-01, D-17, D-20, D-40 … D-42, D-44, D-60, D-63, D-67, D-69, D-74, D-77, D-78, D-79, D-81, D-83, D-84, D-85, D-88, D-89, D-92, D-107, D-121.

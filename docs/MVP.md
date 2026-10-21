@@ -195,4 +195,4 @@ The MVP (Stage 1) is done when content set C1 is approved, every closed-beta cri
 
 Decision register: [ImplementationPlan.md](ImplementationPlan.md) §8. Relevant here: D-07, D-46, D-86 … D-94, D-52, D-53, D-55, D-57, D-62, D-63, D-65, D-67, D-68, D-74, D-76 … D-86, D-109 … D-128.
 
-**D-77 is approved (Option B).** D-48 and D-76 stay pending and are raised only when needed; D-81 (hosting) is decided at the hosting checkpoint; D-74 (legal review) blocks public launch only.
+**D-77 is approved (Option B).** D-48 and D-76 stay pending and are raised only when needed; D-81 (hosting) is decided at HC-1 (2026-10-21: 100% Free Stack $0.00/mo, staging defined in `render.yaml`); D-74 (legal review) blocks public launch only.
