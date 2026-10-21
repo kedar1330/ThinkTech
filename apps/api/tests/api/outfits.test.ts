@@ -7,7 +7,16 @@ import { lookIdentityKey } from '../../src/services/outfits.service';
 import { SUGGESTED_LOOK_TTL_MS } from '../../src/services/recommendations.service';
 import { loadStyleLibrary } from '../../src/style-rules';
 import { buildEngineFixtureLibrary } from '../fixtures/style-library';
-import { bearer, login, logTextForPrivacyChecks, registerUser, startTestEnv, type TestEnv } from '../helpers';
+import { replayTombstones } from '../../src/services/account-deletion';
+import {
+  BASE_CONFIG,
+  bearer,
+  login,
+  logTextForPrivacyChecks,
+  registerUser,
+  startTestEnv,
+  type TestEnv,
+} from '../helpers';
 
 // Saved looks (FR-OUT-01 … 03, FR-OUT-05, API.md §3.5 #14 – #16, #18; T-04, T-31). Looks are generated
 // on the synthetic fixture library, as in recommendations.test.ts.
@@ -204,21 +213,31 @@ describe('/v1/outfits (saved looks)', () => {
     expect(outfitDetailSchema.parse(after.body.data)).toEqual(before);
   });
 
-  it('T-04 another user’s look is NOT_FOUND on get, save and delete, and never listed', async () => {
+  it('T-04 authorisation on every saved-look and feedback endpoint: another user is NOT_FOUND and never listed', async () => {
     const { app, mail } = env.makeApp({}, { styleLibrary });
     await registerUser(app, env, mail, 'owner@example.com');
     await registerUser(app, env, mail, 'other@example.com');
     const owner = await login(app, 'owner@example.com');
     const other = await login(app, 'other@example.com');
-    const [look] = await generate(app, owner);
-    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(owner)).expect(200);
+    const looks = await generate(app, owner);
+    const suggestedLook = looks[0]!;
+    const savedLook = looks[1]!;
+    await request(app).post(`/v1/outfits/${savedLook.id}/save`).set(bearer(owner)).expect(200);
 
-    for (const id of [look!.id, ID_NOBODY_HAS]) {
-      for (const res of [
-        await request(app).get(`/v1/outfits/${id}`).set(bearer(other)),
-        await request(app).post(`/v1/outfits/${id}/save`).set(bearer(other)),
-        await request(app).delete(`/v1/outfits/${id}`).set(bearer(other)),
+    // Another user calling GET, POST /save, POST /feedback, or DELETE on owner's suggested look,
+    // owner's saved look, or a non-existent ID always receives 404 NOT_FOUND.
+    for (const id of [suggestedLook.id, savedLook.id, ID_NOBODY_HAS]) {
+      for (const call of [
+        request(app).get(`/v1/outfits/${id}`).set(bearer(other)),
+        request(app).post(`/v1/outfits/${id}/save`).set(bearer(other)),
+        request(app).post(`/v1/outfits/${id}/feedback`).set(bearer(other)).send({ value: 'love_it' }),
+        request(app)
+          .post(`/v1/outfits/${id}/feedback`)
+          .set(bearer(other))
+          .send({ value: 'not_for_me', reason: 'too_casual' }),
+        request(app).delete(`/v1/outfits/${id}`).set(bearer(other)),
       ]) {
+        const res = await call;
         expect(res.status).toBe(404);
         expect(res.body.error).toEqual({ code: 'NOT_FOUND', message: 'Not found' });
       }
@@ -228,7 +247,7 @@ describe('/v1/outfits (saved looks)', () => {
       expect(list.body.data).toEqual({ looks: [], page: 1, limit: 20, total: 0 });
     }
     // Untouched for its owner.
-    const stored = await env.db.models.Outfit.findById(look!.id).lean();
+    const stored = await env.db.models.Outfit.findById(savedLook.id).lean();
     expect(stored!.status).toBe('saved');
   });
 
@@ -412,22 +431,80 @@ describe('saved looks in the shared save system (D-116)', () => {
     await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
   });
 
-  it('account deletion clears saved looks and their entries', async () => {
+  it('account deletion removes saved looks, entries and feedback, and tombstone replay removes them from a restored copy', async () => {
     const { app, mail } = env.makeApp({}, { styleLibrary });
-    await registerUser(app, env, mail, 'wipe@example.com');
-    const token = await login(app, 'wipe@example.com');
-    const [look] = await generate(app, token);
-    await request(app).post(`/v1/outfits/${look!.id}/save`).set(bearer(token)).expect(200);
-    expect(await entries()).toHaveLength(1);
+    const userToDelete = await registerUser(app, env, mail, 'wipe-all@example.com');
+    const tokenToDelete = await login(app, 'wipe-all@example.com');
+    const keepUser = await registerUser(app, env, mail, 'keep-all@example.com');
+    const keepToken = await login(app, 'keep-all@example.com');
 
-    await request(app).post('/v1/account/deletion-otp').set(bearer(token));
+    // User to delete has both saved and suggested looks, with feedback
+    const wipeLooks = await generate(app, tokenToDelete);
+    expect(wipeLooks.length).toBeGreaterThanOrEqual(2);
+    const wipeSaved = wipeLooks[0]!;
+    const wipeSuggested = wipeLooks[1]!;
+
+    await request(app).post(`/v1/outfits/${wipeSaved.id}/save`).set(bearer(tokenToDelete)).expect(200);
     await request(app)
-      .delete('/v1/account')
-      .set(bearer(token))
-      .send({ otp: mail.otp('wipe@example.com'), confirm: true })
+      .post(`/v1/outfits/${wipeSaved.id}/feedback`)
+      .set(bearer(tokenToDelete))
+      .send({ value: 'love_it' })
       .expect(200);
-    expect(await env.db.models.Outfit.countDocuments()).toBe(0);
-    expect(await entries()).toHaveLength(0);
+    await request(app)
+      .post(`/v1/outfits/${wipeSuggested.id}/feedback`)
+      .set(bearer(tokenToDelete))
+      .send({ value: 'not_for_me', reason: 'colours_not_for_me' })
+      .expect(200);
+
+    // Keep user also has saved and suggested looks with feedback
+    const keepLooks = await generate(app, keepToken);
+    const keepSaved = keepLooks[0]!;
+    await request(app).post(`/v1/outfits/${keepSaved.id}/save`).set(bearer(keepToken)).expect(200);
+    await request(app)
+      .post(`/v1/outfits/${keepSaved.id}/feedback`)
+      .set(bearer(keepToken))
+      .send({ value: 'love_it' })
+      .expect(200);
+
+    // Save a copy before deletion to test tombstone replay on a restored backup
+    const restored = env.db.main.useDb('styleme_restored_outfits');
+    await restored.collection('outfits').insertMany(await env.db.main.collection('outfits').find().toArray());
+    await restored.collection('savedItems').insertMany(await env.db.main.collection('savedItems').find().toArray());
+
+    expect(await env.db.models.Outfit.countDocuments({ userId: userToDelete.id })).toBeGreaterThan(0);
+    expect(await env.db.models.SavedItem.countDocuments({ userId: userToDelete.id })).toBe(1);
+    expect(await env.db.models.Outfit.countDocuments({ userId: keepUser.id })).toBeGreaterThan(0);
+    expect(await env.db.models.SavedItem.countDocuments({ userId: keepUser.id })).toBe(1);
+
+    // Delete account
+    await request(app).post('/v1/account/deletion-otp').set(bearer(tokenToDelete));
+    const delRes = await request(app)
+      .delete('/v1/account')
+      .set(bearer(tokenToDelete))
+      .send({ otp: mail.otp('wipe-all@example.com'), confirm: true });
+    expect(delRes.status).toBe(200);
+
+    // Live database: userToDelete's outfits, entries and feedback are completely gone; keepUser remains
+    expect(await env.db.models.Outfit.countDocuments({ userId: userToDelete.id })).toBe(0);
+    expect(await env.db.models.SavedItem.countDocuments({ userId: userToDelete.id })).toBe(0);
+    expect(await env.db.models.Outfit.countDocuments({ userId: keepUser.id })).toBeGreaterThan(0);
+    expect(await env.db.models.SavedItem.countDocuments({ userId: keepUser.id })).toBe(1);
+    expect(await env.db.models.Outfit.countDocuments({ userId: keepUser.id, 'feedback.value': 'love_it' })).toBe(1);
+
+    // Replay tombstones against the restored database
+    const report = await replayTombstones(env.db.models, restored, BASE_CONFIG.TOMBSTONE_HMAC_KEY);
+    expect(report.ok).toBe(true);
+    const wipeId = new Types.ObjectId(userToDelete.id);
+    const keepId = new Types.ObjectId(keepUser.id);
+    expect(await restored.collection('outfits').countDocuments({ userId: wipeId })).toBe(0);
+    expect(await restored.collection('savedItems').countDocuments({ userId: wipeId })).toBe(0);
+    expect(await restored.collection('outfits').countDocuments({ userId: keepId })).toBeGreaterThan(0);
+    expect(await restored.collection('savedItems').countDocuments({ userId: keepId })).toBe(1);
+    expect(await restored.collection('outfits').countDocuments({ userId: keepId, 'feedback.value': 'love_it' })).toBe(
+      1,
+    );
+
+    await restored.dropDatabase();
   });
 });
 
