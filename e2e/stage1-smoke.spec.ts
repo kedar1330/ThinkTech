@@ -1,12 +1,4 @@
-import {
-  enterCode,
-  expect,
-  newUser,
-  registerUser,
-  submitLogin,
-  test,
-  verifyEmail,
-} from './fixtures/auth';
+import { enterCode, expect, newUser, registerUser, submitLogin, test, verifyEmail } from './fixtures/auth';
 import { SUBJECT, readOtp } from './fixtures/outbox';
 
 // Full Stage 1 E2E Smoke (issue #59, AC-17):

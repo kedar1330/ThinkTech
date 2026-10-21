@@ -36,13 +36,19 @@ describe('T-36: Rate limits (D-38, SECURITY.md §5, §11)', () => {
     await registerUser(app, env, mail, 'user1@example.com');
 
     // 2 logins allowed
-    const res1 = await request(app).post('/v1/auth/login').send({ email: 'user1@example.com', password: 'WrongPassword1!' });
+    const res1 = await request(app)
+      .post('/v1/auth/login')
+      .send({ email: 'user1@example.com', password: 'WrongPassword1!' });
     expect(res1.status).toBe(401);
-    const res2 = await request(app).post('/v1/auth/login').send({ email: 'user1@example.com', password: 'WrongPassword1!' });
+    const res2 = await request(app)
+      .post('/v1/auth/login')
+      .send({ email: 'user1@example.com', password: 'WrongPassword1!' });
     expect(res2.status).toBe(401);
 
     // 3rd login hits rate limit
-    const res3 = await request(app).post('/v1/auth/login').send({ email: 'user1@example.com', password: 'WrongPassword1!' });
+    const res3 = await request(app)
+      .post('/v1/auth/login')
+      .send({ email: 'user1@example.com', password: 'WrongPassword1!' });
     expect(res3.status).toBe(429);
     expect(res3.body).toEqual({
       success: false,
@@ -88,7 +94,10 @@ describe('T-36: Rate limits (D-38, SECURITY.md §5, §11)', () => {
     expect(rec3.body.error.code).toBe('RATE_LIMITED');
 
     // Other user is NOT rate-limited (isolation)
-    const otherRec = await request(app).post('/v1/recommendations').set(bearer(otherToken)).send({ occasion: 'everyday' });
+    const otherRec = await request(app)
+      .post('/v1/recommendations')
+      .set(bearer(otherToken))
+      .send({ occasion: 'everyday' });
     expect(otherRec.status).toBe(200);
 
     // Shortlist write rate limiting (limit: 2)

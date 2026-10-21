@@ -167,11 +167,9 @@ export function createApp({
   );
   app.use(
     '/v1',
-    outfitsRoutes(
-      new OutfitsController(new OutfitsService(db.models, styleLibrary), feedbackService),
-      withPassword,
-      { feedback: rateLimits.feedback },
-    ),
+    outfitsRoutes(new OutfitsController(new OutfitsService(db.models, styleLibrary), feedbackService), withPassword, {
+      feedback: rateLimits.feedback,
+    }),
   );
   const palettes = new PaletteService(styleLibrary, profileService, appearanceService);
   app.use('/v1', paletteRoutes(new PaletteController(palettes), withPassword));

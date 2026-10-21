@@ -5,13 +5,7 @@ import { FieldPrivacyNote } from '../components/profile/FieldPrivacyNote';
 
 describe('FieldPrivacyNote component', () => {
   it('renders the provisional badge and data use breakdown', () => {
-    render(
-      <FieldPrivacyNote
-        usedFor="Style suggestions"
-        whoSees="Only you"
-        howToDelete="Delete anytime"
-      />,
-    );
+    render(<FieldPrivacyNote usedFor="Style suggestions" whoSees="Only you" howToDelete="Delete anytime" />);
 
     expect(screen.getByText('Provisional — pending legal review')).toBeInTheDocument();
     expect(screen.getByText('Privacy & data use')).toBeInTheDocument();
