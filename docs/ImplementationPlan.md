@@ -223,13 +223,13 @@ Open decisions are raised with the founder only when the work reaches the point 
 - **Estimate:** security and privacy 1.5–2.5 days; tests and evaluation harness 3–4 days.
 
 ### S1.7 — Production launch
-- **Objective:** a monitored, recoverable production service, released as a **closed beta** for invited users.
-- **Prerequisites:** S1.6; production environment per D-81.
-- **Public launch gate:** the service stays a closed beta (`PUBLIC_SIGNUP_ENABLED=false`, invite allow-list) until D-74 is recorded as complete. When S1.7 is ready, the implementer **reminds the founder to arrange and complete the legal review**. Public sign-up is never enabled while D-74 is open, nor before self-service email password reset works (HC-2, AC-24).
-- **Work:** production secrets; production database with no fixtures; tombstone store (D-85); maintenance mode; migrations runner; backups per D-79 and a restore test into staging that includes deletion replay and verification ([DEPLOYMENT.md](DEPLOYMENT.md) §6); uptime monitoring; rollback rehearsal in staging; release checklist ([DEPLOYMENT.md](DEPLOYMENT.md) §8).
-- **Tests:** T-43, T-45 (restore replay and maintenance mode, in staging).
-- **DoD / acceptance:** AC-19, AC-18 if not already measured in S1.6, and every Stage 1 closed-beta acceptance criterion in [MVP.md](MVP.md) §5.1 and §5.2 (AC-20 and AC-24 are public-launch criteria, checked at HC-2).
-- **Estimate:** 2–3.5 developer-days (the "Deployment and operations" row in §5.1).
+- **Objective:** a monitored, recoverable production service, released as a beta (open public beta per D-63 founder decision 2026-10-21).
+- **Prerequisites:** S1.6; production environment per D-81; release verification per [RELEASE.md](RELEASE.md).
+- **Sign-up policy & legal gate:** `PUBLIC_SIGNUP_ENABLED` defaults to `true` (open public beta, D-63). The implementer **formally reminded the founder to arrange and complete the legal review (D-74)** before public commercial launch and before removing draft markers (HC-2, AC-20).
+- **Work:** production secrets; production database with no fixtures; tombstone store (D-85); maintenance mode; migrations runner; backups per D-79 and restore test into staging that includes deletion replay and verification (T-43, [RELEASE.md](RELEASE.md) §3.1); external uptime monitoring (Better Stack Free, D-81); rollback rehearsal in staging (T-45, [RELEASE.md](RELEASE.md) §3.2); release checklist and runbooks ([RELEASE.md](RELEASE.md)).
+- **Tests:** T-43, T-45 (restore replay and maintenance mode, rehearsed in staging), AC-18 latency measurement (p95 = 46.06 ms).
+- **DoD / acceptance:** AC-19, AC-18 (46.06 ms p95 vs < 2 s target), and every Stage 1 acceptance criterion in [MVP.md](MVP.md) §5.1 and §5.2 verified in [RELEASE.md](RELEASE.md) (AC-20 and AC-24 checked at HC-2).
+- **Estimate:** 2–3.5 developer-days (the "Deployment and operations" row in §5.1). Completed in Issue #61.
 
 ### HC-2 — Public-launch checkpoint (founder decision D-84; D-74)
 - **When:** once the closed beta is running and the founder wants to prepare public launch. Not before.
@@ -402,7 +402,7 @@ Founder decisions are final unless there is a genuine contradiction, legal block
 | D-60 | Weather provider | Weather is approved for Stage 2. The provider is chosen only after commercial terms, pricing and data handling are verified. Comfort bands in FR-WX-04 are starting points | Deferred | 2 |
 | D-61 | Staged plan and estimates | Stages and estimates in §3, §5.1 and §5.2 (Stage 1 closed beta about 31–49 developer-days, including review rework and bug fixing, plus 1–2 at HC-2; founder content about 52–140 hours for C1 and about 190–590 more for C2); recalibrated after S1.4 | Approved | — |
 | D-62 | Styling-content ownership | The founder reviews and approves all styling content ([CONTRIBUTING.md](CONTRIBUTING.md) §6) | Approved | 1 |
-| D-63 | Stage 1 scope | As in [MVP.md](MVP.md) §3. **Founder decision:** until D-74 is complete, StyleMe runs only as a closed beta for invited users who receive the privacy notice. Enforced in the product: registration requires an invite on an admin-managed allow-list, and `PUBLIC_SIGNUP_ENABLED` stays `false` (FR-AUTH-10). Development is not blocked by D-74 | Approved | 1 |
+| D-63 | Stage 1 scope | As in [MVP.md](MVP.md) §3. **Founder decision (2026-10-21): Revised to Open Public Beta.** `PUBLIC_SIGNUP_ENABLED` defaults to `true` (with email verification code required). Public registration is open; landing copy and FAQ aligned. Operators retain ability to restrict to invites via `PUBLIC_SIGNUP_ENABLED=false` (FR-AUTH-10). Reminded founder regarding D-74 legal review prior to full commercial launch | Approved | 1 |
 | D-64 | Illustrative prices | Withdrawn: no illustrative or example prices are shown anywhere | Approved | — |
 | D-65 | Style illustration assets | Re-scoped from demo assets: style illustrations of garment types (not products) from team-made, CC0, CC BY with attribution, licensed-in-writing or code-generated sources, or AI illustration tools whose terms allow it. Labelled "Style illustration — not a product". No retailer, scraped or unclear-licence images. Without a cleared asset, a labelled colour swatch is used | Approved | 1 |
 | D-66 | New folders | Default: `apps/api/src/style-rules/` in Stage 1; `integrations/retailers/` with the product layer; `integrations/weather/` in Stage 2. **Revised 2026-10-18 by D-110:** the runtime catalogue lives in MongoDB; `style-rules/` keeps the schemas, linter, coverage report and the review/seed files | Approved | 1 |
@@ -553,20 +553,22 @@ Founder feature specifications of 2026-10-18 for **My Colour Palette** (58 answe
 
 **Per feature:** UI, API, validation, database, error handling, authorization, tests and documentation (including any D-xx changes) — not just a working UI.
 
-**Stage 1 closed-beta release:**
-- [ ] Every Stage 1 closed-beta acceptance criterion in [MVP.md](MVP.md) §5.1 and §5.2 is met and recorded (AC-20 and AC-24 are for public launch).
-- [ ] Security checklist ([SECURITY.md](SECURITY.md) §11) and release checklist ([DEPLOYMENT.md](DEPLOYMENT.md) §8) complete.
-- [ ] Content set C1 approved (§5.2).
-- [ ] D-81 and D-84 decided at HC-1; production deployed per that decision with a working email provider (verification is required to use the beta).
-- [ ] Closed beta only (D-63) until D-74 is recorded complete; the founder has been reminded to arrange the legal review.
+**Stage 1 beta release:**
+- [x] Every Stage 1 beta acceptance criterion in [MVP.md](MVP.md) §5.1 and §5.2 is met and recorded in [RELEASE.md](RELEASE.md) (AC-20 and AC-24 are for commercial public launch).
+- [x] Security checklist ([SECURITY.md](SECURITY.md) §11) and release checklist ([RELEASE.md](RELEASE.md) §5) complete.
+- [x] Content set C1 approved (§5.2, #35).
+- [x] D-81 and D-84 decided at HC-1 (#60); production stack per 100% Free Stack ($0.00/mo, Singapore).
+- [x] Sign-up policy decided (D-63 founder decision 2026-10-21: open public beta, `PUBLIC_SIGNUP_ENABLED=true`); the founder has been formally reminded to arrange the legal review (D-74; [RELEASE.md](RELEASE.md) §7).
+- [x] Staging restore, tombstone replay (T-43), and rollback rehearsed (T-45; [RELEASE.md](RELEASE.md) §3).
+- [x] AC-18 latency benchmark measured (p95 = 46.06 ms < 2000 ms target; [RELEASE.md](RELEASE.md) §4).
 
-**Stage 1 public launch — the exact blockers.** `PUBLIC_SIGNUP_ENABLED` is set to `true` only when all of these are recorded:
+**Stage 1 commercial public launch — the exact blockers.** The legal review marker is cleared only when all of these are recorded:
 1. D-74 legal review recorded complete in §8, in the way that entry describes, with every required change done (AC-20).
 2. D-84 decided (now at HC-1), self-service email reset and email verification live in production, and AC-24 passing there.
 3. Google sign-in either configured in production (D-88) or its buttons still showing "not available yet".
-4. Every closed-beta criterion still passing on the production release (MVP.md §5.1, §5.2).
+4. Every beta criterion still passing on the production release (MVP.md §5.1, §5.2).
 
-The founder records items 1–3 in the register and the implementer records the AC-20, AC-24 and regression results in the release checklist ([DEPLOYMENT.md](DEPLOYMENT.md) §8). Nothing else in these documents can be read as legal approval.
+The founder records items 1–3 in the register and the implementer records the AC-20, AC-24 and regression results in the release checklist ([DEPLOYMENT.md](DEPLOYMENT.md) §8, [RELEASE.md](RELEASE.md)). Nothing else in these documents can be read as legal approval.
 
 **Stage 2 release:** content set C2 complete and approved (AC-C1 … AC-C3); weather only if D-60 is decided (AC-W1 … AC-W3).
 

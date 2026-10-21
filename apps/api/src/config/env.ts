@@ -22,8 +22,8 @@ const envSchema = z.object({
   AUTH_ACCESS_TOKEN_SECRET: z.string().min(32),
   BFF_SHARED_SECRET: z.string().min(32),
   WEB_ORIGIN: z.url(),
-  // Public sign-up with email-code verification is on by default; set to false to require an invite
-  // (closed beta, `pnpm admin invite-add`).
+  // Public sign-up with email-code verification is on by default (D-63 founder decision: open public beta);
+  // operators can set to false to require an invite (`pnpm admin invite-add`).
   PUBLIC_SIGNUP_ENABLED: z
     .enum(['true', 'false'])
     .default('true')
