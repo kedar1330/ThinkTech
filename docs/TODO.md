@@ -70,7 +70,7 @@ TD-SHP-01 #37 → TD-SHP-02 #38 → TD-SHP-03 #43 (needs #41)              (Keda
 | TD-SAV-01 | Saved Outfits: save, list, open and remove looks — API and UI (was AN-3) | #41 | 🔄 done locally, PR pending: the four `/v1/outfits` endpoints, `/saved` and `/saved/[id]` with remove confirmation, navigation switched; `savedItems` entry written on save and removed on delete as agreed on #41 (D-116); delete detaches shortlist items | P0 | TD-STY-03 (`outfits` model) | FR-OUT-01 … 03; another user's look → `NOT_FOUND`; saving removes the expiry; removal needs confirmation |
 | TD-SAV-02 | Feedback on looks, permitted preference signals, saved-look alternatives (was AN-4) | #42 | 🔄 done locally, PR pending: POST `/v1/outfits/:id/feedback`, engine lowest-precedence ranking signal, feedback buttons & reason chips, saved-look refreshable alternatives | P1 | TD-SAV-01, TD-STY-03 | `love_it` / `not_for_me` + fixed reasons only (no free text); stored on `outfits.feedback`; never overrides explicit profile choices |
 | TD-SAV-03 | Labelled style illustrations on looks, only with cleared licences | #50 | ⛔ | P2 | Founder sign-off of sources (D-65) | "Style illustration — not a product" label; recorded licence |
-| TD-SAV-04 | Palette and Saved Outfits tests: persistence, authorisation, UI, E2E (was AN-5) | #51 | ⏸ | P1 | TD-PAL-01 … TD-SAV-02, TD-QA-01 | Deletion and tombstone replay cover saved looks and feedback |
+| TD-SAV-04 | Palette and Saved Outfits tests: persistence, authorisation, UI, E2E (was AN-5) | #51 | ✅ | P1 | TD-PAL-01 … TD-SAV-02, TD-QA-01 | Deletion and tombstone replay cover saved looks and feedback |
 
 ## 5. Shop My Look, Design Studio, Virtual Try-On — Kedar
 
