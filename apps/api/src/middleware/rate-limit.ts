@@ -8,10 +8,10 @@ import { sendError } from '../utils/respond';
 // In-memory store: limits are per API instance and reset on restart, so they hold as stated only
 // while one API instance runs (SECURITY.md §5). Each app instance gets fresh stores.
 
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
+export const MINUTE = 60_000;
+export const HOUR = 60 * MINUTE;
 
-function limiter(windowMs: number, limit: number, key: (req: Request) => string): RateLimitRequestHandler {
+export function limiter(windowMs: number, limit: number, key: (req: Request) => string): RateLimitRequestHandler {
   return rateLimit({
     windowMs,
     limit,
@@ -23,8 +23,8 @@ function limiter(windowMs: number, limit: number, key: (req: Request) => string)
   });
 }
 
-const byIp = (req: Request) => ipKeyGenerator(req.clientIp);
-const byUser = (req: Request) => `user:${req.auth ? String(req.auth.user._id) : ipKeyGenerator(req.clientIp)}`;
+export const byIp = (req: Request) => ipKeyGenerator(req.clientIp);
+export const byUser = (req: Request) => `user:${req.auth ? String(req.auth.user._id) : ipKeyGenerator(req.clientIp)}`;
 
 export type Limits = RateLimitRequestHandler[];
 
@@ -43,6 +43,12 @@ export interface AuthRateLimits {
   deleteAccount: Limits;
 }
 
+export interface AppRateLimits extends AuthRateLimits {
+  recommendations: Limits;
+  feedback: Limits;
+  shortlistWrite: Limits;
+}
+
 export function createAuthRateLimits(): AuthRateLimits {
   return {
     login: [limiter(MINUTE, 5, byIp), limiter(HOUR, 30, byIp)],
@@ -54,5 +60,14 @@ export function createAuthRateLimits(): AuthRateLimits {
     resetConfirm: [limiter(HOUR, 10, byIp)],
     accountSecurity: [limiter(HOUR, 30, byUser)],
     deleteAccount: [limiter(HOUR, 5, byUser)],
+  };
+}
+
+export function createRateLimits(): AppRateLimits {
+  return {
+    ...createAuthRateLimits(),
+    recommendations: [limiter(MINUTE, 20, byUser)],
+    feedback: [limiter(MINUTE, 60, byUser)],
+    shortlistWrite: [limiter(MINUTE, 30, byUser)],
   };
 }

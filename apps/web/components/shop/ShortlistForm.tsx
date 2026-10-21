@@ -7,6 +7,7 @@ import type { FormState } from '@/lib/actions';
 import { FormMessage, SubmitButton } from '@/components/auth/shared';
 import { Field } from '@/components/ui/field';
 import { Input, inputClass } from '@/components/ui/input';
+import { FieldPrivacyNote } from '@/components/profile/FieldPrivacyNote';
 import { cn } from '@/lib/utils';
 
 // "Add an item you found" (FR-LIST-01). Inputs are controlled, so a failed submit keeps every entry;
@@ -88,6 +89,11 @@ export function ShortlistForm() {
           aria-describedby={describedBy('note', errors.note, true)}
         />
       </Field>
+      <FieldPrivacyNote
+        usedFor="Keeping items you found in other shops and their prices to compare against your budget. StyleMe never opens, previews, or checks your links."
+        whoSees="Private to you. Never used for other people’s suggestions and never sent to any external AI service."
+        howToDelete="You can delete any item at any time, and your entire shortlist is permanently removed if you delete your account."
+      />
       <FormMessage state={state} />
       <div className="max-w-xs">
         <SubmitButton pending={pending} pendingLabel="Adding…">

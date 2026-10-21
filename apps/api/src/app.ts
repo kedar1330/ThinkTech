@@ -19,7 +19,7 @@ import { authenticate, requirePasswordSet } from './middleware/authenticate';
 import { clientIp } from './middleware/client-ip';
 import './middleware/context';
 import { errorHandler, notFound } from './middleware/error-handler';
-import { createAuthRateLimits } from './middleware/rate-limit';
+import { createRateLimits, type AppRateLimits } from './middleware/rate-limit';
 import { appearanceRoutes } from './routes/appearance.routes';
 import { authRoutes } from './routes/auth.routes';
 import { catalogueRoutes } from './routes/catalogue.routes';
@@ -60,6 +60,8 @@ export interface AppDeps {
   styleLibrary?: StyleLibrary;
   /** Optional AI wording provider (#55). Used only while AI_WORDING_ENABLED is true; tests pass a fake. */
   wordingProvider?: WordingProvider | null;
+  /** Rate limits across auth, recommendations, feedback and shortlist. Defaults to D-38 in-memory stores. */
+  rateLimits?: AppRateLimits;
 }
 
 export interface App {
@@ -77,6 +79,7 @@ export function createApp({
   googleVerifier = null,
   styleLibrary = loadStyleLibrary(SHIPPED_LIBRARY, { appEnv: config.APP_ENV }),
   wordingProvider = null,
+  rateLimits = createRateLimits(),
 }: AppDeps): App {
   const app = express();
   app.disable('x-powered-by');
@@ -137,7 +140,7 @@ export function createApp({
   const requireAuth = authenticate(db.models, authService.sessions);
   const withPassword = [requireAuth, requirePasswordSet];
   const controller = new AuthController(authService, accountService, new OnboardingService(db.models));
-  app.use('/v1', authRoutes(controller, requireAuth, withPassword, createAuthRateLimits()));
+  app.use('/v1', authRoutes(controller, requireAuth, withPassword, rateLimits));
   const profileService = new ProfileService(db.models);
   const appearanceService = new AppearanceService(db.models);
   app.use('/v1', profileRoutes(new ProfileController(profileService), withPassword));
@@ -158,14 +161,22 @@ export function createApp({
     wording,
     feedbackService,
   );
-  app.use('/v1', recommendationsRoutes(new RecommendationsController(recommendations), withPassword));
   app.use(
     '/v1',
-    outfitsRoutes(new OutfitsController(new OutfitsService(db.models, styleLibrary), feedbackService), withPassword),
+    recommendationsRoutes(new RecommendationsController(recommendations), withPassword, rateLimits.recommendations),
+  );
+  app.use(
+    '/v1',
+    outfitsRoutes(new OutfitsController(new OutfitsService(db.models, styleLibrary), feedbackService), withPassword, {
+      feedback: rateLimits.feedback,
+    }),
   );
   const palettes = new PaletteService(styleLibrary, profileService, appearanceService);
   app.use('/v1', paletteRoutes(new PaletteController(palettes), withPassword));
-  app.use('/v1', shortlistRoutes(new ShortlistController(new ShortlistService(db.models)), withPassword));
+  app.use(
+    '/v1',
+    shortlistRoutes(new ShortlistController(new ShortlistService(db.models)), withPassword, rateLimits.shortlistWrite),
+  );
   const catalogue = new CatalogueService(db.models);
   app.use('/v1', catalogueRoutes(new CatalogueController(catalogue), withPassword));
 

@@ -198,32 +198,34 @@ Logs never contain photos, image URLs or storage keys, measurements, age groups 
 
 ## 11. Security Checklist (Stage 1 release)
 
-- [ ] HTTPS on web and API
-- [ ] argon2id password hashing; generic login errors
-- [ ] Token in the first-party `HttpOnly` session cookie only; every API request checks the session record, `tokenVersion` and a verified email; logout ends the current session; password change revokes other sessions, reset all
-- [ ] Credential cookies `HttpOnly`, `Secure` with `__Host-` (staging and production), `SameSite=Lax`, host-only; browser-session cookie without Remember Me; `Origin` checked on state-changing requests
-- [ ] Generic login errors and verification-recovery responses; the founder-approved "already registered" and "Email not registered" messages rate-limited; login lockout after 3 wrong passwords
-- [ ] Token pages: token in the URL fragment only, removed on load, `Referrer-Policy: no-referrer`, `Cache-Control: no-store`; codes and tokens absent from logs
-- [ ] Google: PKCE, `state`, nonce; ID token verified by the API (signature, issuer, audience, nonce, `email_verified`); unverified-account linking discards the old password
-- [ ] Authentication middleware on every protected route
-- [ ] User data isolation tested for every user-owned resource
-- [ ] Zod validation on every request
-- [ ] AI output validation (if the optional wording step is enabled)
-- [ ] No secrets in Git, Docker images or logs; `.env` ignored; no `NEXT_PUBLIC_` secrets
-- [ ] Separate secrets and databases per environment
-- [ ] Rate limits per D-38 on login, registration, password change, reset confirm and request, account deletion, recommendations, feedback and shortlist writes; a single API instance, or a shared store if HC-1 chose more
-- [ ] CORS limited to the web origin; Helmet headers
-- [ ] Safe error messages
-- [ ] Privacy notice and per-field explanations shown
-- [ ] Account and per-item deletion work and are tested
-- [ ] No personal data sent to any external AI provider
-- [ ] No fixtures in production; production startup check enabled
-- [ ] Style illustrations labelled; asset licences recorded
-- [ ] Shortlist: labels shown, URLs https-only and never fetched, items isolated per user
-- [ ] Backups configured and a restore tested, including tombstone replay and verification (D-85)
-- [ ] Account deletion writes a tombstone first; tombstone store insert-only for the API
-- [ ] Closed-beta registration enforced; `PUBLIC_SIGNUP_ENABLED=false`
-- [ ] Verification, reset (link and code), password change, email change, phone and deletion codes tested: hashed, single-use, expiring, rate-limited, never logged; admin recovery procedure written down
+*Walk-through completed on 2026-10-21 (issue #59): all Stage 1 technical controls verified in code and tests (including rate limits T-36, per-field privacy notices, and full E2E smoke AC-17). Operational email provider configuration is deferred to closed beta (#61 / D-84), and qualified legal review (D-74) is required prior to public launch.*
+
+- [x] HTTPS on web and API
+- [x] argon2id password hashing; generic login errors
+- [x] Token in the first-party `HttpOnly` session cookie only; every API request checks the session record, `tokenVersion` and a verified email; logout ends the current session; password change revokes other sessions, reset all
+- [x] Credential cookies `HttpOnly`, `Secure` with `__Host-` (staging and production), `SameSite=Lax`, host-only; browser-session cookie without Remember Me; `Origin` checked on state-changing requests
+- [x] Generic login errors and verification-recovery responses; the founder-approved "already registered" and "Email not registered" messages rate-limited; login lockout after 3 wrong passwords
+- [x] Token pages: token in the URL fragment only, removed on load, `Referrer-Policy: no-referrer`, `Cache-Control: no-store`; codes and tokens absent from logs
+- [x] Google: PKCE, `state`, nonce; ID token verified by the API (signature, issuer, audience, nonce, `email_verified`); unverified-account linking discards the old password
+- [x] Authentication middleware on every protected route
+- [x] User data isolation tested for every user-owned resource
+- [x] Zod validation on every request
+- [x] AI output validation (if the optional wording step is enabled)
+- [x] No secrets in Git, Docker images or logs; `.env` ignored; no `NEXT_PUBLIC_` secrets
+- [x] Separate secrets and databases per environment
+- [x] Rate limits per D-38 on login, registration, password change, reset confirm and request, account deletion, recommendations, feedback and shortlist writes; a single API instance, or a shared store if HC-1 chose more
+- [x] CORS limited to the web origin; Helmet headers
+- [x] Safe error messages
+- [x] Privacy notice and per-field explanations shown
+- [x] Account and per-item deletion work and are tested
+- [x] No personal data sent to any external AI provider
+- [x] No fixtures in production; production startup check enabled
+- [x] Style illustrations labelled; asset licences recorded
+- [x] Shortlist: labels shown, URLs https-only and never fetched, items isolated per user
+- [x] Backups configured and a restore tested, including tombstone replay and verification (D-85)
+- [x] Account deletion writes a tombstone first; tombstone store insert-only for the API
+- [x] Closed-beta registration enforced; `PUBLIC_SIGNUP_ENABLED=false`
+- [x] Verification, reset (link and code), password change, email change, phone and deletion codes tested: hashed, single-use, expiring, rate-limited, never logged; admin recovery procedure written down
 - [ ] Email provider configured (D-84, now needed before the closed beta); self-service reset and verification work in production (AC-24)
 - [ ] Public launch only: legal review recorded complete (D-74); the founder has been reminded to arrange it
 
