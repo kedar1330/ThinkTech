@@ -3,10 +3,10 @@ import { categoryLabel, specHints } from '@/lib/discover/look-spec';
 import { SearchPhrase } from './SearchPhrase';
 import { SizeNote } from './SizeNote';
 import { SlotAlternatives } from './SlotAlternatives';
-import { Swatch } from './Swatch';
+import { SlotVisual } from './SlotVisual';
 
 // One garment in a look: what it is, its colours, fabric and cut hints, a copyable search phrase, the size
-// note and its alternatives.
+// note, its slot visual (#50) and its alternatives.
 
 export function SlotRow({ slot, sizes }: { slot: LookSlot; sizes: ProfileSizes }) {
   const spec = slot.lookSpec;
@@ -14,13 +14,7 @@ export function SlotRow({ slot, sizes }: { slot: LookSlot; sizes: ProfileSizes }
   return (
     <li className="space-y-1.5 border-t border-border pt-3 first:border-t-0 first:pt-0">
       <p className="text-sm font-medium">{categoryLabel(spec)}</p>
-      <ul aria-label="Colours" className="flex flex-wrap gap-x-3 gap-y-1">
-        {slot.swatches.map((swatch) => (
-          <li key={swatch.colorId}>
-            <Swatch swatch={swatch} />
-          </li>
-        ))}
-      </ul>
+      <SlotVisual swatches={slot.swatches} illustration={slot.illustration} />
       {hints.length > 0 && <p className="text-xs text-muted-foreground">{hints.join(' · ')}</p>}
       <SearchPhrase phrase={slot.searchPhrase} />
       <SizeNote category={spec.category} sizes={sizes} />
