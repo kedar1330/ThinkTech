@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -21,6 +22,7 @@ const API_DIR = join(REPO_ROOT, 'apps', 'api');
 const WEB_DIR = join(REPO_ROOT, 'apps', 'web');
 const API_ENTRY = join(API_DIR, 'dist', 'server.js');
 const NEXT_BIN = join(WEB_DIR, 'node_modules', 'next', 'dist', 'bin', 'next');
+const TSX_CLI = join(API_DIR, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 
 /** A fresh random value per run, so the suite needs no stored secrets. */
 const secret = () => randomBytes(32).toString('hex');
@@ -47,29 +49,37 @@ export default async function globalSetup(): Promise<void> {
     const mongo = await MongoMemoryServer.create();
     harness().mongo = mongo;
 
-    const api = startNode('api', [API_ENTRY], {
+    const apiEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      NODE_ENV: 'production',
+      PORT: String(API_PORT),
+      APP_ENV: 'local',
+      MONGODB_URI: mongo.getUri('styleme_e2e'),
+      TOMBSTONE_STORE_URI: mongo.getUri('styleme_e2e_tombstones'),
+      TOMBSTONE_HMAC_KEY: secret(),
+      AUTH_ACCESS_TOKEN_SECRET: secret(),
+      BFF_SHARED_SECRET: bffSecret,
+      WEB_ORIGIN: BASE_URL,
+      PUBLIC_SIGNUP_ENABLED: 'true',
+      MAINTENANCE_MODE: 'false',
+      // No email provider: every message is written to the dev outbox, where the fixtures read it.
+      SMTP_URL: '',
+      EMAIL_FROM: '',
+      DEV_OUTBOX_DIR: OUTBOX_DIR,
+      DEV_ECHO_MESSAGES: 'false',
+      GOOGLE_CLIENT_ID: '',
+    };
+
+    // Discover My Style builds looks around a design saved in Outfit Categories (D-132), so the design
+    // catalogue and its approved rules are seeded first (`design:seed`).
+    const seed = spawnSync(process.execPath, [TSX_CLI, join('scripts', 'design-catalogue.ts'), 'seed'], {
       cwd: API_DIR,
-      env: {
-        ...process.env,
-        NODE_ENV: 'production',
-        PORT: String(API_PORT),
-        APP_ENV: 'local',
-        MONGODB_URI: mongo.getUri('styleme_e2e'),
-        TOMBSTONE_STORE_URI: mongo.getUri('styleme_e2e_tombstones'),
-        TOMBSTONE_HMAC_KEY: secret(),
-        AUTH_ACCESS_TOKEN_SECRET: secret(),
-        BFF_SHARED_SECRET: bffSecret,
-        WEB_ORIGIN: BASE_URL,
-        PUBLIC_SIGNUP_ENABLED: 'true',
-        MAINTENANCE_MODE: 'false',
-        // No email provider: every message is written to the dev outbox, where the fixtures read it.
-        SMTP_URL: '',
-        EMAIL_FROM: '',
-        DEV_OUTBOX_DIR: OUTBOX_DIR,
-        DEV_ECHO_MESSAGES: 'false',
-        GOOGLE_CLIENT_ID: '',
-      },
+      env: apiEnv,
+      encoding: 'utf8',
     });
+    if (seed.status !== 0) throw new Error(`[e2e] Seeding the design catalogue failed:\n${seed.stderr}`);
+
+    const api = startNode('api', [API_ENTRY], { cwd: API_DIR, env: apiEnv });
     await waitForHttp('api', `${API_URL}/health`, api);
 
     const web = startNode('web', [NEXT_BIN, 'start', '-p', String(WEB_PORT)], {
