@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Look, LookSlot } from '@styleme/contracts';
 import { LookTabs } from '@/components/shop/LookTabs';
 import { lookTitle } from '@/lib/outfits/look-text';
@@ -28,6 +28,14 @@ const look = (n: number): Look => ({
   combinationSignature: `sig-${n}`,
   aiModel: null,
   source: 'discover_my_style',
+});
+
+// Each tab asks for its price range (#118); these tests are about the tabs themselves.
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => Response.json({ error: 'PROVIDER_NOT_CONFIGURED' }, { status: 503 })),
+  );
 });
 
 const tabs = () => screen.getByRole('navigation', { name: 'Your looks from Discover My Style' });

@@ -204,6 +204,8 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 **Today (#43, PR open):** `/shop` lists saved looks; `/shop?outfitId=…` (the "Shop this look" link on Discover results and saved looks) shows each part with the user's saved size and the shortlist item they put on it, a labelled total against their budget per look, and filters by category, size group and price. A "Product data unavailable" notice explains that StyleMe lists no shop products yet.
 
+**Tabs (#115, PR #116) and tab photo and price range (#118, local preview):** each saved Discover My Style look is a tab with its AI outfit image (or its garment colours) and a price range from Amazon, Flipkart and Meesho search results found with Serper.dev, labelled "not verified by StyleMe; not a checkout price". The range is live only with `SERPER_API_KEY` and `APP_ENV=local` until the founder decides whether store prices may be shown (D-77, D-43 … D-45).
+
 **Stage 1 (D-77 = B):** a **shortlist of items the user found themselves** — name, optional https link, the price they enter, optional note — attached to a look slot, with a budget summary. Every user-entered price is labelled "not verified by StyleMe"; StyleMe never fetches the link.
 
 **Later (product layer):** verified products with image, price, size and disclosures, filtered by budget and suitability, 3–5 alternatives — **only** from a retailer that has authorised StyleMe in writing. Flipkart and Meesho have **not** approved StyleMe (D-43 … D-45). No scraping. When verified data or usage rights are unavailable, explain that and offer styling alternatives (PDF p17).

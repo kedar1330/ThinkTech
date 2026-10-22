@@ -30,6 +30,7 @@
 | `appearanceProfiles` | Self-reported appearance signals (estimates later) | Per user | 1 |
 | `outfits` | Suggested and saved looks | Per user | 1 |
 | `aiCache` | Cached optional AI wording | System | 1 (only if AI wording is enabled) — model and TTL index implemented (#55) |
+| `priceSearchCache` | Store search listings for Shop My Look price ranges (#118) | System | Local preview only — model and TTL index implemented |
 | `shortlistItems` | Items the user found elsewhere, with prices they entered (not verified by StyleMe) | Per user | 1 (D-77 = B) |
 | `retailers` | Retailer registry, access level and disclosure | Shared | Product layer |
 | `products` | Verified real product listings | Shared | Product layer |
@@ -392,6 +393,17 @@ Items the user attaches to a slot are linked from `shortlistItems` (`outfitId`, 
 | `createdAt`, `expiresAt` | TTL index on `expiresAt` (explanation wording: 7 days) |
 
 The input to the optional AI wording step contains only rule references and attribute tags, never personal data (AI rule 16), so cached entries hold no personal data. **Implemented (#55):** `requestType: "explanation-wording"`, `response: { text, promptVersion }`; not user-owned, so not in `USER_OWNED_COLLECTIONS`. Written only while AI wording is on.
+
+### 3.5a `priceSearchCache` (#118, local preview)
+
+| Field | Type / rule |
+|---|---|
+| `cacheKey` | SHA-256 of provider + normalised query (a garment's search phrase and the department); unique |
+| `provider` | `"serper"` |
+| `listings` | `[{ store: "amazon" \| "flipkart" \| "meesho", price }]`: only the store and the parsed price; no titles, links or images |
+| `checkedAt`, `expiresAt` | TTL index on `expiresAt` (24 hours after `checkedAt`) |
+
+The query holds no personal data and the entry no user ID, so it is system data, not user-owned. Prices are third-party search results, shown only with `PRICE_RANGE_LABEL`.
 
 ### 3.6 `shortlistItems` (Stage 1, D-77 = B)
 

@@ -92,6 +92,7 @@ Registration — by email or Google — requires an invite when `PUBLIC_SIGNUP_E
 | `GOOGLE_CLIENT_ID` (API and web), `GOOGLE_CLIENT_SECRET` (web only) | When Google sign-in is configured (D-88) |
 | SMS provider credentials | Only after an SMS provider is chosen (D-92) |
 | `FLIPKART_AFFILIATE_ID`, `FLIPKART_AFFILIATE_TOKEN` | Only after Flipkart approves access (D-44). The Affiliate API documents one active token per account, so rotation must update the environment at the same time |
+| `SERPER_API_KEY` | Shop My Look price ranges (#118), API only; used only with `APP_ENV=local` until the founder approves store prices (D-77) |
 | `WEATHER_API_KEY` | Stage 2, only if the chosen provider needs a key (D-60) |
 | Cloudinary, Groq, Hugging Face keys | Only for deferred or future features that use them |
 
@@ -100,6 +101,7 @@ Registration — by email or Google — requires an invite when `PUBLIC_SIGNUP_E
 - Every request body and query is validated by Zod schemas from `packages/contracts`.
 - All AI output is parsed, Zod-validated and business-validated before use. For the optional wording step, invalid output is discarded and the template text is used.
 - All text that came from a user or a retailer is escaped when rendered. No retailer HTML is rendered.
+- Store search for price ranges (#118): the only data sent to Serper.dev is a garment's search phrase and the department, never sizes, measurements, photos, appearance, the user's name or email. Replies are parsed defensively; only the store and a parsed price are kept. Queries, listings and prices are never logged.
 - User-entered shortlist URLs: https only, length-limited (D-80), stored unchanged, rendered as plain outbound links with `rel="noopener noreferrer nofollow"`, never fetched, previewed or modified by the server, so StyleMe makes no outbound request to user-supplied addresses.
 
 ## 5. Rate Limiting, Headers and Transport

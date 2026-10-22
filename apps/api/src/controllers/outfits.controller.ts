@@ -3,11 +3,13 @@ import { Types } from 'mongoose';
 import {
   objectIdSchema,
   type DeletedResponse,
+  type LookPriceRange,
   type FeedbackRecordedResponse,
   type OutfitFeedbackRequest,
   type OutfitListQuery,
 } from '@styleme/contracts';
 import type { OutfitsService } from '../services/outfits.service';
+import type { PriceRangeService } from '../services/price-range.service';
 import type { FeedbackService } from '../services/feedback.service';
 import { AppError } from '../utils/errors';
 import { sendData } from '../utils/respond';
@@ -17,6 +19,7 @@ export class OutfitsController {
   constructor(
     private readonly outfits: OutfitsService,
     private readonly feedbackService?: FeedbackService,
+    private readonly priceRanges?: PriceRangeService,
   ) {}
 
   list: RequestHandler = async (req, res) => {
@@ -34,6 +37,12 @@ export class OutfitsController {
     const { data, contentType } = await this.outfits.image(userOf(req), outfitIdOf(req));
     res.set({ 'content-type': contentType, 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' });
     res.send(data);
+  };
+
+  /** The look's price range from store search results (#118); labelled, never a StyleMe price. */
+  priceRange: RequestHandler = async (req, res) => {
+    if (!this.priceRanges) throw new AppError('PROVIDER_NOT_CONFIGURED');
+    sendData<LookPriceRange>(res, await this.priceRanges.range(userOf(req), outfitIdOf(req)));
   };
 
   save: RequestHandler = async (req, res) => {

@@ -3,6 +3,7 @@ import { loadConfig, type Config } from './config/env';
 import { connectDatabase, type Database } from './db';
 import { createLogger } from './logger';
 import { pollinationsImageProvider } from './integrations/ai/image-client';
+import { serperShoppingProvider } from './integrations/shopping/serper-client';
 import { geminiVisionProvider } from './integrations/ai/vision-client';
 import { geminiWordingProvider } from './integrations/ai/wording-client';
 import { googleVerifier } from './services/google';
@@ -41,6 +42,10 @@ export async function startServer(deps: StartServerDeps = {}) {
   const outfitImageProvider = config.OUTFIT_IMAGES_ENABLED
     ? pollinationsImageProvider(config.POLLINATIONS_API_KEY!, config.POLLINATIONS_IMAGE_MODEL)
     : null;
+  // Price ranges (#118): live whenever a Serper.dev key is set, and only locally until the founder approves
+  // showing store prices (D-77); elsewhere the key is ignored and the tabs say prices are unavailable.
+  const shoppingProvider =
+    config.SERPER_API_KEY && config.APP_ENV === 'local' ? serperShoppingProvider(config.SERPER_API_KEY) : null;
 
   // Validate, lint and index the style knowledge base before anything else; an invalid library
   // stops the API (FR-STY-03). The look generator receives this library.
@@ -69,6 +74,7 @@ export async function startServer(deps: StartServerDeps = {}) {
     wordingProvider,
     photoAnalysisProvider,
     outfitImageProvider,
+    shoppingProvider,
   });
 
   if (deps.listen === false) {
@@ -86,6 +92,7 @@ export async function startServer(deps: StartServerDeps = {}) {
       aiWording: config.AI_WORDING_ENABLED,
       photoAnalysis: Boolean(photoAnalysisProvider),
       outfitImages: Boolean(outfitImageProvider),
+      priceRanges: Boolean(shoppingProvider),
     });
   });
 

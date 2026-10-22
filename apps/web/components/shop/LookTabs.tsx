@@ -2,11 +2,13 @@ import Link from 'next/link';
 import type { Look } from '@styleme/contracts';
 import { lookTitle } from '@/lib/outfits/look-text';
 import { cn } from '@/lib/utils';
+import { TabPhoto } from './TabPhoto';
+import { TabPriceRange } from './TabPriceRange';
 import { TryOnButton } from './TryOnButton';
 
 /**
  * Shop My Look tabs (#115): one small tab per saved look from Discover My Style, newest first, each with
- * its Virtual Try-On button. A tab is a link to `/shop?outfitId=<id>`, so the selected look lives in the
+ * the outfit's photo and its price range from store search results (#118), and its Virtual Try-On button. A tab is a link to `/shop?outfitId=<id>`, so the selected look lives in the
  * URL and the "Shop this look" links open the right tab. The strip scrolls sideways on small screens.
  */
 export function LookTabs({ looks, selectedId }: { looks: Look[]; selectedId?: string }) {
@@ -20,10 +22,11 @@ export function LookTabs({ looks, selectedId }: { looks: Look[]; selectedId?: st
             <li
               key={look.id}
               className={cn(
-                'flex w-52 shrink-0 flex-col gap-2 rounded-2xl border p-3 transition-colors',
+                'flex w-56 shrink-0 flex-col gap-2 rounded-2xl border p-3 transition-colors',
                 selected ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:border-plum/60',
               )}
             >
+              <TabPhoto look={look} title={title} />
               <Link
                 href={`/shop?outfitId=${look.id}`}
                 aria-current={selected ? 'page' : undefined}
@@ -34,7 +37,10 @@ export function LookTabs({ looks, selectedId }: { looks: Look[]; selectedId?: st
               >
                 {title}
               </Link>
-              <TryOnButton outfitId={look.id} lookName={title} />
+              <TabPriceRange outfitId={look.id} />
+              <div className="mt-auto">
+                <TryOnButton outfitId={look.id} lookName={title} />
+              </div>
             </li>
           );
         })}

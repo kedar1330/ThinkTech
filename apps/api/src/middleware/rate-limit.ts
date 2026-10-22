@@ -51,6 +51,8 @@ export interface AppRateLimits extends AuthRateLimits {
   photoAnalysis: Limits;
   /** AI outfit image views: a first view is a paid generation, later ones read the stored image. */
   outfitImage?: Limits;
+  /** Price ranges: an uncached garment is a paid Serper.dev search (#118). */
+  priceRange?: Limits;
 }
 
 export function createAuthRateLimits(): AuthRateLimits {
@@ -75,5 +77,6 @@ export function createRateLimits(): AppRateLimits {
     shortlistWrite: [limiter(MINUTE, 30, byUser)],
     photoAnalysis: [limiter(MINUTE, 5, byUser), limiter(HOUR, 20, byUser)],
     outfitImage: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
+    priceRange: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
   };
 }
