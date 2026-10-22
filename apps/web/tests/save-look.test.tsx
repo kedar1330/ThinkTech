@@ -6,6 +6,7 @@ import type { Look, ProfileSizes } from '@styleme/contracts';
 
 const actions = vi.hoisted(() => ({
   saveOutfitAction: vi.fn(),
+  shopLookAction: vi.fn(),
   removeOutfitAction: vi.fn(),
   feedbackOutfitAction: vi.fn(),
 }));
@@ -81,5 +82,18 @@ describe('Save to Saved Outfits', () => {
     rerender(<LookCard look={look('saved')} position={1} sizes={SIZES} />);
     expect(screen.queryByRole('button', { name: 'Save to Saved Outfits' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View in Saved Outfits' })).toHaveAttribute('href', `/saved/${ID}`);
+  });
+
+  it('#115 Shop this look saves a suggested look and opens it; a saved look links straight to Shop My Look', async () => {
+    actions.shopLookAction.mockResolvedValue(undefined);
+    const { rerender } = render(<LookCard look={look('suggested')} position={1} sizes={SIZES} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Shop this look' }));
+    expect(actions.shopLookAction).toHaveBeenCalledOnce();
+    const data = actions.shopLookAction.mock.calls[0]![1] as FormData;
+    expect(data.get('outfitId')).toBe(ID);
+
+    rerender(<LookCard look={look('saved')} position={1} sizes={SIZES} />);
+    expect(screen.queryByRole('button', { name: 'Shop this look' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Shop this look' })).toHaveAttribute('href', `/shop?outfitId=${ID}`);
   });
 });

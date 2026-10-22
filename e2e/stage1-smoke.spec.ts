@@ -40,7 +40,7 @@ test('Stage 1 full smoke journey: register → onboarding → request looks → 
     await firstLook.getByRole('button', { name: 'Save to Saved Outfits' }).click();
     await expect(firstLook.getByRole('status')).toHaveText(/Saved to Saved Outfits\./);
 
-    await firstLook.getByRole('link', { name: 'Shop this look' }).click();
+    await firstLook.getByRole('button', { name: 'Shop this look' }).click();
     await expect(page).toHaveURL(/\/shop\?outfitId=[a-f0-9]{24}$/);
     await expect(page.getByText('Product data unavailable')).toBeVisible();
     shopUrl = page.url();

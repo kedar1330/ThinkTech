@@ -6,6 +6,7 @@ import type { Look, ProfileSizes } from '@styleme/contracts';
 
 const actions = vi.hoisted(() => ({
   saveOutfitAction: vi.fn(),
+  shopLookAction: vi.fn(),
   removeOutfitAction: vi.fn(),
   feedbackOutfitAction: vi.fn(),
 }));

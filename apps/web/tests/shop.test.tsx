@@ -13,7 +13,11 @@ import {
 
 const shop = vi.hoisted(() => ({ attachItemAction: vi.fn(), detachItemAction: vi.fn() }));
 vi.mock('@/app/actions/shop', () => shop);
-vi.mock('@/app/actions/outfits', () => ({ saveOutfitAction: vi.fn(), removeOutfitAction: vi.fn() }));
+vi.mock('@/app/actions/outfits', () => ({
+  saveOutfitAction: vi.fn(),
+  shopLookAction: vi.fn(),
+  removeOutfitAction: vi.fn(),
+}));
 
 import { LookShopper } from '@/components/shop/LookShopper';
 
