@@ -6,6 +6,8 @@ import { validateBody, validateQuery } from '../middleware/validate';
 
 export interface OutfitRateLimits {
   feedback?: Limits;
+  /** AI outfit images: each first view calls the image provider. */
+  image?: Limits;
 }
 
 // /v1/outfits (API.md §3.5 #14 – #18). Pipeline: route → authentication → validation → controller →
@@ -18,6 +20,7 @@ export function outfitsRoutes(
   const router = Router();
   router.get('/outfits', ...auth, validateQuery(outfitListQuerySchema), controller.list);
   router.get('/outfits/:id', ...auth, controller.get);
+  router.get('/outfits/:id/image', ...auth, ...(limits.image ?? []), controller.image);
   router.post('/outfits/:id/save', ...auth, controller.save);
   router.post(
     '/outfits/:id/feedback',

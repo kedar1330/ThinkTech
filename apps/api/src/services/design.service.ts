@@ -22,6 +22,7 @@ import {
   type SuitabilityResult,
   type UpdateDesignPreferencesRequest,
 } from '@styleme/contracts';
+import { GARMENT_TYPES } from '../design/catalogue';
 import { baseFigureAssetId } from '../design/illustrations';
 import { evaluateSuitability, type MatchableRule } from '../design/rules';
 import type { Models } from '../models/index';
@@ -379,9 +380,23 @@ export class DesignService {
     };
   }
 
+  /** The user's saved designs, newest first, with display names for the garment and each chosen feature. */
   async listSelections(userId: UserId): Promise<DesignSelectionItem[]> {
     const docs = await this.models.UserDesignSelection.find({ userId }).sort({ savedAt: -1 }).lean();
-    return docs.map((d) => this.selectionItem(d));
+    const items = docs.map((d) => this.selectionItem(d));
+    const ids = [...new Set(items.flatMap((i) => Object.values(i.selectedFeatures).filter(Boolean) as string[]))];
+    const features = await this.models.DesignFeature.find({ featureId: { $in: ids } })
+      .select('featureId featureCategory name')
+      .lean();
+    const byId = new Map(features.map((f) => [f.featureId, f]));
+    return items.map((item) => ({
+      ...item,
+      garmentName: GARMENT_TYPES.find((g) => g.id === item.garmentType)?.name ?? item.garmentType,
+      features: Object.entries(item.selectedFeatures).flatMap(([category, featureId]) => {
+        const f = featureId ? byId.get(featureId) : undefined;
+        return f ? [{ category: category as DesignFeatureCategory, featureId: f.featureId, name: f.name }] : [];
+      }),
+    }));
   }
 
   async saveSelection(userId: UserId, body: SaveDesignSelectionRequest): Promise<DesignSelectionItem> {

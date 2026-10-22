@@ -49,6 +49,8 @@ export interface AppRateLimits extends AuthRateLimits {
   shortlistWrite: Limits;
   /** Photo uploads: each one is a paid Gemini analysis (D-129). */
   photoAnalysis: Limits;
+  /** AI outfit image views: a first view is a paid generation, later ones read the stored image. */
+  outfitImage?: Limits;
 }
 
 export function createAuthRateLimits(): AuthRateLimits {
@@ -72,5 +74,6 @@ export function createRateLimits(): AppRateLimits {
     feedback: [limiter(MINUTE, 60, byUser)],
     shortlistWrite: [limiter(MINUTE, 30, byUser)],
     photoAnalysis: [limiter(MINUTE, 5, byUser), limiter(HOUR, 20, byUser)],
+    outfitImage: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
   };
 }

@@ -10,6 +10,8 @@ const actions = vi.hoisted(() => ({
   setFeaturePreferenceAction: vi.fn(async () => ({ success: 'Saved.' })),
 }));
 vi.mock('@/app/actions/design', () => actions);
+const router = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => router }));
 
 import { DesignStudio } from '@/components/design/DesignStudio';
 
@@ -122,6 +124,29 @@ describe('DesignStudio', () => {
       stylingGoals: ['define_waist'],
     });
     expect(await screen.findByText('Your preferences are saved.')).toBeTruthy();
+  });
+
+  it('Discover my style saves the design first, then opens Discover My Style for it', async () => {
+    actions.saveDesignAction.mockClear();
+    render(<DesignStudio data={DATA} outfitCategory="indian" stylingGoals={[]} />);
+    const discover = screen.getByRole('button', { name: /Discover my style/ });
+    expect((discover as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Pick a neckline or sleeve first.')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Square neck' }));
+    await userEvent.click(discover);
+    expect(actions.saveDesignAction).toHaveBeenCalledTimes(1);
+    expect(router.push).toHaveBeenCalledWith('/discover/looks?from=design&garment=kurta&outfit=indian');
+  });
+
+  it('stays on the page with the error when the design cannot be saved', async () => {
+    router.push.mockClear();
+    actions.saveDesignAction.mockResolvedValueOnce({ error: 'Something went wrong. Please try again.' } as never);
+    render(<DesignStudio data={DATA} outfitCategory="indian" stylingGoals={[]} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Square neck' }));
+    await userEvent.click(screen.getByRole('button', { name: /Discover my style/ }));
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeTruthy();
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   it('likes a feature through its own action', async () => {

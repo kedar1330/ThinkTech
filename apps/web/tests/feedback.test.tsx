@@ -6,12 +6,10 @@ import type { Look, LookSlot, ProfileSizes } from '@styleme/contracts';
 
 const actions = vi.hoisted(() => ({
   feedbackOutfitAction: vi.fn(),
-  getFreshAlternativesAction: vi.fn(),
 }));
 vi.mock('@/app/actions/outfits', () => actions);
 
 import { FeedbackButtons } from '@/components/outfits/FeedbackButtons';
-import { SavedAlternatives } from '@/components/outfits/SavedAlternatives';
 import { LookDetail } from '@/components/outfits/LookDetail';
 
 const SIZES: ProfileSizes = { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null, shoes: null };
@@ -58,7 +56,6 @@ const LOOK: Look = {
 
 beforeEach(() => {
   actions.feedbackOutfitAction.mockReset();
-  actions.getFreshAlternativesAction.mockReset();
 });
 
 describe('FeedbackButtons', () => {
@@ -119,84 +116,13 @@ describe('FeedbackButtons', () => {
   });
 });
 
-describe('SavedAlternatives', () => {
-  it('renders stored alternatives for slots', () => {
-    render(<SavedAlternatives outfitId={LOOK.id} slots={SAMPLE_SLOTS} />);
-    expect(screen.getByRole('heading', { name: 'Alternatives for this look' })).toBeInTheDocument();
-    expect(screen.getByText('Stored variations for each slot saved with this look.')).toBeInTheDocument();
-    expect(screen.getByText('Sky blue')).toBeInTheDocument();
-    expect(screen.getByText('sky blue kurta')).toBeInTheDocument();
-  });
-
-  it('refreshes alternatives from engine when "Get fresh alternatives" is clicked', async () => {
-    const freshSlots: LookSlot[] = [
-      {
-        ...SLOT_TOP,
-        alternatives: [
-          {
-            lookSpec: { category: 'kurta', colorFamily: 'blue', colorId: 'indigo' },
-            swatches: [{ colorId: 'indigo', name: 'Indigo', hex: '#4B0082' }],
-            searchPhrase: 'indigo kurta',
-          },
-        ],
-      },
-      SLOT_BOTTOM,
-    ];
-
-    actions.getFreshAlternativesAction.mockResolvedValue({
-      slots: freshSlots,
-    });
-
-    const user = userEvent.setup();
-    render(<SavedAlternatives outfitId={LOOK.id} slots={SAMPLE_SLOTS} />);
-
-    const refreshButton = screen.getByRole('button', { name: 'Get fresh alternatives' });
-    await user.click(refreshButton);
-
-    await waitFor(() => expect(actions.getFreshAlternativesAction).toHaveBeenCalledTimes(1));
-    const formData = (actions.getFreshAlternativesAction.mock.calls[0] as unknown as [unknown, FormData])[1];
-    expect(formData.get('outfitId')).toBe(LOOK.id);
-
-    // Fresh badge and updated alternative should now show
-    expect(await screen.findByText('Fresh from engine')).toBeInTheDocument();
-    expect(screen.getByText('Indigo')).toBeInTheDocument();
-    expect(screen.getByText('indigo kurta')).toBeInTheDocument();
-  });
-
-  it('displays error if getting fresh alternatives fails', async () => {
-    actions.getFreshAlternativesAction.mockResolvedValue({
-      error: 'Engine could not generate alternatives.',
-    });
-
-    const user = userEvent.setup();
-    render(<SavedAlternatives outfitId={LOOK.id} slots={SAMPLE_SLOTS} />);
-
-    await user.click(screen.getByRole('button', { name: 'Get fresh alternatives' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Engine could not generate alternatives.');
-  });
-});
-
-describe('LookDetail tab switching', () => {
-  it('switches between "The pieces" and "Alternatives" tabs', async () => {
-    const user = userEvent.setup();
+describe('LookDetail', () => {
+  it('shows the pieces and why the look works, with no alternatives', () => {
     render(<LookDetail look={LOOK} sizes={SIZES} />);
-
-    // Initially "The pieces" tab is selected
-    const piecesTab = screen.getByRole('tab', { name: 'The pieces' });
-    const alternativesTab = screen.getByRole('tab', { name: 'Alternatives' });
-    expect(piecesTab).toHaveAttribute('aria-selected', 'true');
-    expect(alternativesTab).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('heading', { name: 'The pieces' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Why this works' })).toBeInTheDocument();
-
-    // Click "Alternatives" tab
-    await user.click(alternativesTab);
-    expect(alternativesTab).toHaveAttribute('aria-selected', 'true');
-    expect(piecesTab).toHaveAttribute('aria-selected', 'false');
-    expect(screen.getByRole('heading', { name: 'Alternatives for this look' })).toBeInTheDocument();
-
-    // Click "The pieces" tab to return
-    await user.click(piecesTab);
-    expect(piecesTab).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('heading', { name: 'Why this works' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+    expect(screen.queryByText(/alternative/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('sky blue kurta')).not.toBeInTheDocument();
   });
 });

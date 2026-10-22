@@ -7,7 +7,6 @@ import type { Logger } from 'pino';
 import type { Config } from './config/env';
 import { AppearanceController } from './controllers/appearance.controller';
 import { AuthController } from './controllers/auth.controller';
-import { CatalogueController } from './controllers/catalogue.controller';
 import { DesignController } from './controllers/design.controller';
 import { ColourLibraryController } from './controllers/colour-library.controller';
 import { MeasurementsController } from './controllers/measurements.controller';
@@ -19,6 +18,7 @@ import { ProfileController } from './controllers/profile.controller';
 import { RecommendationsController } from './controllers/recommendations.controller';
 import { ShortlistController } from './controllers/shortlist.controller';
 import type { Database } from './db';
+import type { OutfitImageProvider } from './integrations/ai/image-client';
 import type { PhotoAnalysisProvider } from './integrations/ai/vision-client';
 import type { WordingProvider } from './integrations/ai/wording-client';
 import { authenticate, requirePasswordSet } from './middleware/authenticate';
@@ -28,7 +28,6 @@ import { errorHandler, notFound } from './middleware/error-handler';
 import { createRateLimits, type AppRateLimits } from './middleware/rate-limit';
 import { appearanceRoutes } from './routes/appearance.routes';
 import { authRoutes } from './routes/auth.routes';
-import { catalogueRoutes } from './routes/catalogue.routes';
 import { colourLibraryRoutes } from './routes/colour-library.routes';
 import { designRoutes } from './routes/design.routes';
 import { measurementsRoutes } from './routes/measurements.routes';
@@ -42,7 +41,6 @@ import { shortlistRoutes } from './routes/shortlist.routes';
 import { AppearanceService } from './services/appearance.service';
 import { AccountService } from './services/account.service';
 import { AuthService } from './services/auth.service';
-import { CatalogueService } from './services/catalogue.service';
 import { ColourLibraryService } from './services/colour-library.service';
 import { DesignService } from './services/design.service';
 import type { GoogleVerifier } from './services/google';
@@ -52,6 +50,7 @@ import { FeedbackService } from './services/feedback.service';
 import { MeasurementsService } from './services/measurements.service';
 import { ManualService } from './services/manual.service';
 import { OnboardingService } from './services/onboarding.service';
+import { OutfitImageService } from './services/outfit-image.service';
 import { OutfitsService } from './services/outfits.service';
 import { PaletteService } from './services/palette.service';
 import { PhotoService } from './services/photo.service';
@@ -78,6 +77,8 @@ export interface AppDeps {
   wordingProvider?: WordingProvider | null;
   /** Photo analysis (D-129). Used only while PHOTO_ANALYSIS_ENABLED is true; tests pass a fake. */
   photoAnalysisProvider?: PhotoAnalysisProvider | null;
+  /** AI outfit images. Used only while OUTFIT_IMAGES_ENABLED is true; tests pass a fake. */
+  outfitImageProvider?: OutfitImageProvider | null;
   /** Rate limits across auth, recommendations, feedback and shortlist. Defaults to D-38 in-memory stores. */
   rateLimits?: AppRateLimits;
 }
@@ -98,6 +99,7 @@ export function createApp({
   styleLibrary = loadStyleLibrary(SHIPPED_LIBRARY, { appEnv: config.APP_ENV }),
   wordingProvider = null,
   photoAnalysisProvider = null,
+  outfitImageProvider = null,
   rateLimits = createRateLimits(),
 }: AppDeps): App {
   const app = express();
@@ -164,10 +166,8 @@ export function createApp({
   const appearanceService = new AppearanceService(db.models);
   app.use('/v1', profileRoutes(new ProfileController(profileService), withPassword));
   app.use('/v1', appearanceRoutes(new AppearanceController(appearanceService), withPassword));
-  app.use(
-    '/v1',
-    measurementsRoutes(new MeasurementsController(new MeasurementsService(db.models, appearanceService)), withPassword),
-  );
+  const measurementsService = new MeasurementsService(db.models, appearanceService);
+  app.use('/v1', measurementsRoutes(new MeasurementsController(measurementsService), withPassword));
   const photos = new PhotoService(
     db.models,
     appearanceService,
@@ -184,6 +184,14 @@ export function createApp({
     config.AI_WORDING_TIMEOUT_MS,
     mongoWordingCache(db.models),
   );
+  const colourLibrary = new ColourLibraryService(db.models, config.APP_ENV);
+  const outfitImages = new OutfitImageService(
+    db.models,
+    config.OUTFIT_IMAGES_ENABLED ? outfitImageProvider : null,
+    config.OUTFIT_IMAGE_TIMEOUT_MS,
+    logger,
+    colourLibrary,
+  );
   const recommendations = new RecommendationsService(
     db.models,
     styleLibrary,
@@ -191,6 +199,10 @@ export function createApp({
     appearanceService,
     wording,
     feedbackService,
+    undefined,
+    outfitImages,
+    colourLibrary,
+    measurementsService,
   );
   app.use(
     '/v1',
@@ -198,9 +210,11 @@ export function createApp({
   );
   app.use(
     '/v1',
-    outfitsRoutes(new OutfitsController(new OutfitsService(db.models, styleLibrary), feedbackService), withPassword, {
-      feedback: rateLimits.feedback,
-    }),
+    outfitsRoutes(
+      new OutfitsController(new OutfitsService(db.models, styleLibrary, undefined, outfitImages), feedbackService),
+      withPassword,
+      { feedback: rateLimits.feedback, image: rateLimits.outfitImage },
+    ),
   );
   const palettes = new PaletteService(styleLibrary, profileService, appearanceService);
   app.use('/v1', paletteRoutes(new PaletteController(palettes), withPassword));
@@ -208,13 +222,8 @@ export function createApp({
     '/v1',
     shortlistRoutes(new ShortlistController(new ShortlistService(db.models)), withPassword, rateLimits.shortlistWrite),
   );
-  const catalogue = new CatalogueService(db.models);
-  app.use('/v1', catalogueRoutes(new CatalogueController(catalogue), withPassword));
   app.use('/v1', designRoutes(new DesignController(new DesignService(db.models)), withPassword));
-  app.use(
-    '/v1',
-    colourLibraryRoutes(new ColourLibraryController(new ColourLibraryService(db.models, config.APP_ENV)), withPassword),
-  );
+  app.use('/v1', colourLibraryRoutes(new ColourLibraryController(colourLibrary), withPassword));
   const manualService = new ManualService(db.models);
   app.use('/v1', manualRoutes(new ManualController(manualService), withPassword));
 

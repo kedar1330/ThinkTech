@@ -24,6 +24,8 @@ export async function requestLooksAction(_prev: LooksState, formData: FormData):
     style: str(formData, 'style'),
     wearType: formData.getAll('wearType').filter((v): v is string => typeof v === 'string'),
     paletteMode: str(formData, 'paletteMode'),
+    designGarment: str(formData, 'designGarment'),
+    designOutfit: str(formData, 'designOutfit'),
   });
   if (!form.ok) return { error: 'Please check the highlighted fields.', fieldErrors: form.fieldErrors };
 

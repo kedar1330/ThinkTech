@@ -1,13 +1,7 @@
 import type { Metadata } from 'next';
-import type {
-  CatalogueCategoryItem,
-  ClothingStylesResponse,
-  DesignTaxonomyResponse,
-  ProfileResponse,
-} from '@styleme/contracts';
+import type { DesignTaxonomyResponse } from '@styleme/contracts';
 import { apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
-import { CategoryExplorer } from '@/components/categories/CategoryExplorer';
 import { OutfitCategoryPicker } from '@/components/design/OutfitCategoryPicker';
 
 export const metadata: Metadata = {
@@ -24,21 +18,10 @@ export default async function OutfitCategoriesPage({
   const { accessToken } = await requireOnboarded();
   const department = params.department === 'women' || params.department === 'men' ? params.department : null;
 
-  // Fetch published categories and styles in parallel
-  const [taxonomy, categories, stylesResult, profile] = await Promise.all([
-    apiRequest<DesignTaxonomyResponse>(`/v1/design/taxonomy${department ? `?department=${department}` : ''}`, {
-      token: accessToken,
-    }).catch(() => null),
-    apiRequest<CatalogueCategoryItem[]>('/v1/catalogue/categories', { token: accessToken }).catch(
-      () => [] as CatalogueCategoryItem[],
-    ),
-    apiRequest<ClothingStylesResponse>('/v1/catalogue/styles?limit=100', { token: accessToken }).catch(
-      () => ({ items: [], total: 0, page: 1, limit: 100, pages: 1 }) as ClothingStylesResponse,
-    ),
-    apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }).catch(() => null),
-  ]);
-
-  const userDepartment = profile?.department && profile.department !== 'any' ? profile.department : 'all';
+  const taxonomy = await apiRequest<DesignTaxonomyResponse>(
+    `/v1/design/taxonomy${department ? `?department=${department}` : ''}`,
+    { token: accessToken },
+  ).catch(() => null);
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -52,13 +35,6 @@ export default async function OutfitCategoriesPage({
       </header>
 
       {taxonomy && <OutfitCategoryPicker taxonomy={taxonomy} outfit={params.outfit ?? ''} />}
-
-      <h2 className="font-display text-2xl text-primary">Style library</h2>
-      <CategoryExplorer
-        initialCategories={categories}
-        initialStyles={stylesResult.items}
-        userDepartment={userDepartment}
-      />
     </div>
   );
 }
