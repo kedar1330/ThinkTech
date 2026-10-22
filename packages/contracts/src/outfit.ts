@@ -143,6 +143,14 @@ export const OUTFIT_STATUSES = ['suggested', 'saved'] as const;
 export const outfitStatusSchema = z.enum(OUTFIT_STATUSES);
 export type OutfitStatus = z.infer<typeof outfitStatusSchema>;
 
+/**
+ * The feature a look was created in, stored on the look (#115). Every look `POST /v1/recommendations`
+ * makes today comes from Discover My Style; Shop My Look shows tabs for those only.
+ */
+export const OUTFIT_SOURCES = ['discover_my_style'] as const;
+export const outfitSourceSchema = z.enum(OUTFIT_SOURCES);
+export type OutfitSource = z.infer<typeof outfitSourceSchema>;
+
 // --- Feedback (FR-OUT-04): no free text is collected ------------------------------------------------
 
 export const FEEDBACK_VALUES = ['love_it', 'not_for_me'] as const;
@@ -217,6 +225,7 @@ export const lookSchema = z
     image: lookImageStatusSchema.nullable().optional(),
     /** Present only on looks requested with a `design`. */
     designMatch: designMatchSchema.nullable().optional(),
+    source: outfitSourceSchema.optional(),
   })
   .strict();
 export type Look = z.infer<typeof lookSchema>;
@@ -246,7 +255,11 @@ export type RecommendationResponse = z.infer<typeof recommendationResponseSchema
 // --- Saved looks -------------------------------------------------------------------------------------
 
 /** `GET /v1/outfits` query (FR-OUT-02). */
-export const outfitListQuerySchema = paginationQuerySchema.extend({ status: outfitStatusSchema.default('saved') });
+export const outfitListQuerySchema = paginationQuerySchema.extend({
+  status: outfitStatusSchema.default('saved'),
+  /** Only looks created in this feature (#115); all looks when absent. */
+  source: outfitSourceSchema.optional(),
+});
 export type OutfitListQuery = z.infer<typeof outfitListQuerySchema>;
 
 /** `GET /v1/outfits` data: one page of the user's looks, newest first, and how many there are in all. */

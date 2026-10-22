@@ -163,6 +163,8 @@ export class RecommendationsService {
       userId,
       recommendationId,
       status: 'suggested' as const,
+      // Every look made here is a Discover My Style look (#115).
+      source: 'discover_my_style' as const,
       ...look,
       explanation: worded[i]!.explanation,
       contentVersion: result.contentVersion,
@@ -190,6 +192,7 @@ export class RecommendationsService {
       // A new look has no stored image yet; one is made on first view when outfit images are on.
       ...(this.images?.enabled ? { image: 'on_request' as const } : {}),
       ...(doc.designMatch ? { designMatch: doc.designMatch } : {}),
+      source: doc.source,
     }));
     return {
       data: {

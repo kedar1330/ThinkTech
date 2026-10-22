@@ -62,7 +62,7 @@ test('shop a saved look: add your own item to a part and see the labelled total'
   });
 });
 
-test('Shop My Look lists saved looks, and asks to save a suggested look first', async ({ page }) => {
+test('Shop My Look shows a tab per saved Discover look, and asks to save a suggested look first', async ({ page }) => {
   await signUpAndSkipOnboarding(page);
   const results = await looksForDesign(page);
 
@@ -75,10 +75,18 @@ test('Shop My Look lists saved looks, and asks to save a suggested look first', 
     await expect(page.getByText(/Save this look first/)).toHaveCount(0);
   });
 
-  await test.step('the navigation entry opens the list of saved looks', async () => {
+  await test.step('the navigation entry opens the newest look, with one tab per saved Discover look (#115)', async () => {
     await page.goto('/shop');
-    await expect(page.getByRole('heading', { name: 'Shop your saved looks' })).toBeVisible();
+    const tabs = page.getByRole('navigation', { name: 'Your looks from Discover My Style' });
+    await expect(tabs.getByRole('listitem')).toHaveCount(1);
+    await expect(tabs.locator('a[aria-current="page"]')).toHaveCount(1);
     await expect(page.getByText('Product data unavailable')).toBeVisible();
-    await expect(page.getByRole('link', { name: /^Shop this look: / })).toHaveCount(1);
+    await expect(page.getByRole('list', { name: 'Parts of this look' })).toBeVisible();
+  });
+
+  await test.step('each tab’s Virtual Try-On button opens the honest Coming soon page', async () => {
+    const tabs = page.getByRole('navigation', { name: 'Your looks from Discover My Style' });
+    await tabs.getByRole('link', { name: /^Virtual Try-On: .+ \(coming soon\)$/ }).click();
+    await expect(page).toHaveURL(/\/features\/virtual-try-on$/);
   });
 });

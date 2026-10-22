@@ -154,11 +154,41 @@ describe('/v1/outfits (saved looks)', () => {
 
   it('rejects an invalid list query with INVALID_REQUEST', async () => {
     const { app, token } = await signedIn('query@example.com');
-    for (const query of ['limit=51', 'limit=0', 'page=0', 'status=x', 'status=archived']) {
+    for (const query of ['limit=51', 'limit=0', 'page=0', 'status=x', 'status=archived', 'source=shop_my_look']) {
       const res = await request(app).get(`/v1/outfits?${query}`).set(bearer(token));
       expect(res.status, query).toBe(400);
       expect(res.body.error.code).toBe('INVALID_REQUEST');
     }
+  });
+
+  it('#115 stores Discover My Style as the source of every new look, and source= lists only those', async () => {
+    const { app, token } = await signedIn('source@example.com');
+    const looks = await generate(app, token, 'everyday');
+    expect(looks.length).toBeGreaterThanOrEqual(2);
+    expect(looks.every((l) => l.source === 'discover_my_style')).toBe(true);
+    const stored = await env.db.models.Outfit.find({ _id: { $in: looks.map((l) => l.id) } }).lean();
+    expect(stored.every((o) => o.source === 'discover_my_style')).toBe(true);
+
+    const [fromDiscover, unknown] = looks;
+    for (const look of [fromDiscover!, unknown!])
+      await request(app).post(`/v1/outfits/${look.id}/save`).set(bearer(token)).expect(200);
+    // A look with no recorded source (before migration 003) is not a Discover My Style look.
+    await env.db.main
+      .collection('outfits')
+      .updateOne({ _id: new Types.ObjectId(unknown!.id) }, { $unset: { source: 1 } });
+
+    const all = outfitListResponseSchema.parse((await request(app).get('/v1/outfits').set(bearer(token))).body.data);
+    expect(all.total).toBe(2);
+    const discover = outfitListResponseSchema.parse(
+      (await request(app).get('/v1/outfits?source=discover_my_style').set(bearer(token))).body.data,
+    );
+    expect(discover.total).toBe(1);
+    expect(discover.looks.map((l) => [l.id, l.source])).toEqual([[fromDiscover!.id, 'discover_my_style']]);
+
+    const detail = outfitDetailSchema.parse(
+      (await request(app).get(`/v1/outfits/${fromDiscover!.id}`).set(bearer(token))).body.data,
+    );
+    expect(detail.source).toBe('discover_my_style');
   });
 
   it('opens a look (suggested or saved) with no attached items or price summary yet', async () => {

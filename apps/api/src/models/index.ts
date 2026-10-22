@@ -415,11 +415,15 @@ const outfitSchema = new Schema(
     feedback: { type: Schema.Types.Mixed, default: null },
     // `{ level, differs }` when the look was requested around a designed garment (D-132); null otherwise.
     designMatch: { type: Schema.Types.Mixed, default: null },
+    // The feature the look was created in (#115); migration 003 fills it on looks made before it existed.
+    source: { type: String, enum: ['discover_my_style'], default: 'discover_my_style' },
     expiresAt: { type: Date, default: null },
   },
   { timestamps: true, minimize: false },
 );
 outfitSchema.index({ userId: 1, status: 1, createdAt: -1 });
+// Shop My Look tabs: the user's saved looks from Discover My Style, newest first (#115).
+outfitSchema.index({ userId: 1, status: 1, source: 1, createdAt: -1 });
 // Suggested looks expire 7 days after creation (D-23); saved looks have no `expiresAt`.
 outfitSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
