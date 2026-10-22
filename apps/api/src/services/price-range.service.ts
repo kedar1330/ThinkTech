@@ -16,8 +16,10 @@ import { AppError } from '../utils/errors';
 
 // Price ranges on Shop My Look tabs (#118). For each garment of one of the user's own looks, the service
 // searches store listings with the garment's search phrase and the department only (never sizes,
-// measurements, photos, appearance or anything else about the user), keeps Amazon, Flipkart and Meesho
-// listings, and reports the lowest and highest price found. Only prices the provider returned are used:
+// measurements, photos, appearance or anything else about the user), and reports the lowest and highest
+// Amazon, Flipkart and Meesho price found. A plain search rarely returns Flipkart or Meesho, so each garment
+// gets three searches: the plain one (its Amazon listings are kept) and the same query naming Flipkart, then
+// Meesho (only that store's listings are kept), so no listing is counted twice. Only prices the provider returned are used:
 // a garment without listings has no range, never a guessed one. Results are cached per query for a day
 // in `priceSearchCache` (system data: the key is the query, no user ID). Queries, listings and prices are
 // never logged.
@@ -64,8 +66,17 @@ export function queryFor(slot: LookSlot, department: string | null | undefined):
   return [slot.searchPhrase, department].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
-const cacheKeyOf = (provider: string, query: string) =>
-  createHash('sha256').update(`price-search|${provider}|${query}`).digest('hex');
+/** The three searches for one garment and the one store whose listings each of them contributes. */
+export function searchesFor(query: string): Array<{ query: string; store: PriceRangeStore }> {
+  return [
+    { query, store: 'amazon' },
+    { query: `${query} flipkart`, store: 'flipkart' },
+    { query: `${query} meesho`, store: 'meesho' },
+  ];
+}
+
+const cacheKeyOf = (provider: string, store: PriceRangeStore, query: string) =>
+  createHash('sha256').update(`price-search|${provider}|${store}|${query}`).digest('hex');
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
@@ -96,7 +107,17 @@ export class PriceRangeService {
     const garments = look.slots.filter((s) => GARMENT_SLOTS.has(s.slot));
     const slotsToPrice = garments.length > 0 ? garments : look.slots;
     const department = look.inputsUsed?.department ?? null;
-    const searched = await Promise.all(slotsToPrice.map((slot) => this.listings(queryFor(slot, department))));
+    const searched = await Promise.all(
+      slotsToPrice.map(async (slot) => {
+        const results = await Promise.all(
+          searchesFor(queryFor(slot, department)).map(({ query, store }) => this.listings(query, store)),
+        );
+        return {
+          listings: results.flatMap((r) => r.listings),
+          checkedAt: new Date(Math.min(...results.map((r) => r.checkedAt.getTime()))),
+        };
+      }),
+    );
 
     const slots: SlotPriceRange[] = slotsToPrice.map((slot, i) => {
       const prices = searched[i]!.listings.map((l) => l.price);
@@ -124,10 +145,13 @@ export class PriceRangeService {
     };
   }
 
-  /** The Amazon, Flipkart and Meesho listings for one query: cached for a day, else searched now. */
-  private async listings(query: string): Promise<{ listings: CachedListing[]; checkedAt: Date }> {
+  /** One store's listings for one query: cached for a day, else searched now. */
+  private async listings(
+    query: string,
+    store: PriceRangeStore,
+  ): Promise<{ listings: CachedListing[]; checkedAt: Date }> {
     const provider = this.provider!;
-    const cacheKey = cacheKeyOf(provider.name, query);
+    const cacheKey = cacheKeyOf(provider.name, store, query);
     const cached = await this.models.PriceSearchCache.findOne({ cacheKey, expiresAt: { $gt: this.now() } }).lean();
     if (cached) return { listings: cached.listings as CachedListing[], checkedAt: cached.checkedAt };
 
@@ -145,9 +169,8 @@ export class PriceRangeService {
     }
 
     const listings = raw.flatMap((l): CachedListing[] => {
-      const store = storeOf(l.source);
-      const price = store ? parseInr(l.price) : null;
-      return store && price !== null ? [{ store, price }] : [];
+      const price = storeOf(l.source) === store ? parseInr(l.price) : null;
+      return price !== null ? [{ store, price }] : [];
     });
     const checkedAt = this.now();
     await this.models.PriceSearchCache.updateOne(

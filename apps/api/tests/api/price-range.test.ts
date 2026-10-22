@@ -73,7 +73,8 @@ describe('GET /v1/outfits/:id/price-range (#118)', () => {
     const garments = look.slots.filter((s) => GARMENTS.has(s.slot));
     expect(range.totalSlots).toBe(garments.length);
     expect(range.slots.map((s) => s.slotId)).toEqual(garments.map((s) => s.slotId));
-    // Myntra's ₹2,499 is left out; the fake returns the same listings for every garment.
+    // The fake returns the same four listings for every search. Each search keeps only its own store, so the
+    // three searches give one Amazon, one Flipkart and one Meesho price (not nine); Myntra's ₹2,499 is left out.
     for (const slot of range.slots) {
       expect(slot).toEqual({
         slotId: slot.slotId,
@@ -106,7 +107,15 @@ describe('GET /v1/outfits/:id/price-range (#118)', () => {
     await priceRange(app, token, look.id).expect(200);
 
     const garments = look.slots.filter((s) => GARMENTS.has(s.slot));
-    expect(shopping.queries).toEqual(garments.map((s) => `${s.searchPhrase} women`.toLowerCase()));
+    // Three searches per garment: plain (Amazon), then naming Flipkart and Meesho.
+    expect([...shopping.queries].sort()).toEqual(
+      garments
+        .flatMap((s) => {
+          const base = `${s.searchPhrase} women`.toLowerCase();
+          return [base, `${base} flipkart`, `${base} meesho`];
+        })
+        .sort(),
+    );
     for (const q of shopping.queries) expect(q).not.toMatch(/168|waist|30 ?in|skin|undertone|body|private-range/i);
   });
 
