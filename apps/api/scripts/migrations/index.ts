@@ -67,6 +67,20 @@ export const MIGRATIONS: Migration[] = [
       };
     },
   },
+  {
+    id: '002-user-photos-in-mongodb',
+    description:
+      'Photos are stored in userPhotos itself since D-129, without a storageKey: drop the old unique ' +
+      'storageKey_1 index (it would treat every missing key as a duplicate). The partial index ' +
+      'storageKey_when_set replaces it.',
+    async up(db) {
+      const photos = db.collection('userPhotos');
+      const indexes = await photos.indexes().catch(() => []);
+      const old = indexes.some((i) => i.name === 'storageKey_1');
+      if (old) await photos.dropIndex('storageKey_1');
+      return { oldStorageKeyIndexDropped: old ? 1 : 0 };
+    },
+  },
 ];
 
 /** Applies pending migrations in order. Returns the IDs applied in this run. */

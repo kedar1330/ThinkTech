@@ -1,0 +1,656 @@
+import type { ClothingPreference, DesignFeatureCategory, GarmentKind, OutfitCategory } from '@styleme/contracts';
+
+// The design-feature catalogue (D-132): garment types per Clothing Preference and outfit category, and every
+// individual design feature, as supplied by the founder on 2026-10-22. `scripts/design-catalogue.ts seed`
+// upserts it into `outfitCategories` and `designFeatures`; the API only ever reads it from MongoDB.
+// Descriptions say what a feature is, never whom it suits — that is the suitability rules' job (D-62).
+
+const W: ClothingPreference[] = ['women'];
+const M: ClothingPreference[] = ['men'];
+const B: ClothingPreference[] = ['women', 'men'];
+
+export interface GarmentTypeSeed {
+  id: string;
+  name: string;
+  kind: GarmentKind;
+  departments: ClothingPreference[];
+  outfitCategories: OutfitCategory[];
+}
+
+/** Garment types. A garment can sit in more than one outfit category (a kurta is Indian and Indo-Western). */
+export const GARMENT_TYPES: GarmentTypeSeed[] = [
+  // Women
+  { id: 'kurta', name: 'Kurta', kind: 'top', departments: B, outfitCategories: ['indian', 'fusion'] },
+  { id: 'kurti', name: 'Kurti', kind: 'top', departments: W, outfitCategories: ['indian', 'fusion'] },
+  { id: 'anarkali', name: 'Anarkali', kind: 'one_piece', departments: W, outfitCategories: ['indian'] },
+  { id: 'saree_blouse', name: 'Saree blouse', kind: 'top', departments: W, outfitCategories: ['indian'] },
+  { id: 'saree', name: 'Saree', kind: 'drape', departments: W, outfitCategories: ['indian'] },
+  { id: 'lehenga', name: 'Lehenga', kind: 'one_piece', departments: W, outfitCategories: ['indian'] },
+  { id: 'palazzo', name: 'Palazzo and salwar', kind: 'bottom', departments: W, outfitCategories: ['indian', 'fusion'] },
+  { id: 'top', name: 'Top', kind: 'top', departments: W, outfitCategories: ['western'] },
+  { id: 'blouse', name: 'Blouse', kind: 'top', departments: W, outfitCategories: ['western'] },
+  { id: 'shirt', name: 'Shirt', kind: 'top', departments: B, outfitCategories: ['western'] },
+  { id: 't_shirt', name: 'T-shirt', kind: 'top', departments: B, outfitCategories: ['western'] },
+  { id: 'dress', name: 'Dress', kind: 'one_piece', departments: W, outfitCategories: ['western'] },
+  { id: 'jumpsuit', name: 'Jumpsuit', kind: 'one_piece', departments: W, outfitCategories: ['western'] },
+  { id: 'skirt', name: 'Skirt', kind: 'bottom', departments: W, outfitCategories: ['western'] },
+  { id: 'trousers', name: 'Trousers', kind: 'bottom', departments: B, outfitCategories: ['western'] },
+  { id: 'jeans', name: 'Jeans', kind: 'bottom', departments: B, outfitCategories: ['western'] },
+  { id: 'jacket', name: 'Jacket', kind: 'layer', departments: W, outfitCategories: ['western'] },
+  { id: 'tunic', name: 'Tunic', kind: 'top', departments: W, outfitCategories: ['fusion'] },
+  {
+    id: 'indo_western_gown',
+    name: 'Indo-Western gown',
+    kind: 'one_piece',
+    departments: W,
+    outfitCategories: ['fusion'],
+  },
+  { id: 'cape_jacket', name: 'Cape and jacket set', kind: 'layer', departments: W, outfitCategories: ['fusion'] },
+  { id: 'dhoti_pants', name: 'Dhoti pants', kind: 'bottom', departments: B, outfitCategories: ['fusion'] },
+  // Men
+  { id: 'sherwani', name: 'Sherwani', kind: 'layer', departments: M, outfitCategories: ['indian'] },
+  { id: 'nehru_jacket', name: 'Nehru jacket', kind: 'layer', departments: M, outfitCategories: ['indian', 'fusion'] },
+  { id: 'churidar', name: 'Churidar and pyjama', kind: 'bottom', departments: M, outfitCategories: ['indian'] },
+  { id: 'polo', name: 'Polo', kind: 'top', departments: M, outfitCategories: ['western'] },
+  { id: 'blazer', name: 'Blazer', kind: 'layer', departments: M, outfitCategories: ['western'] },
+  { id: 'shorts', name: 'Shorts', kind: 'bottom', departments: M, outfitCategories: ['western'] },
+  { id: 'short_kurta', name: 'Short kurta', kind: 'top', departments: M, outfitCategories: ['fusion'] },
+  { id: 'bandhgala', name: 'Bandhgala', kind: 'layer', departments: M, outfitCategories: ['fusion'] },
+];
+
+export interface DesignFeatureSeed {
+  featureId: string;
+  category: DesignFeatureCategory;
+  name: string;
+  description: string;
+  departments: ClothingPreference[];
+  /** Narrower than the category's garment kinds, e.g. lapels only on layers. */
+  kinds?: GarmentKind[];
+  /** Feature-specific attributes (neckline depth, sleeve length and volume …). */
+  attributes?: Record<string, string>;
+  /** `Not applicable` records are stored for completeness but never offered as an option. */
+  selectable?: boolean;
+}
+
+type Row = [
+  slug: string,
+  name: string,
+  departments: ClothingPreference[],
+  description: string,
+  extra?: Partial<DesignFeatureSeed>,
+];
+
+function rows(category: DesignFeatureCategory, list: Row[]): DesignFeatureSeed[] {
+  return list.map(([slug, name, departments, description, extra]) => ({
+    featureId: `${category}_${slug}`,
+    category,
+    name,
+    description,
+    departments,
+    ...extra,
+  }));
+}
+
+const NOT_APPLICABLE = (what: string): Row => [
+  'not_applicable',
+  'Not applicable',
+  B,
+  `The garment has no ${what}.`,
+  { selectable: false },
+];
+const neck = (depth: string, width: string) => ({ attributes: { depth, width } });
+const sleeve = (length: string, volume: string) => ({ attributes: { length, volume } });
+const LAYERS: GarmentKind[] = ['layer'];
+
+export const DESIGN_FEATURES: DesignFeatureSeed[] = [
+  ...rows('neckline', [
+    ['v_neck', 'V-neck', B, 'A neckline that dips to a point at the centre front.', neck('medium', 'medium')],
+    [
+      'deep_v_neck',
+      'Deep V-neck',
+      W,
+      'A V-shaped neckline that reaches well below the bust line.',
+      neck('deep', 'medium'),
+    ],
+    [
+      'round_neck',
+      'Round neck',
+      W,
+      'A gently curved neckline that sits just below the base of the neck.',
+      neck('shallow', 'medium'),
+    ],
+    [
+      'crew_neck',
+      'Crew neck',
+      B,
+      'A close, round neckline that sits at the base of the neck.',
+      neck('shallow', 'narrow'),
+    ],
+    [
+      'square_neck',
+      'Square neck',
+      W,
+      'A neckline with straight sides and a straight front edge.',
+      neck('medium', 'medium'),
+    ],
+    [
+      'scoop_neck',
+      'Scoop neck',
+      B,
+      'A wide, U-shaped curve that sits lower than a round neck.',
+      neck('medium', 'wide'),
+    ],
+    [
+      'boat_neck',
+      'Boat neck',
+      W,
+      'A wide, shallow neckline that runs almost straight from shoulder to shoulder.',
+      neck('shallow', 'wide'),
+    ],
+    [
+      'sweetheart',
+      'Sweetheart neck',
+      W,
+      'A neckline shaped like the top of a heart, with two curves meeting at the centre.',
+      neck('medium', 'wide'),
+    ],
+    [
+      'off_shoulder',
+      'Off-shoulder',
+      W,
+      'A neckline that sits below the shoulders, leaving them uncovered.',
+      neck('shallow', 'wide'),
+    ],
+    [
+      'one_shoulder',
+      'One-shoulder',
+      W,
+      'An asymmetric neckline that covers one shoulder only.',
+      neck('medium', 'wide'),
+    ],
+    [
+      'halter',
+      'Halter neck',
+      W,
+      'Straps or fabric that fasten behind the neck, leaving the shoulders uncovered.',
+      neck('medium', 'narrow'),
+    ],
+    ['high_neck', 'High neck', B, 'A neckline that rises above the base of the neck.', neck('none', 'narrow')],
+    [
+      'mock_neck',
+      'Mock neck',
+      W,
+      'A short standing band around the neck that is not folded over.',
+      neck('none', 'narrow'),
+    ],
+    [
+      'turtleneck',
+      'Turtleneck',
+      W,
+      'A tall, close band that folds over and covers most of the neck.',
+      neck('none', 'narrow'),
+    ],
+    ['collar', 'Collar neck', W, 'A neckline finished with a turned-down collar.', neck('shallow', 'narrow')],
+    ['cowl', 'Cowl neck', W, 'Soft folds of fabric that drape at the front of the neckline.', neck('medium', 'medium')],
+    [
+      'keyhole',
+      'Keyhole neck',
+      W,
+      'A high neckline with a small teardrop-shaped opening below it.',
+      neck('shallow', 'narrow'),
+    ],
+    ['asymmetric', 'Asymmetric neck', W, 'A neckline that is cut differently on each side.', neck('medium', 'medium')],
+    [
+      'queen_anne',
+      'Queen Anne neck',
+      W,
+      'A neckline that stands high at the back and sides and opens into a sweetheart or V at the front.',
+      neck('medium', 'medium'),
+    ],
+    [
+      'notched',
+      'Notched neck',
+      W,
+      'A round or V-shaped neckline with a small notch cut at the centre front.',
+      neck('shallow', 'medium'),
+    ],
+    ['u_neck', 'U-neck', W, 'A deep, narrow U-shaped neckline.', neck('deep', 'medium')],
+    [
+      'strapless',
+      'Strapless',
+      W,
+      'A straight or shaped top edge across the bust, with no straps or shoulders.',
+      { ...neck('medium', 'wide'), kinds: ['top', 'one_piece'] },
+    ],
+    [
+      'mandarin_collar',
+      'Mandarin collar',
+      B,
+      'A short stand-up collar that does not fold over.',
+      neck('none', 'narrow'),
+    ],
+    [
+      'angrakha',
+      'Angrakha / wrap neck',
+      W,
+      'A crossover neckline where one front panel wraps over the other, tied at the side.',
+      neck('medium', 'medium'),
+    ],
+    [
+      'henley',
+      'Henley neck',
+      M,
+      'A round, collarless neckline with a short buttoned placket.',
+      neck('shallow', 'narrow'),
+    ],
+    ['polo_collar', 'Polo collar', M, 'A soft knit collar with a short buttoned placket.', neck('shallow', 'narrow')],
+    ['spread_collar', 'Spread collar', M, 'A shirt collar whose points are set wide apart.', neck('shallow', 'narrow')],
+    [
+      'button_down_collar',
+      'Button-down collar',
+      M,
+      'A shirt collar whose points button to the shirt front.',
+      neck('shallow', 'narrow'),
+    ],
+    ['band_collar', 'Band collar', M, 'A narrow standing band with no collar leaves.', neck('none', 'narrow')],
+    [
+      'cuban_collar',
+      'Cuban collar',
+      M,
+      'A flat, open collar that lies against the shirt with no collar stand.',
+      neck('medium', 'medium'),
+    ],
+    [
+      'camp_collar',
+      'Camp collar',
+      M,
+      'A relaxed, one-piece collar that sits open with a notch at the neck.',
+      neck('medium', 'medium'),
+    ],
+    [
+      'cutaway_collar',
+      'Cutaway collar',
+      M,
+      'A shirt collar with points cut back very wide.',
+      neck('shallow', 'narrow'),
+    ],
+    [
+      'shawl_collar',
+      'Shawl collar',
+      M,
+      'A rounded collar and lapel cut in one continuous curve.',
+      { ...neck('deep', 'medium'), kinds: LAYERS },
+    ],
+    [
+      'notched_lapel',
+      'Notched lapel',
+      M,
+      'A lapel with a V-shaped notch where the collar meets it.',
+      { ...neck('deep', 'medium'), kinds: LAYERS },
+    ],
+    [
+      'peak_lapel',
+      'Peak lapel',
+      M,
+      'A lapel whose edges point up towards the shoulders.',
+      { ...neck('deep', 'medium'), kinds: LAYERS },
+    ],
+    [
+      'hooded',
+      'Hooded neck',
+      M,
+      'A neckline with an attached hood.',
+      { ...neck('shallow', 'medium'), kinds: ['top', 'layer'] },
+    ],
+    NOT_APPLICABLE('neckline'),
+  ]),
+  ...rows('sleeve', [
+    ['sleeveless', 'Sleeveless', B, 'No sleeves; the armhole is finished at the shoulder.', sleeve('none', 'fitted')],
+    [
+      'spaghetti_strap',
+      'Spaghetti strap',
+      W,
+      'Very thin straps over the shoulders instead of sleeves.',
+      sleeve('none', 'fitted'),
+    ],
+    ['cap', 'Cap sleeve', B, 'A very short sleeve that just covers the top of the shoulder.', sleeve('cap', 'fitted')],
+    ['short', 'Short sleeve', B, 'A sleeve that ends on the upper arm.', sleeve('short', 'fitted')],
+    [
+      'elbow_length',
+      'Elbow-length sleeve',
+      B,
+      'A sleeve that ends at or just above the elbow.',
+      sleeve('elbow', 'fitted'),
+    ],
+    [
+      'three_quarter',
+      'Three-quarter sleeve',
+      B,
+      'A sleeve that ends between the elbow and the wrist.',
+      sleeve('three_quarter', 'fitted'),
+    ],
+    ['full_length', 'Full-length sleeve', B, 'A sleeve that reaches the wrist.', sleeve('full', 'fitted')],
+    [
+      'puff',
+      'Puff sleeve',
+      W,
+      'A short sleeve gathered at the shoulder and hem so it puffs out.',
+      sleeve('short', 'full'),
+    ],
+    [
+      'bishop',
+      'Bishop sleeve',
+      W,
+      'A long sleeve that widens towards the wrist and is gathered into a cuff.',
+      sleeve('full', 'full'),
+    ],
+    [
+      'bell',
+      'Bell sleeve',
+      W,
+      'A sleeve that is fitted at the top and flares out like a bell at the hem.',
+      sleeve('three_quarter', 'full'),
+    ],
+    ['flutter', 'Flutter sleeve', W, 'A short, loose sleeve with a soft, rippled hem.', sleeve('short', 'moderate')],
+    [
+      'raglan',
+      'Raglan sleeve',
+      B,
+      'A sleeve that runs in one piece to the neckline, with a diagonal seam from underarm to collar.',
+      sleeve('full', 'moderate'),
+    ],
+    [
+      'dolman',
+      'Dolman / batwing sleeve',
+      W,
+      'A sleeve cut with a very deep armhole that runs into the body of the garment.',
+      sleeve('full', 'full'),
+    ],
+    [
+      'lantern',
+      'Lantern sleeve',
+      W,
+      'A sleeve that balloons out in the middle and narrows at both ends.',
+      sleeve('three_quarter', 'full'),
+    ],
+    [
+      'balloon',
+      'Balloon sleeve',
+      W,
+      'A full, rounded sleeve gathered at the shoulder and the cuff.',
+      sleeve('full', 'full'),
+    ],
+    [
+      'leg_of_mutton',
+      'Leg-of-mutton sleeve',
+      W,
+      'A sleeve that is full at the shoulder and fitted from the elbow to the wrist.',
+      sleeve('full', 'full'),
+    ],
+    [
+      'cold_shoulder',
+      'Cold-shoulder sleeve',
+      W,
+      'A sleeve with a cut-out that leaves the top of the shoulder uncovered.',
+      sleeve('short', 'moderate'),
+    ],
+    [
+      'off_shoulder',
+      'Off-shoulder sleeve',
+      W,
+      'A sleeve that starts below the shoulder and wraps the upper arm.',
+      sleeve('short', 'moderate'),
+    ],
+    ['kimono', 'Kimono sleeve', B, 'A wide, straight sleeve cut in one piece with the body.', sleeve('elbow', 'full')],
+    [
+      'cuffed',
+      'Cuffed sleeve',
+      B,
+      'A sleeve finished with a separate band (cuff) at the hem.',
+      sleeve('full', 'fitted'),
+    ],
+    ['roll_up', 'Roll-up sleeve', B, 'A long sleeve worn rolled up, often held with a tab.', sleeve('elbow', 'fitted')],
+    [
+      'drop_shoulder',
+      'Drop-shoulder sleeve',
+      M,
+      'The shoulder seam sits below the shoulder on the upper arm.',
+      sleeve('short', 'moderate'),
+    ],
+    NOT_APPLICABLE('sleeves'),
+  ]),
+  ...rows('fit', [
+    ['slim', 'Slim fit', B, 'Cut close to the body with little extra room.'],
+    ['regular', 'Regular fit', B, 'A standard cut with comfortable room through the body.'],
+    ['relaxed', 'Relaxed fit', B, 'A looser cut with extra room throughout.'],
+    ['oversized', 'Oversized fit', B, 'Cut deliberately larger than the body.'],
+    ['bodycon', 'Bodycon fit', W, 'Close-fitting, usually in a stretch fabric that follows the body.'],
+    ['tailored', 'Tailored fit', B, 'Shaped with darts or seams to follow the body closely but not tightly.'],
+    ['straight', 'Straight fit', B, 'Falls straight down from the widest point without shaping.'],
+    ['flared', 'Flared fit', W, 'Fitted at the top and widening towards the hem.'],
+    ['a_line', 'A-line fit', W, 'Narrower at the top and gradually wider towards the hem, like the letter A.'],
+    ['wrap', 'Wrap fit', W, 'One front panel wraps over the other and ties or fastens at the side.'],
+    ['athletic', 'Athletic fit', M, 'Extra room through the chest and shoulders, tapering to the waist.'],
+    ['tapered', 'Tapered fit', M, 'Gradually narrower towards the hem or ankle.'],
+    NOT_APPLICABLE('fit'),
+  ]),
+  ...rows('length', [
+    ['cropped', 'Cropped', B, 'Ends above the natural waist (tops) or above the ankle (bottoms).'],
+    ['waist_length', 'Waist length', W, 'Ends at the natural waist.'],
+    ['hip_length', 'Hip length', W, 'Ends at the hip.'],
+    ['tunic', 'Tunic length', W, 'Ends between the hip and mid-thigh.'],
+    ['mid_thigh', 'Mid-thigh', W, 'Ends halfway down the thigh.'],
+    ['above_knee', 'Above knee', W, 'Ends just above the knee.'],
+    ['knee', 'Knee length', W, 'Ends at the knee.'],
+    ['midi', 'Midi', W, 'Ends between the knee and the calf.'],
+    ['calf', 'Calf length', W, 'Ends at the widest part of the calf.'],
+    ['ankle', 'Ankle length', B, 'Ends at the ankle.'],
+    ['floor', 'Floor length', W, 'Reaches the floor.'],
+    ['full_length', 'Full length', M, 'Trousers that reach the top of the shoe.'],
+    ['shorts', 'Shorts length', M, 'Ends on the thigh or at the knee.'],
+    ['adjustable', 'Adjustable / variable', W, 'Length can be changed, for example with ties or a high-low hem.'],
+    NOT_APPLICABLE('set length'),
+  ]),
+  ...rows('waistline', [
+    ['natural', 'Natural waist', W, 'The waist seam sits at the narrowest part of the torso.'],
+    ['high_waist', 'High waist', W, 'The waist seam sits above the natural waist.'],
+    ['empire', 'Empire waist', W, 'The waist seam sits just below the bust.'],
+    ['drop', 'Drop waist', W, 'The waist seam sits below the natural waist, around the hip.'],
+    ['low_waist', 'Low waist', W, 'The waistline sits below the natural waist.'],
+    ['high_rise', 'High rise', B, 'Bottoms whose waistband sits at or above the navel.'],
+    ['mid_rise', 'Mid rise', B, 'Bottoms whose waistband sits just below the navel.'],
+    ['low_rise', 'Low rise', B, 'Bottoms whose waistband sits on the hips.'],
+    ['adjustable', 'Adjustable waist', W, 'A waist that can be adjusted with ties, buttons or elastic.'],
+    NOT_APPLICABLE('waistline'),
+  ]),
+  ...rows('silhouette', [
+    ['straight', 'Straight', W, 'Falls in a straight line from shoulder to hem.'],
+    ['a_line', 'A-line', W, 'Fitted at the top and gently widening to the hem.'],
+    ['fit_and_flare', 'Fit-and-flare', W, 'Fitted through the bodice and waist, then flaring out.'],
+    ['flared', 'Flared', W, 'Widens noticeably towards the hem.'],
+    ['mermaid', 'Mermaid', W, 'Fitted to the knee, then flaring out sharply.'],
+    ['trumpet', 'Trumpet', W, 'Fitted through the hips, flaring from mid-thigh.'],
+    ['sheath', 'Sheath', W, 'A narrow, fitted shape that follows the body without a waist seam.'],
+    ['empire', 'Empire', W, 'A high waist seam under the bust with a skirt falling from it.'],
+    ['wrap', 'Wrap', W, 'Formed by wrapping one side over the other.'],
+    ['asymmetric', 'Asymmetric', W, 'Different on each side, for example a diagonal hem.'],
+    ['layered', 'Layered', W, 'Built from several tiers or layers.'],
+    ['draped', 'Draped', W, 'Shaped by folds of fabric that hang or are gathered.'],
+    NOT_APPLICABLE('defined silhouette'),
+  ]),
+  ...rows('leg_shape', [
+    ['skinny', 'Skinny', M, 'Close-fitting from hip to ankle.'],
+    ['slim', 'Slim', M, 'Narrow through the leg with a little room.'],
+    ['straight', 'Straight', M, 'The same width from knee to hem.'],
+    ['tapered', 'Tapered', M, 'Roomier at the thigh, narrowing to the ankle.'],
+    ['wide', 'Wide', M, 'Generous width throughout the leg.'],
+    ['flared', 'Flared', M, 'Widens from the knee to the hem.'],
+  ]),
+  ...rows('waistband', [
+    ['elastic', 'Elastic', M, 'An elasticated waistband.'],
+    ['drawstring', 'Drawstring', M, 'A waistband gathered with a cord.'],
+    ['fixed', 'Fixed', M, 'A structured waistband with a button or hook closure.'],
+    ['adjustable', 'Adjustable', M, 'A waistband with side adjusters or tabs.'],
+  ]),
+  ...rows('pleats', [
+    ['flat_front', 'Flat front', M, 'No pleats below the waistband.'],
+    ['single', 'Single pleat', M, 'One fold on each side of the front below the waistband.'],
+    ['double', 'Double pleat', M, 'Two folds on each side of the front below the waistband.'],
+  ]),
+  ...rows('bottom_hem', [
+    ['standard', 'Standard', M, 'A plain hem with no turn-up.'],
+    ['cuffed', 'Cuffed', M, 'The hem is finished with a sewn or elastic cuff.'],
+    ['turn_up', 'Turn-up', M, 'The hem is folded up on the outside.'],
+  ]),
+  ...rows('pattern', [
+    ['solid', 'Solid', B, 'One colour with no print.'],
+    ['striped', 'Striped', B, 'Lines of colour running across or along the fabric.'],
+    ['checked', 'Checked', B, 'A grid of crossing stripes.'],
+    ['floral', 'Floral', W, 'Flowers and leaves.'],
+    ['geometric', 'Geometric', W, 'Regular shapes such as triangles, diamonds or circles.'],
+    ['abstract', 'Abstract', W, 'Free-form shapes and brushstrokes.'],
+    ['polka_dot', 'Polka dot', W, 'Evenly spaced dots.'],
+    ['paisley', 'Paisley', W, 'Curved teardrop motifs.'],
+    ['animal_print', 'Animal print', W, 'Patterns based on animal coats, such as leopard or zebra.'],
+    ['traditional_motifs', 'Traditional motifs', W, 'Regional Indian motifs such as buta, mango or temple borders.'],
+    ['block_print', 'Block print', W, 'Hand-printed with carved wooden blocks.'],
+    ['embroidered', 'Embroidered', B, 'Decorated with needlework.'],
+    ['sequin', 'Sequin / embellished', W, 'Decorated with sequins, beads or mirrors.'],
+    ['jacquard', 'Jacquard', W, 'A pattern woven into the fabric itself.'],
+    ['tie_dye', 'Tie-dye', W, 'Colour patterns made by tying the fabric before dyeing.'],
+    ['color_blocked', 'Colour-blocked', W, 'Large solid panels of contrasting colours.'],
+    ['textured', 'Textured', W, 'A surface with visible texture, such as slub, seersucker or crinkle.'],
+    ['printed', 'Printed', M, 'An all-over printed design.'],
+  ]),
+  ...rows('fabric', [
+    ['cotton', 'Cotton', B, 'A breathable natural fibre.'],
+    ['linen', 'Linen', B, 'A crisp, airy natural fibre that creases easily.'],
+    ['silk', 'Silk', B, 'A smooth natural fibre with a soft sheen.'],
+    ['rayon', 'Rayon', W, 'A soft, fluid fibre made from wood pulp.'],
+    ['georgette', 'Georgette', W, 'A light, slightly grainy, sheer crepe fabric.'],
+    ['chiffon', 'Chiffon', W, 'A very light, sheer and floaty fabric.'],
+    ['denim', 'Denim', B, 'A sturdy cotton twill.'],
+    ['wool', 'Wool', B, 'A warm natural fibre.'],
+    ['knit', 'Knit', B, 'A stretchy fabric made from interlocking loops.'],
+  ]),
+  ...rows('closure', [
+    ['buttons', 'Buttons', B, 'Fastens with buttons.'],
+    ['zipper', 'Zipper', B, 'Fastens with a zip.'],
+    ['hooks', 'Hooks', B, 'Fastens with hooks and eyes.'],
+    ['tie_up', 'Tie-up', W, 'Fastens with ties or dori.'],
+    ['pull_on', 'Pull-on', W, 'No fastening; pulled on over the head or hips.'],
+    ['drawstring', 'Drawstring', M, 'Fastens with a cord.'],
+  ]),
+  ...rows('collar', [
+    ['shirt', 'Shirt collar', W, 'A classic turned-down collar on a stand.'],
+    ['mandarin', 'Mandarin collar', W, 'A short stand-up collar.'],
+    ['peter_pan', 'Peter Pan collar', W, 'A flat collar with rounded ends.'],
+    ['spread', 'Spread collar', W, 'A shirt collar with widely spaced points.'],
+    ['notched', 'Notched collar', W, 'A collar and lapel joined with a V-shaped notch.'],
+  ]),
+  ...rows('hemline', [
+    ['straight', 'Straight', B, 'An even hem all the way round.'],
+    ['curved', 'Curved', B, 'A hem that curves up at the sides.'],
+    ['high_low', 'High-low', W, 'Shorter at the front than at the back.'],
+    ['asymmetric', 'Asymmetric', W, 'A hem that is longer on one side.'],
+    ['slit', 'Slit', W, 'A hem with side or front slits.'],
+    ['split', 'Split', M, 'Short side vents at the hem.'],
+    ['ribbed', 'Ribbed', M, 'A stretchy ribbed band at the hem.'],
+  ]),
+  ...rows('pockets', [
+    ['none', 'No pockets', W, 'The garment has no pockets.'],
+    ['chest', 'Chest', M, 'A pocket on the chest.'],
+    ['side', 'Side', B, 'Pockets set into the side seams.'],
+    ['patch', 'Patch', B, 'Pockets sewn onto the outside.'],
+    ['welt', 'Welt', B, 'Slit pockets finished with a narrow band.'],
+    ['cargo', 'Cargo', B, 'Large patch pockets with flaps, usually on the thigh.'],
+  ]),
+  ...rows('draping', [
+    ['straight', 'Straight drape', W, 'Fabric falls straight without gathers.'],
+    ['wrap', 'Wrap', W, 'Fabric wraps around the body.'],
+    ['pleated', 'Pleated', W, 'Fabric folded into regular pleats.'],
+    ['gathered', 'Gathered', W, 'Fabric drawn together into soft gathers.'],
+  ]),
+  ...rows('layering', [
+    ['single_layer', 'Single layer', W, 'Worn on its own with no extra layer.'],
+    ['jacket', 'Jacket', B, 'Worn with a jacket.'],
+    ['cape', 'Cape', W, 'Worn with a cape over the shoulders.'],
+    ['shrug', 'Shrug', W, 'Worn with a short, open shrug.'],
+    ['overlay', 'Overlay', W, 'A sheer or open layer over the garment.'],
+    ['blazer', 'Blazer', M, 'Worn with a blazer.'],
+    ['waistcoat', 'Waistcoat', M, 'Worn with a waistcoat or vest.'],
+    ['overshirt', 'Overshirt', M, 'Worn with an open overshirt.'],
+  ]),
+  ...rows('transparency', [
+    ['opaque', 'Opaque', W, 'You cannot see through the fabric.'],
+    ['semi_sheer', 'Semi-sheer', W, 'Slightly see-through.'],
+    ['sheer', 'Sheer', W, 'See-through; usually lined or layered.'],
+  ]),
+  ...rows('stretch', [
+    ['non_stretch', 'Non-stretch', W, 'The fabric does not stretch.'],
+    ['slight_stretch', 'Slight stretch', W, 'A little give for comfort.'],
+    ['stretch', 'Stretch', W, 'Noticeable stretch that moves with the body.'],
+  ]),
+  ...rows('occasion', [
+    ['casual', 'Casual', B, 'Everyday wear.'],
+    ['office', 'Office', B, 'Work and business settings.'],
+    ['party', 'Party', B, 'Evening and party wear.'],
+    ['wedding', 'Wedding', B, 'Weddings and ceremonies.'],
+    ['festive', 'Festive', B, 'Festivals and celebrations.'],
+    ['travel', 'Travel', B, 'Comfortable wear for travelling.'],
+  ]),
+];
+
+/**
+ * Pairs that cannot be constructed together (`featureCombinations`, kind `incompatible`). Construction facts,
+ * not styling advice: a strapless or off-shoulder bodice has no armhole for a set-in sleeve, and so on.
+ */
+const NO_SHOULDER_NECKLINES = ['neckline_strapless', 'neckline_off_shoulder'];
+const SET_IN_SLEEVES = [
+  'sleeve_cap',
+  'sleeve_short',
+  'sleeve_elbow_length',
+  'sleeve_three_quarter',
+  'sleeve_full_length',
+  'sleeve_puff',
+  'sleeve_bishop',
+  'sleeve_bell',
+  'sleeve_flutter',
+  'sleeve_raglan',
+  'sleeve_dolman',
+  'sleeve_lantern',
+  'sleeve_balloon',
+  'sleeve_leg_of_mutton',
+  'sleeve_cold_shoulder',
+  'sleeve_kimono',
+  'sleeve_cuffed',
+  'sleeve_roll_up',
+  'sleeve_drop_shoulder',
+];
+export const INCOMPATIBLE_PAIRS: Array<[string, string, string]> = [
+  ...NO_SHOULDER_NECKLINES.flatMap((n) =>
+    SET_IN_SLEEVES.map((s): [string, string, string] => [
+      n,
+      s,
+      'This neckline leaves the shoulders bare, so there is no armhole for this sleeve.',
+    ]),
+  ),
+  ['neckline_strapless', 'sleeve_spaghetti_strap', 'A strapless neckline has no straps.'],
+  [
+    'neckline_halter',
+    'sleeve_spaghetti_strap',
+    'A halter already fastens behind the neck instead of over the shoulders.',
+  ],
+  ...['sleeve_raglan', 'sleeve_dolman', 'sleeve_kimono', 'sleeve_cold_shoulder', 'sleeve_off_shoulder'].map(
+    (s): [string, string, string] => [
+      'neckline_halter',
+      s,
+      'A halter leaves the shoulders bare, so this sleeve cannot be attached.',
+    ],
+  ),
+  ...['sleeve_raglan', 'sleeve_dolman', 'sleeve_kimono'].map((s): [string, string, string] => [
+    'neckline_one_shoulder',
+    s,
+    'This sleeve needs both shoulders of the garment.',
+  ]),
+];

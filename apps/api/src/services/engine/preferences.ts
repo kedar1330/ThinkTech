@@ -1,10 +1,12 @@
 import {
   departmentScope,
+  heightBand,
   type AppearanceResponse,
   type ColorId,
   type ContrastLevel,
   type Department,
   type Fabric,
+  type HeightBand,
   type MonkRange,
   type Occasion,
   type ProfileResponse,
@@ -65,6 +67,11 @@ export interface Preferences {
   undertone: Exclude<Undertone, 'not_sure'> | null;
   monkRange: readonly [number, number] | null;
   proportions: Exclude<ProportionDescriptor, 'prefer_not_to_say'> | null;
+  /**
+   * From the height in the profile (D-131). Profile data like sizes, so it applies even while appearance
+   * signals are off; height-scoped rules count in the signal tier.
+   */
+  heightBand: HeightBand | null;
   signalsUsed: boolean;
   /** Optional inputs that fell back to defaults (FR-LOOK-09). */
   defaultsApplied: string[];
@@ -123,6 +130,7 @@ export function resolvePreferences(profile: ProfileResponse, signals: EngineSign
     undertone,
     monkRange,
     proportions,
+    heightBand: heightBand(profile.department, profile.heightCm),
     signalsUsed,
     defaultsApplied,
     conflicts,

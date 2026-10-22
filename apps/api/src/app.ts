@@ -8,12 +8,18 @@ import type { Config } from './config/env';
 import { AppearanceController } from './controllers/appearance.controller';
 import { AuthController } from './controllers/auth.controller';
 import { CatalogueController } from './controllers/catalogue.controller';
+import { DesignController } from './controllers/design.controller';
+import { ColourLibraryController } from './controllers/colour-library.controller';
+import { MeasurementsController } from './controllers/measurements.controller';
+import { ManualController } from './controllers/manual.controller';
 import { OutfitsController } from './controllers/outfits.controller';
 import { PaletteController } from './controllers/palette.controller';
+import { PhotosController } from './controllers/photos.controller';
 import { ProfileController } from './controllers/profile.controller';
 import { RecommendationsController } from './controllers/recommendations.controller';
 import { ShortlistController } from './controllers/shortlist.controller';
 import type { Database } from './db';
+import type { PhotoAnalysisProvider } from './integrations/ai/vision-client';
 import type { WordingProvider } from './integrations/ai/wording-client';
 import { authenticate, requirePasswordSet } from './middleware/authenticate';
 import { clientIp } from './middleware/client-ip';
@@ -23,8 +29,13 @@ import { createRateLimits, type AppRateLimits } from './middleware/rate-limit';
 import { appearanceRoutes } from './routes/appearance.routes';
 import { authRoutes } from './routes/auth.routes';
 import { catalogueRoutes } from './routes/catalogue.routes';
+import { colourLibraryRoutes } from './routes/colour-library.routes';
+import { designRoutes } from './routes/design.routes';
+import { measurementsRoutes } from './routes/measurements.routes';
+import { manualRoutes } from './routes/manual.routes';
 import { outfitsRoutes } from './routes/outfits.routes';
 import { paletteRoutes } from './routes/palette.routes';
+import { photosRoutes } from './routes/photos.routes';
 import { profileRoutes } from './routes/profile.routes';
 import { recommendationsRoutes } from './routes/recommendations.routes';
 import { shortlistRoutes } from './routes/shortlist.routes';
@@ -32,13 +43,18 @@ import { AppearanceService } from './services/appearance.service';
 import { AccountService } from './services/account.service';
 import { AuthService } from './services/auth.service';
 import { CatalogueService } from './services/catalogue.service';
+import { ColourLibraryService } from './services/colour-library.service';
+import { DesignService } from './services/design.service';
 import type { GoogleVerifier } from './services/google';
 import type { EmailSender, SmsSender } from './services/messaging';
 import type { StyleLibrary } from './services/engine';
 import { FeedbackService } from './services/feedback.service';
+import { MeasurementsService } from './services/measurements.service';
+import { ManualService } from './services/manual.service';
 import { OnboardingService } from './services/onboarding.service';
 import { OutfitsService } from './services/outfits.service';
 import { PaletteService } from './services/palette.service';
+import { PhotoService } from './services/photo.service';
 import { ProfileService } from './services/profile.service';
 import { RecommendationsService } from './services/recommendations.service';
 import { ShortlistService } from './services/shortlist.service';
@@ -60,6 +76,8 @@ export interface AppDeps {
   styleLibrary?: StyleLibrary;
   /** Optional AI wording provider (#55). Used only while AI_WORDING_ENABLED is true; tests pass a fake. */
   wordingProvider?: WordingProvider | null;
+  /** Photo analysis (D-129). Used only while PHOTO_ANALYSIS_ENABLED is true; tests pass a fake. */
+  photoAnalysisProvider?: PhotoAnalysisProvider | null;
   /** Rate limits across auth, recommendations, feedback and shortlist. Defaults to D-38 in-memory stores. */
   rateLimits?: AppRateLimits;
 }
@@ -79,6 +97,7 @@ export function createApp({
   googleVerifier = null,
   styleLibrary = loadStyleLibrary(SHIPPED_LIBRARY, { appEnv: config.APP_ENV }),
   wordingProvider = null,
+  photoAnalysisProvider = null,
   rateLimits = createRateLimits(),
 }: AppDeps): App {
   const app = express();
@@ -145,6 +164,18 @@ export function createApp({
   const appearanceService = new AppearanceService(db.models);
   app.use('/v1', profileRoutes(new ProfileController(profileService), withPassword));
   app.use('/v1', appearanceRoutes(new AppearanceController(appearanceService), withPassword));
+  app.use(
+    '/v1',
+    measurementsRoutes(new MeasurementsController(new MeasurementsService(db.models, appearanceService)), withPassword),
+  );
+  const photos = new PhotoService(
+    db.models,
+    appearanceService,
+    config.PHOTO_ANALYSIS_ENABLED ? photoAnalysisProvider : null,
+    config.PHOTO_ANALYSIS_TIMEOUT_MS,
+    logger,
+  );
+  app.use('/v1', photosRoutes(new PhotosController(photos), withPassword, rateLimits.photoAnalysis));
   const feedbackService = new FeedbackService(db.models);
   const wording = new WordingService(
     config.AI_WORDING_ENABLED ? wordingProvider : null,
@@ -179,6 +210,13 @@ export function createApp({
   );
   const catalogue = new CatalogueService(db.models);
   app.use('/v1', catalogueRoutes(new CatalogueController(catalogue), withPassword));
+  app.use('/v1', designRoutes(new DesignController(new DesignService(db.models)), withPassword));
+  app.use(
+    '/v1',
+    colourLibraryRoutes(new ColourLibraryController(new ColourLibraryService(db.models, config.APP_ENV)), withPassword),
+  );
+  const manualService = new ManualService(db.models);
+  app.use('/v1', manualRoutes(new ManualController(manualService), withPassword));
 
   app.use(notFound);
   app.use(errorHandler);

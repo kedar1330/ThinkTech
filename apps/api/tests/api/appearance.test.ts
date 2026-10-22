@@ -34,6 +34,7 @@ describe('self-reported appearance signals (FR-SIG, AC-04)', () => {
       skinTone: null,
       undertone: null,
       bodyProportions: null,
+      bodyType: null,
       useInRecommendations: true,
     });
   });

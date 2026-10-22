@@ -1,5 +1,11 @@
 import { Types } from 'mongoose';
-import type { Look, RecommendationRequest, RecommendationResponse, WarningCode } from '@styleme/contracts';
+import {
+  heightBand,
+  type Look,
+  type RecommendationRequest,
+  type RecommendationResponse,
+  type WarningCode,
+} from '@styleme/contracts';
 import type { Models } from '../models/index';
 import type { AppearanceService } from './appearance.service';
 import { generateLooks, signalsFromAppearance, type StyleLibrary } from './engine';
@@ -69,6 +75,7 @@ export class RecommendationsService {
       sizesSaved: Object.entries(profile.sizes)
         .filter(([, size]) => size !== null)
         .map(([group]) => group),
+      heightBand: heightBand(profile.department, profile.heightCm),
       signalsUsed: result.signalsUsed,
     };
 

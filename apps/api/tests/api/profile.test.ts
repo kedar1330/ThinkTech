@@ -21,6 +21,8 @@ async function signedIn(email: string) {
 
 const FULL = {
   department: 'women',
+  ageGroup: '25_34',
+  heightCm: 163,
   sizes: {
     tops: { letter: 'M', collarIn: 14.5 },
     bottoms: { waistIn: 30, lengthIn: 31 },
@@ -81,8 +83,8 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
     const partial = await request(app)
       .put('/v1/profile')
       .set(bearer(token))
-      .send({ department: 'any', likedColors: ['teal'] });
-    expect(partial.body.data.department).toBe('any');
+      .send({ department: 'men', likedColors: ['teal'] });
+    expect(partial.body.data.department).toBe('men');
     expect(partial.body.data.likedColors).toEqual(['teal']);
     expect(partial.body.data.sizes.tops).toEqual({ letter: 'M', collarIn: 14.5 });
     expect(partial.body.data.budgetPreference).toBe(2500);
@@ -91,7 +93,7 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
       .put('/v1/profile')
       .set(bearer(token))
       .send({
-        department: 'any',
+        department: 'men',
         budgetPreference: null,
         dislikedColors: [],
         sizes: { tops: null, shoes: { uk: 7 } },
@@ -135,6 +137,27 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
       expect(res.body.error.code).toBe('INVALID_REQUEST');
     }
     expect(await env.db.models.Profile.countDocuments()).toBe(0);
+  });
+
+  it('D-131: height is saved in whole centimetres, kept when omitted, cleared with null and range-checked', async () => {
+    const { app, token } = await signedIn('ha@example.com');
+    const saved = await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women', heightCm: 162 });
+    expect(saved.status).toBe(200);
+    expect(saved.body.data.heightCm).toBe(162);
+
+    const kept = await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women' });
+    expect(kept.body.data.heightCm).toBe(162);
+
+    for (const heightCm of [119, 231, 162.5, '162']) {
+      const res = await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women', heightCm });
+      expect(res.status, String(heightCm)).toBe(400);
+    }
+
+    const cleared = await request(app)
+      .put('/v1/profile')
+      .set(bearer(token))
+      .send({ department: 'women', heightCm: null });
+    expect(cleared.body.data.heightCm).toBeNull();
   });
 
   it('T-08: measurements and a budget ≤ 0 are rejected; a positive budget is saved', async () => {
@@ -205,10 +228,11 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
     expect(await env.db.models.Profile.countDocuments()).toBe(0);
   });
 
-  it('proposed My Profile fields stay dormant: the API rejects them and never returns stored ones (D-102 … D-104)', async () => {
+  it('D-129: the Clothing Preference is Women’s Wear or Men’s Wear only; age group is accepted; other My Profile fields are not', async () => {
     const { app, token } = await signedIn('ko@example.com');
     for (const body of [
-      { department: 'women', ageGroup: '18_24' },
+      { department: 'any' },
+      { department: 'women', ageGroup: '17' },
       { department: 'women', categoryBudgets: { tops: 1000 } },
       { department: 'women', customOccasions: ['Sangeet'] },
     ]) {
@@ -216,15 +240,43 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
         400,
       );
     }
-    await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women' });
+    const res = await request(app)
+      .put('/v1/profile')
+      .set(bearer(token))
+      .send({ department: 'women', ageGroup: '18_24' });
+    expect(res.body.data.ageGroup).toBe('18_24');
     await env.db.models.Profile.updateOne(
       {},
-      { ageGroup: '25_34', measurements: { displayUnit: 'cm', valuesCm: { waist: 78 } }, customOccasions: ['x'] },
+      { measurements: { displayUnit: 'cm', valuesCm: { waist: 78 } }, customOccasions: ['x'] },
     );
-    const res = await request(app).get('/v1/profile').set(bearer(token));
+    const get = await request(app).get('/v1/profile').set(bearer(token));
     // `updatedAt` is left out: a timestamp such as "…:45.078Z" would match the stored waist value 78.
-    const { updatedAt: _updatedAt, ...returned } = res.body.data;
-    expect(JSON.stringify(returned)).not.toMatch(/ageGroup|measurements|customOccasions|78/);
+    const { updatedAt: _updatedAt, ...returned } = get.body.data;
+    expect(JSON.stringify(returned)).not.toMatch(/measurements|customOccasions|78/);
+  });
+
+  it('D-129: changing the Clothing Preference clears a body type the new list does not offer', async () => {
+    const { app, token } = await signedIn('mo@example.com');
+    await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women' });
+    await request(app)
+      .put('/v1/appearance')
+      .set(bearer(token))
+      .send({ bodyType: { value: 'spoon' } });
+    await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women', ageGroup: '25_34' });
+    expect((await request(app).get('/v1/appearance').set(bearer(token))).body.data.bodyType.value).toBe('spoon');
+
+    await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'men' });
+    const after = (await request(app).get('/v1/appearance').set(bearer(token))).body.data;
+    expect(after.bodyType).toBeNull();
+    expect(after.bodyProportions).toBeNull();
+
+    // A body type both lists offer is kept.
+    await request(app)
+      .put('/v1/appearance')
+      .set(bearer(token))
+      .send({ bodyType: { value: 'rectangle' } });
+    await request(app).put('/v1/profile').set(bearer(token)).send({ department: 'women' });
+    expect((await request(app).get('/v1/appearance').set(bearer(token))).body.data.bodyType.value).toBe('rectangle');
   });
 
   it('account deletion also removes proposed photo metadata and appearance analyses', async () => {
@@ -234,7 +286,7 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
     const photo = await env.db.models.UserPhoto.create({
       userId,
       kind: 'face',
-      storageKey: `test/${userId}/face.jpg`,
+      data: Buffer.from('synthetic test bytes'),
       contentType: 'image/jpeg',
       bytes: 1000,
       retention: 'keep',

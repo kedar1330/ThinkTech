@@ -21,6 +21,7 @@ import {
   fabricSchema,
   fitSchema,
   garmentLengthSchema,
+  heightBandSchema,
   monkRangeSchema,
   necklineSchema,
   occasionSchema,
@@ -143,8 +144,10 @@ export const appliesToSchema = z
     styles: z.array(styleSchema).default([]),
     departments: z.array(departmentSchema).default([]),
     proportions: z.array(proportionDescriptorSchema).default([]),
+    // Height bands (D-131), derived from the profile's height.
+    heights: z.array(heightBandSchema).default([]),
   })
-  .default({ categories: [], occasions: [], styles: [], departments: [], proportions: [] });
+  .default({ categories: [], occasions: [], styles: [], departments: [], proportions: [], heights: [] });
 export type AppliesTo = z.infer<typeof appliesToSchema>;
 
 // --- Palettes PAL-xxx --------------------------------------------------------------------------

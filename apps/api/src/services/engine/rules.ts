@@ -7,7 +7,10 @@ import { ZERO, type Score } from './score';
 /** A rule that applies to one slot of one look, and the precedence tier its effect counts in. */
 export interface ApplicableRule {
   rule: Rule;
-  /** Rules scoped to body proportions are appearance signals (FR-LOOK-08 tier 4); the rest are rules. */
+  /**
+   * Rules scoped to body proportions or height bands are appearance signals (FR-LOOK-08 tier 4); the rest
+   * are rules.
+   */
   tier: 'rule' | 'signal';
 }
 
@@ -30,12 +33,14 @@ export function applicableRules(
 ): ApplicableRule[] {
   const found: ApplicableRule[] = [];
   for (const rule of library.rulesForCategory(category)) {
-    const { occasions, styles, departments, proportions } = rule.appliesTo;
+    const { occasions, styles, departments, proportions, heights } = rule.appliesTo;
     if (!listMatches(occasions, [scope.occasion])) continue;
     if (!listMatches(styles, scope.styles)) continue;
     if (!listMatches(departments, [scope.templateDepartment, prefs.department])) continue;
-    if (proportions.length === 0) found.push({ rule, tier: 'rule' });
-    else if (prefs.proportions && proportions.includes(prefs.proportions)) found.push({ rule, tier: 'signal' });
+    // A rule scoped to proportions or heights applies only when the user's value is in its list.
+    if (proportions.length > 0 && !(prefs.proportions && proportions.includes(prefs.proportions))) continue;
+    if (heights.length > 0 && !(prefs.heightBand && heights.includes(prefs.heightBand))) continue;
+    found.push({ rule, tier: proportions.length === 0 && heights.length === 0 ? 'rule' : 'signal' });
   }
   return found.sort((a, b) => a.rule.id.localeCompare(b.rule.id));
 }

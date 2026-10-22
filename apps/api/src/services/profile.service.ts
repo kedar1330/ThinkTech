@@ -1,9 +1,10 @@
 import type { Types } from 'mongoose';
-import type { ProfileResponse, UpdateProfileRequest } from '@styleme/contracts';
+import { bodyTypesFor, type ProfileResponse, type UpdateProfileRequest } from '@styleme/contracts';
 import type { Models, ProfileDoc } from '../models/index';
 
-// Style profile (FR-PROF-01 … 06, FR-SIZE-01 … 04). One document per user. `department` is always
-// sent; other fields are unchanged when omitted, cleared when `null` (or an empty list).
+// Style profile (FR-PROF-01 … 06, FR-SIZE-01 … 04, D-129). One document per user. `department` (the
+// Clothing Preference) is always sent; other fields are unchanged when omitted, cleared when `null` (or an
+// empty list). Changing the Clothing Preference clears a body type that the new list doesn't offer.
 
 const LIST_FIELDS = [
   'likedColors',
@@ -33,6 +34,8 @@ function toResponse(doc: (ProfileDoc & { updatedAt?: Date }) | null): ProfileRes
   const fabrics = (doc?.fabricPreferences ?? {}) as { liked?: string[]; avoided?: string[] };
   return {
     department: (doc?.department as ProfileResponse['department']) ?? null,
+    ageGroup: (doc?.ageGroup as ProfileResponse['ageGroup']) ?? null,
+    heightCm: doc?.heightCm ?? null,
     sizes: pick(doc?.sizes as Record<string, unknown>, ['tops', 'bottoms', 'ethnicTops', 'ethnicSets', 'shoes']),
     fitPreferences: pick(doc?.fitPreferences as Record<string, unknown>, [
       'tops',
@@ -80,12 +83,18 @@ export class ProfileService {
       set.fabricPreferences = input.fabricPreferences ?? { liked: [], avoided: [] };
     if (input.contrastPreference !== undefined) set.contrastPreference = input.contrastPreference;
     if (input.budgetPreference !== undefined) set.budgetPreference = input.budgetPreference;
+    if (input.ageGroup !== undefined) set.ageGroup = input.ageGroup;
+    if (input.heightCm !== undefined) set.heightCm = input.heightCm;
 
     const doc = await this.models.Profile.findOneAndUpdate(
       { userId },
       { $set: set, $setOnInsert: { userId } },
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     ).lean();
+    await this.models.AppearanceProfile.updateOne(
+      { userId, 'bodyType.value': { $nin: [...bodyTypesFor(input.department)] }, bodyType: { $ne: null } },
+      { $set: { bodyType: null, bodyProportions: null } },
+    );
     return toResponse(doc);
   }
 }

@@ -52,6 +52,15 @@ const envSchema = z.object({
   GEMINI_API_KEY: optional,
   GEMINI_MODEL: optional,
   AI_WORDING_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(4000),
+  // Photo analysis by Gemini (D-129): a face photo (skin tone, undertone) and a full-body photo (body type).
+  // Live whenever GEMINI_API_KEY is set; set PHOTO_ANALYSIS_ENABLED=false to switch it off (users then
+  // choose manually). GEMINI_VISION_MODEL must accept image input.
+  PHOTO_ANALYSIS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  GEMINI_VISION_MODEL: z.string().trim().min(1).default('gemini-3.8-flash'),
+  PHOTO_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(90_000),
 });
 
 const configSchema = envSchema.superRefine((env, ctx) => {

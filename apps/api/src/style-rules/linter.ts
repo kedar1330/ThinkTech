@@ -234,7 +234,7 @@ function overlap(a: AttributeRef[], b: AttributeRef[]): string | null {
 
 // Two contexts overlap when every dimension overlaps; an empty list means "any".
 function contextsOverlap(a: AppliesTo, b: AppliesTo): boolean {
-  const dims = ['categories', 'occasions', 'styles', 'proportions'] as const;
+  const dims = ['categories', 'occasions', 'styles', 'proportions', 'heights'] as const;
   for (const dim of dims) {
     const x = a[dim] as string[];
     const y = b[dim] as string[];

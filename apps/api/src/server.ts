@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { loadConfig, type Config } from './config/env';
 import { connectDatabase, type Database } from './db';
 import { createLogger } from './logger';
+import { geminiVisionProvider } from './integrations/ai/vision-client';
 import { geminiWordingProvider } from './integrations/ai/wording-client';
 import { googleVerifier } from './services/google';
 import { createEmailSender, createSmsSender } from './services/messaging';
@@ -30,6 +31,11 @@ export async function startServer(deps: StartServerDeps = {}) {
   const wordingProvider = config.AI_WORDING_ENABLED
     ? geminiWordingProvider(config.GEMINI_API_KEY!, config.GEMINI_MODEL!)
     : null;
+  // Photo analysis (D-129): live whenever a Gemini key is set, unless PHOTO_ANALYSIS_ENABLED=false.
+  const photoAnalysisProvider =
+    config.PHOTO_ANALYSIS_ENABLED && config.GEMINI_API_KEY
+      ? geminiVisionProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
+      : null;
 
   // Validate, lint and index the style knowledge base before anything else; an invalid library
   // stops the API (FR-STY-03). The look generator receives this library.
@@ -56,6 +62,7 @@ export async function startServer(deps: StartServerDeps = {}) {
     googleVerifier: google,
     styleLibrary,
     wordingProvider,
+    photoAnalysisProvider,
   });
 
   if (deps.listen === false) {
@@ -71,6 +78,7 @@ export async function startServer(deps: StartServerDeps = {}) {
       sms: smsSender?.kind ?? 'none',
       google: Boolean(google),
       aiWording: config.AI_WORDING_ENABLED,
+      photoAnalysis: Boolean(photoAnalysisProvider),
     });
   });
 

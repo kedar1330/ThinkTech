@@ -1,1 +1,151 @@
-[]
+[
+  {
+    "id": "STY-021",
+    "version": 1,
+    "tags": ["height", "petite", "kurta-kurti", "length"],
+    "userAdjustable": ["signals"],
+    "rationale": "On a petite frame, a kurta or kurti that ends around the thigh or knee leaves more of the leg line visible below the hem, which keeps the outfit in proportion with the height.",
+    "limitations": "Long and floor-length kurtas are worn and loved at every height; this only gives a small lift to thigh and knee lengths, and the user's own style comes first.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "length",
+    "areas": ["coordination", "fit"],
+    "coordinationAspects": ["proportion_balance"],
+    "appliesTo": {
+      "categories": ["kurta", "kurti"],
+      "heights": ["petite"]
+    },
+    "effect": {
+      "prefer": [
+        { "attribute": "length", "value": "thigh" },
+        { "attribute": "length", "value": "knee" }
+      ],
+      "weight": 0.3
+    }
+  },
+  {
+    "id": "STY-022",
+    "version": 1,
+    "tags": ["height", "petite", "bottoms", "vertical-line"],
+    "userAdjustable": ["signals", "silhouettes"],
+    "rationale": "Straight and tapered trousers and jeans follow the leg in one clean vertical line, which keeps the proportions balanced on a petite frame.",
+    "limitations": "Wide-leg and flared cuts also work at any height, especially with a heel or a matching top; this is a gentle default and the user's silhouette preferences come first.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "silhouette",
+    "areas": ["coordination", "fit"],
+    "coordinationAspects": ["proportion_balance"],
+    "appliesTo": {
+      "categories": ["jeans", "trousers"],
+      "heights": ["petite"]
+    },
+    "effect": {
+      "prefer": [
+        { "attribute": "silhouette", "value": "straight" },
+        { "attribute": "silhouette", "value": "tapered" }
+      ],
+      "weight": 0.25
+    }
+  },
+  {
+    "id": "STY-023",
+    "version": 1,
+    "tags": ["height", "petite", "print-scale"],
+    "userAdjustable": ["signals"],
+    "rationale": "Small and medium print scales repeat several times across a petite frame, so the pattern reads as a whole rather than as one or two large motifs.",
+    "limitations": "Bold, large prints are a style choice open to everyone; this only slightly favours smaller scales when the look includes a print.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "print-scale",
+    "areas": ["coordination"],
+    "coordinationAspects": ["pattern_mixing"],
+    "appliesTo": {
+      "heights": ["petite"]
+    },
+    "effect": {
+      "prefer": [
+        { "attribute": "patternScale", "value": "small" },
+        { "attribute": "patternScale", "value": "medium" }
+      ],
+      "weight": 0.2
+    }
+  },
+  {
+    "id": "STY-024",
+    "version": 1,
+    "tags": ["height", "tall", "kurta-kurti", "length"],
+    "userAdjustable": ["signals"],
+    "rationale": "On a tall frame, a kurta or kurti that reaches the knee, midi or ankle carries its length well and keeps the top and bottom of the outfit in proportion.",
+    "limitations": "Shorter kurtis also suit tall wearers, particularly in casual looks; this only gives a small lift to longer lengths, and the user's own style comes first.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "length",
+    "areas": ["coordination", "fit"],
+    "coordinationAspects": ["proportion_balance"],
+    "appliesTo": {
+      "categories": ["kurta", "kurti"],
+      "heights": ["tall"]
+    },
+    "effect": {
+      "prefer": [
+        { "attribute": "length", "value": "knee" },
+        { "attribute": "length", "value": "midi" },
+        { "attribute": "length", "value": "ankle" }
+      ],
+      "weight": 0.3
+    }
+  },
+  {
+    "id": "STY-025",
+    "version": 1,
+    "tags": ["height", "tall", "bottoms", "volume"],
+    "userAdjustable": ["signals", "silhouettes"],
+    "rationale": "Wide-leg and flared trousers have room to fall fully on a tall frame, so the volume of the cut shows as designed from hip to hem.",
+    "limitations": "Straight and tapered cuts are equally good choices for tall wearers; this is a gentle default and the user's silhouette preferences come first.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "silhouette",
+    "areas": ["coordination", "fit"],
+    "coordinationAspects": ["proportion_balance"],
+    "appliesTo": {
+      "categories": ["jeans", "trousers"],
+      "heights": ["tall"]
+    },
+    "effect": {
+      "prefer": [
+        { "attribute": "silhouette", "value": "wide_leg" },
+        { "attribute": "silhouette", "value": "flared" }
+      ],
+      "weight": 0.25
+    }
+  },
+  {
+    "id": "STY-026",
+    "version": 1,
+    "tags": ["height", "tall", "print-scale"],
+    "userAdjustable": ["signals"],
+    "rationale": "Medium and large print scales have space to show complete motifs across a tall frame, so the pattern keeps its intended design.",
+    "limitations": "Small, fine prints suit tall wearers too; this only slightly favours larger scales when the look includes a print.",
+    "reviewStatus": "draft",
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "type": "print-scale",
+    "areas": ["coordination"],
+    "coordinationAspects": ["pattern_mixing"],
+    "appliesTo": {
+      "heights": ["tall"]
+    },
+    "effect": {
+      "prefer": [
+        { "attribute": "patternScale", "value": "medium" },
+        { "attribute": "patternScale", "value": "large" }
+      ],
+      "weight": 0.2
+    }
+  }
+]

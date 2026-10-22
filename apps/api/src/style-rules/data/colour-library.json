@@ -1,0 +1,185 @@
+{
+  "id": "CLIB-001",
+  "version": 2,
+  "reviewStatus": "approved",
+  "reviewedBy": "Shreya Sharma",
+  "reviewedAt": "2026-10-22",
+  "coloursPerCategory": 120,
+  "familyCap": 18,
+  "undertones": {
+    "warm": {
+      "rationale": "A warm undertone has a golden, peachy or yellow cast, so the rules favour yellow-based colours: corals, rust, camel, gold, mustard and olive, with warm teal as a contrast accent.",
+      "baseHueScore": 0.1,
+      "hues": [
+        {
+          "hue": 32,
+          "weight": 1,
+          "note": "Warm red and coral, with a yellow-orange base, echo the golden cast of a warm undertone."
+        },
+        {
+          "hue": 50,
+          "weight": 1,
+          "note": "Terracotta, rust and copper share the earthy warmth of a warm undertone."
+        },
+        {
+          "hue": 72,
+          "weight": 1,
+          "note": "Camel, amber and orange carry the same golden base as a warm undertone."
+        },
+        {
+          "hue": 95,
+          "weight": 0.95,
+          "note": "Gold, mustard and honey tones pick up the golden cast of a warm undertone."
+        },
+        {
+          "hue": 120,
+          "weight": 0.85,
+          "note": "Olive and moss are yellow-based greens that sit naturally with a warm undertone."
+        },
+        {
+          "hue": 150,
+          "weight": 0.65,
+          "note": "A yellow-leaning green works as a fresh accent with a warm undertone."
+        },
+        {
+          "hue": 190,
+          "weight": 0.6,
+          "note": "Warm teal and turquoise give a contrasting accent that still sits well with a golden cast."
+        }
+      ],
+      "neutralNote": "A warm-cast neutral such as cream, ivory or camel pairs easily with a warm undertone."
+    },
+    "cool": {
+      "rationale": "A cool undertone has a pink, red or bluish cast, so the rules favour blue-based colours: raspberry, fuchsia, purple, true and icy blues and emerald, with crisp white, grey and black.",
+      "baseHueScore": 0.1,
+      "hues": [
+        {
+          "hue": 0,
+          "weight": 1,
+          "note": "Raspberry, rose and blue-based reds share the pink-blue cast of a cool undertone."
+        },
+        {
+          "hue": 330,
+          "weight": 1,
+          "note": "Fuchsia, magenta and berry tones echo the rosy cast of a cool undertone."
+        },
+        {
+          "hue": 300,
+          "weight": 1,
+          "note": "Purple, violet and plum are blue-based colours that sit naturally with a cool undertone."
+        },
+        {
+          "hue": 265,
+          "weight": 1,
+          "note": "True blue, royal blue and navy share the blue base of a cool undertone."
+        },
+        {
+          "hue": 235,
+          "weight": 0.95,
+          "note": "Icy and sky blues keep the clear, blue-based feel of a cool undertone."
+        },
+        {
+          "hue": 200,
+          "weight": 0.85,
+          "note": "Aqua and cool turquoise bring a fresh, blue-leaning accent for a cool undertone."
+        },
+        {
+          "hue": 160,
+          "weight": 0.85,
+          "note": "Emerald and blue-green jewel tones complement the cast of a cool undertone."
+        }
+      ],
+      "neutralNote": "Crisp white, cool grey, charcoal and black echo the clear feel of a cool undertone."
+    },
+    "neutral": {
+      "rationale": "A neutral undertone balances warm and cool, so most hues work; the rules favour softened, mid-intensity colours such as dusty rose, jade, sage, soft blue and mauve over very bright or very muted extremes.",
+      "baseHueScore": 0.6,
+      "hues": [
+        {
+          "hue": 15,
+          "weight": 0.95,
+          "note": "Dusty rose and soft berry sit between warm and cool, like a neutral undertone."
+        },
+        {
+          "hue": 45,
+          "weight": 0.9,
+          "note": "Soft coral and muted peach balance warm and cool, suiting a neutral undertone."
+        },
+        {
+          "hue": 80,
+          "weight": 0.85,
+          "note": "Muted gold and soft camel give a gentle warmth that a neutral undertone carries easily."
+        },
+        {
+          "hue": 140,
+          "weight": 0.9,
+          "note": "Sage and soft green are balanced greens that suit a neutral undertone."
+        },
+        {
+          "hue": 185,
+          "weight": 0.95,
+          "note": "Jade and soft teal sit between warm and cool, like a neutral undertone."
+        },
+        {
+          "hue": 255,
+          "weight": 0.9,
+          "note": "Soft blue and denim tones work with the balanced cast of a neutral undertone."
+        },
+        {
+          "hue": 315,
+          "weight": 0.85,
+          "note": "Mauve and soft plum bridge warm and cool, suiting a neutral undertone."
+        }
+      ],
+      "neutralNote": "Off-white, taupe, grey and black are balanced neutrals that suit a neutral undertone."
+    },
+    "olive": {
+      "rationale": "An olive undertone has a green-grey or green-gold cast, so the rules favour muted, deep and jewel tones: olive, khaki, emerald, teal, burgundy, plum and mustard, ahead of pastels and neon brights.",
+      "baseHueScore": 0.15,
+      "hues": [
+        {
+          "hue": 115,
+          "weight": 1,
+          "note": "Olive, khaki and moss repeat the green-gold cast of an olive undertone."
+        },
+        {
+          "hue": 150,
+          "weight": 1,
+          "note": "Emerald and forest green are jewel tones that bring out an olive undertone."
+        },
+        {
+          "hue": 195,
+          "weight": 1,
+          "note": "Teal and petrol blue complement the muted green cast of an olive undertone."
+        },
+        {
+          "hue": 20,
+          "weight": 0.9,
+          "note": "Burgundy, brick and wine are deep, muted reds that sit well with an olive undertone."
+        },
+        {
+          "hue": 335,
+          "weight": 0.9,
+          "note": "Plum and aubergine are rich, muted jewel tones that suit an olive undertone."
+        },
+        {
+          "hue": 85,
+          "weight": 0.85,
+          "note": "Mustard, bronze and antique gold echo the golden side of an olive undertone."
+        },
+        {
+          "hue": 265,
+          "weight": 0.75,
+          "note": "Navy and deep blue give a clean, muted contrast with an olive undertone."
+        }
+      ],
+      "neutralNote": "Soft white, stone, taupe and charcoal are muted neutrals that suit an olive undertone."
+    }
+  },
+  "depthGroups": {
+    "light": "For lighter skin (Monk 1 – 3) the rules favour soft-to-medium intensity and colours that differ clearly from the skin, so very pale beiges rank lower and neon brights are toned down.",
+    "medium": "For medium skin (Monk 4 – 6) the rules favour medium-to-rich intensity; most depths work, and colours very close to the skin colour rank lower.",
+    "deep": "For deeper skin (Monk 7 – 10) the rules favour rich, saturated and jewel-toned colours and clear brights or pastels that contrast with the skin; dark, muted shades close to the skin colour rank lower."
+  },
+  "limitations": "Suggestions follow colour-theory rules for skin tone and undertone. They are a starting point, never a restriction: you can wear any colour. Colour names come from openly licensed lists (CSS named colours and the CC0 xkcd colour survey). Swatches are approximate on screen and are not product colours."
+}
