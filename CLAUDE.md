@@ -59,7 +59,7 @@ Prefer targeted tests while working; run the full suite once at the end.
 
 - **New user-owned collection:** add it to `USER_OWNED_COLLECTIONS` in `apps/api/src/models/index.ts` in the same PR (account deletion + tombstone replay).
 - **Logs:** never log request bodies, personal data, codes, tokens, photos or image URLs.
-- **AI rule 16:** never send personal photos, measurements or appearance signals to an external AI provider. The core path is deterministic; AI is optional and falls back. Sole exception: full-body photos to Gemini under D-122, only after the privacy review is recorded (mocks behind a disabled flag until then).
+- **AI rule 16:** never send personal photos, measurements or appearance signals to an external AI provider. The core path is deterministic; AI is optional and falls back. Sole exception (D-122, widened by D-129 on 2026-10-22): the user's **face photo** (skin tone, undertone) and **full-body photo** (body type) go to Gemini via `src/integrations/ai/vision-client.ts`, live when `GEMINI_API_KEY` is set, only after the user agrees to the photo notice, and with nothing else about the user — except the profile **height**, which goes with the full-body photo only (D-131). Other measurements never leave StyleMe.
 - **Never fabricate** products, prices, ratings, reviews or availability, in code, seeds, UI copy or docs.
 - **Fixtures** are synthetic, `isFixture: true`, live only in `apps/api/tests/fixtures/`, and never reach production.
 - **Secrets:** never commit `.env*` (except `.env.example`), and never use `NEXT_PUBLIC_` for secrets.

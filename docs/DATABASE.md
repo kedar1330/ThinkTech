@@ -47,6 +47,7 @@
 | `illustrations` | Croquis, technical flats, try-on layers and models, imagery, with rights (§4a.5) | Shared | 1 (D-113) — model declared, unused |
 | `adminAccounts`, `adminAuditLogs` | Admin roles and the admin audit log (§4b) | Admin / system | 1 (D-120) — models declared, unused |
 | `usageDailyStats` | Aggregate daily counters for the admin dashboard; no user ID (§4b.3) | System | 1 (D-125) — model declared, unused |
+| `manualSteps` | Interactive website manual workflow steps with feature roadmap, imagery and metadata | Shared | 1 |
 | `productImportRuns` | Results of product imports and syncs (§4.6) | System | Product layer — not created |
 | `designs`, `chatMessages` | Design Studio, chatbot | Per user | Deferred (D-76) |
 | try-on results | Photo-based or generative try-on | Per user | Future (D-48). The 2D try-on stores only configurations in `savedItems` (D-119, D-128) |
@@ -159,7 +160,7 @@ No name, plain email, IP address, reason text or other personal data. The store 
 | Field | Type / rule |
 |---|---|
 | `userId` | reference → `users`, unique |
-| `department` | `women` \| `men` \| `any` (required) |
+| `department` | The **Clothing Preference** (D-129): `women` \| `men` (required). `any` remains valid only on profiles saved before D-129; My Profile asks those users to choose again |
 | `sizes` | per category group, each optional ([FRD.md](FRD.md) §4.8): `tops` `{ letter: XS…3XL, collarIn? 13–20 in 0.5 steps }`; `bottoms` `{ waistIn: 24–50, lengthIn?: 26–36 }`; `ethnicTops` `{ letter?, numeric?: 28–54 }` (at least one); `ethnicSets` `{ letter?, waistIn? }` (at least one); `shoes` `{ uk: 1–14 }`. Letter sizes: `XS`, `S`, `M`, `L`, `XL`, `2XL`, `3XL`. `dresses` is added with that category in Stage 2. Ranges are defaults (D-54) and can be widened without migration |
 | `fitPreferences` | per category group (`tops`, `bottoms`, `ethnicTops`, `ethnicSets`): `slim` \| `regular` \| `relaxed` |
 | `likedColors[]`, `dislikedColors[]` | colour IDs from the knowledge base |
@@ -171,9 +172,10 @@ No name, plain email, IP address, reason text or other personal data. The store 
 | `preferredStyles[]`, `preferredOccasions[]` | enum values (D-09) |
 | `preferredWearTypes[]` | `indian` \| `fusion` \| `western`; optional soft ranking preference (D-96). A wear type chosen in a look request overrides it. **Planned (#63): not yet in `profileSchema` or the profile contract** |
 | `budgetPreference` | optional per-look budget in whole ₹ (1 – 10,00,000). Stage 1: compared only with totals of user-entered prices; never filters generation |
-| `measurements` | optional, self-measured; collected only when product size charts exist (product layer). `{ chestCm, waistCm, hipCm, footLengthCm, updatedAt }`. **Approved replacement (D-102), declared, not yet written:** `{ displayUnit: cm \| in, valuesCm: { height, shoulderWidth, chestBust, waist, hipsSeat, highHip, neck, armLength, upperArm, wrist, inseam, outseam, thigh, knee, calf, torsoLength, underbust }, updatedAt }` — manual entry only, stored in cm, each value range-checked (`bodyMeasurementsSchema` in `packages/contracts/src/my-profile.ts`). Deletable on its own |
-| `ageGroup` | **Approved (D-104; ships after the D-74 legal review), declared, not yet written:** optional `under_18` \| `18_24` \| `25_34` \| `35_44` \| `45_plus`; no date of birth. Reported to admins only as aggregated counts |
-| `bodyShapeChoice` | **Approved (D-102), declared, not yet written:** a proportion descriptor (D-09) or `not_sure`, chosen manually on the body-shape cards when no analysis is used |
+| `measurements` | **Built (D-129):** `{ displayUnit: cm \| in, valuesCm: { … }, updatedAt }`, written by `PUT /v1/measurements`. Body-type measurements — women: `shoulder`, `bust`, `waist`, `hip`, `highHip`; men: `shoulder`, `chest`, `waist`, `hip`. Optional fit measurements — women: `underbust`, `shoulderToWaist`, `backWidth`, `armhole`, `upperArm`, `wrist`, `sleeveLength`, `neck`, `waistToHip`, `thigh`, `knee`, `calf`, `inseam`, `outseam`, `riseFront`, `riseBack`, `dressLength`; men: `neck`, `backWidth`, `shoulderToWaist`, `armhole`, `upperArm`, `wrist`, `sleeveLength`, `thigh`, `knee`, `calf`, `inseam`, `outseam`, `riseFront`, `riseBack`, `jacketLength`, `shirtLength`. Entered by the user only, stored in cm, each value range-checked (`BODY_MEASUREMENTS`, `MEASUREMENT_ORDER` in `packages/contracts/src/my-profile.ts`). Never sent to any AI provider; never logged |
+| `ageGroup` | **Built (D-104, kept by D-129 on 2026-10-22):** optional `under_18` \| `18_24` \| `25_34` \| `35_44` \| `45_plus`; no date of birth. Reported to admins only as aggregated counts |
+| `heightCm` | **Built (D-131, 2026-10-22):** optional height in whole centimetres (120 – 230), unset until given. The engine uses only its height band (`heightBand()`); it goes to Gemini with a full-body photo, never with a face photo |
+| `bodyShapeChoice` | **Unused since D-129** (the body type lives in `appearanceProfiles.bodyType`); kept for existing documents |
 | `defaultFit` | **Approved (D-102), declared, not yet written:** default fit applied where `fitPreferences` has no value for a category; adds `oversized` to the fit options (vocabulary change, D-62) |
 | `categoryBudgets` | **Approved (D-102), declared, not yet written:** `{ <size group>: ₹ }`, e.g. `{ tops: 1500, bottoms: 2000 }`; `budgetPreference` stays the default per look. Temporary budget changes while exploring are not stored |
 | `customOccasions[]` | **Approved (D-102), declared, not yet written:** up to 10 plain-text labels (≤ 40 characters); shown to the user only, never read by the engine or logged |
@@ -186,6 +188,8 @@ No name, plain email, IP address, reason text or other personal data. The store 
 
 **Allowed values (D-09).** Every enumerated field here and in `appearanceProfiles` (department, colour IDs, contrast, silhouettes, coverage, comfort, fabrics, styles, wear types, occasions, fit, undertone, Monk range, proportion descriptors) uses the shared vocabulary in `packages/contracts/src/style-vocabulary.ts`, which the style knowledge base uses too. Values are stored as strings, so adding a value needs no migration; IDs are never renamed or removed.
 
+*D-129:* My Profile no longer asks for `sizes`, `fitPreferences`, colours, `contrastPreference`, silhouettes, coverage, comfort, styles or occasions; saving My Profile sends them cleared. The fields stay in the schema for existing data and for features that ask per outfit.
+
 Age range and height are **not collected** in Stage 1: no Stage 1 rule or feature uses them (FR-PROF-04). They are added only when a released rule or feature defines a purpose for them.
 
 **My Profile (D-102 … D-104, approved 2026-10-18; not built).** The request's `user_profiles` collection is this existing `profiles` collection — no second profile collection is created. The proposed fields above are already declared in `profileSchema` (`apps/api/src/models/index.ts`) with `default: undefined`, so existing documents are unchanged and **no migration is needed**. `PUT /v1/profile` still rejects them and `GET /v1/profile` never returns them (tested in `apps/api/tests/api/profile.test.ts`). Name and city stay on `users` (one place each); clothing preference is `department`; section completion is computed on read (`profileCompleteness()`), never stored.
@@ -197,42 +201,45 @@ Age range and height are **not collected** in Stage 1: no Stage 1 rule or featur
 | `userId` | reference → `users`, unique |
 | `skinTone` | attribute object (§5); `value` is `{ monkRange: "4-5" }` (tones `a-b`, 1 ≤ a ≤ b ≤ 10, span ≤ 2) |
 | `undertone` | attribute object (§5); `value` is `warm` \| `cool` \| `neutral` \| `olive` \| `not_sure` |
-| `bodyProportions` | attribute object (§5); `value` is a self-described proportion or silhouette descriptor (D-09) |
+| `bodyProportions` | attribute object (§5); `value` is a self-described proportion or silhouette descriptor (D-09). Set automatically from `bodyType` (`BODY_SHAPES[].proportion`) |
+| `bodyType` | **Built (D-129):** attribute object (§5); `value` is one of `BODY_TYPES_BY_DEPARTMENT[department]` — women: `hourglass`, `top_hourglass`, `bottom_hourglass`, `pear`, `spoon`, `rectangle`, `inverted_triangle`, `oval`, `diamond`; men: `rectangle`, `triangle`, `inverted_triangle`, `trapezoid`, `oval`. Cleared when the Clothing Preference changes to one whose list lacks it |
 | `useInRecommendations` | boolean, default `true`; when `false`, all appearance signals are ignored (they stay stored until cleared) |
-| `analysisVersion` | only for photo-analysis estimates (deferred) |
+| `analysisVersion` | prompt version of the latest photo analysis (`photo-analysis-v1`) |
 | `createdAt`, `updatedAt` | timestamps |
 
-In Stage 1 every attribute has `source: "self_reported"`. Any attribute can be cleared (set to `null`).
+Since D-129 an attribute's `source` is `self_reported` (manual), `photo_estimate` (Gemini), `measurements` (`classifyBodyType`) or `user_corrected`. Photo and measurement results are written at once with `userConfirmed: false`, `confirmedAt: null` and `estimate: { analysisId, confidence }`; `POST /v1/appearance/confirm` sets `userConfirmed: true`. Any attribute can be cleared (set to `null`).
 
-**Approved fields (D-103; declared in the model, not written by any endpoint yet):**
+**Consent fields (D-103; written by `POST /v1/photos` since D-129):**
 
 | Field | Type / rule |
 |---|---|
 | `photoConsent` | `{ face?: { noticeVersion, grantedAt, revokedAt }, body?: { … } }` — consent per photo kind, asked before the first analysis; revoking stops future analysis |
-| `photoRetention` | `keep` \| `delete_after_analysis` — the user's choice for newly uploaded photos |
+| `photoRetention` | `keep` \| `delete_after_analysis` — unused since D-129 (photos are kept until the user deletes them) |
 
-With photo analysis, `skinTone`, `undertone` and `bodyProportions` hold the value **confirmed or corrected by the user** (`source: photo_estimate` or `user_corrected`, §5); the estimates and their history live in `appearanceAnalyses` (§3.8).
+The history of estimates lives in `appearanceAnalyses` (§3.8).
 
-### 3.7 `userPhotos` — approved (D-103), declared, unused
+### 3.7 `userPhotos` — built (D-103, D-129)
 
-Metadata of private profile photos. The image file itself is stored in **private object storage** (provider D-107) under `storageKey`; it is never public, never hotlinked and never returned to clients — the API streams it to its owner or issues a short-lived signed URL. Model declared in `apps/api/src/models/index.ts`; no endpoint uses it yet.
+Private profile photos. **Since D-129 (founder decision 2026-10-22) the image bytes are stored in this document** (`data`, BSON binary, `select: false`, never returned to clients or logged), so account deletion removes them with the document (`USER_OWNED_COLLECTIONS`). Only the newest photo of each kind is kept. `storage: object_storage` with `storageKey` is reserved for a later move to R2 (D-107).
 
 | Field | Type / rule |
 |---|---|
 | `userId` | reference → `users` |
 | `kind` | `face` (skin tone and undertone) \| `body` (body shape) — two separate uploads |
 | `angle` | `front` \| `side` \| `back` for body photos; `null` for face photos |
-| `storageKey` | unique object key, e.g. `users/<userId>/<random>`; never contains the name or email |
-| `contentType`, `bytes` | `image/jpeg` \| `image/png` \| `image/webp`; ≤ 8 MB. EXIF/location metadata is stripped before storage |
+| `storage` | `mongodb` (default) \| `object_storage` |
+| `data` | the image bytes (when `storage: mongodb`); never selected by default |
+| `storageKey` | unset while photos live in MongoDB; unique (partial index) when used |
+| `contentType`, `bytes` | `image/jpeg` \| `image/png` \| `image/webp`; ≤ 8 MB, file signature checked. The web app redraws the photo before upload, which drops EXIF/location metadata |
 | `retention` | `keep` \| `delete_after_analysis` |
 | `uploadedAt`, `analyzedAt` | timestamps |
 | `deleteAfter` | set for `delete_after_analysis`; a deletion job removes the stored object **and** this document together (no TTL index, which would orphan the object) |
 
 Deleting a photo deletes the object and this document; it does **not** delete results derived from it (§3.8).
 
-### 3.8 `appearanceAnalyses` — approved (D-103), declared, unused
+### 3.8 `appearanceAnalyses` — built (D-103, D-129)
 
-History of skin-tone and body-shape analyses. Declared in the model; no endpoint uses it yet.
+History of skin-tone and body-type analyses: Gemini photo analyses (`analysisVersion: photo-analysis-v1`; `result` `{ monkTone, undertone }` or `{ bodyType }`) and body types identified from measurements (`source: measurements`, `measurements-v1`, `confidence: null`). A new result supersedes the previous pending one of the same kind; confirming sets `confirmed`, a correction sets `corrected`.
 
 | Field | Type / rule |
 |---|---|
@@ -545,7 +552,7 @@ The existing knowledge-base record types (§6), stored one document per record:
 | Field | Type / rule |
 |---|---|
 | `assetId` | `ILL-001` …, unique |
-| `kind` | `croquis` \| `technical_flat` \| `body_shape_figure` \| `tryon_model` \| `tryon_layer` \| `palette_mood` \| `editorial_photo` |
+| `kind` | `croquis` \| `technical_flat` \| `body_shape_figure` \| `tryon_model` \| `tryon_layer` \| `palette_mood` \| `editorial_photo` \| `measurement_guide` \| `undertone_guide` (D-129) |
 | `title`, `altText` | alt text is required |
 | `views[]` | `{ view: front \| back \| side \| detail, storage: static \| object_storage, path, format: svg \| webp \| png \| jpeg, width, height }`; at least one |
 | `depicts` | `{ departments[], clothingStyleIds[], bodyShape, skinToneRange }` — skin tone for representation only |
@@ -554,6 +561,40 @@ The existing knowledge-base record types (§6), stored one document per record:
 | `rights` | `{ source: team_made \| commissioned \| cc0 \| cc_by \| licensed_in_writing \| code_generated \| ai_tool_permitted, creator, licence, licenceUrl, attribution, allowedUsage[], evidenceRef, verifiedBy, verifiedAt }`. **A record can't be published until `rights.verifiedAt` is set** (enforced by the model) |
 
 Files: static assets under the web app's public folder in the first release (`storage: static`), object storage later if needed (D-107). These are never user media.
+
+**My Profile guides (D-129).** 46 code-generated SVGs (`rights.source: code_generated`, published): one measuring guide per measurement and Clothing Preference (`ILL-1101` … women, `ILL-1201` … men, in `MEASUREMENT_ORDER`; figure in a plain white shirt and pants with a yellow tape) and four undertone hands (`ILL-1301` … `ILL-1304`). Files live in `apps/web/public/illustrations/profile/`. `pnpm --filter @styleme/api illustrations:generate` rewrites the files; `illustrations:seed` upserts the records.
+
+---
+
+## 4c. Design Features (D-132)
+
+Outfit Categories → necklines, sleeves and more: a shared catalogue (not user-owned) and two user-owned collections. Seeded by `pnpm --filter @styleme/api design:seed` from `src/design/catalogue.ts` (safe to re-run); images written by `design:generate`.
+
+| Collection | Owner | Purpose | Key fields and indexes |
+|---|---|---|---|
+| `outfitCategories` | shared | Hierarchy: `department` (women, men) → `outfit_category` (indian, western, fusion = Indo-Western) → `garment_type` | `key` unique (`garment-kurta`); `departments[]`, `outfitCategories[]`, `garmentKind` (top, one_piece, bottom, layer, drape), `featureCategoryIds[]`; index `{level, departments, status, sortOrder}` |
+| `designFeatureCategories` | shared | Neckline, sleeve, fit, length … and how the page shows them (`illustrated`, `grid`, `tags`) | `categoryId` unique; `garmentKinds[]` |
+| `designFeatures` | shared | One record per feature (`neckline_v_neck`), shared by Women's and Men's Wear where it is the same | `featureId` unique; `featureCategory`, `departments[]`, `garmentKinds[]` (empty = all of the category's), `attributes` (depth, width, sleeve length, volume), `illustrations[] {department, role: card/layer, assetId}`, `selectable` (false for "Not applicable"), `status`, `version` |
+| `featureSuitabilityRules` | shared, styling content | When a feature is recommended / alternative / not preferred, and why | `ruleId` unique (`FSR-001`); `featureId`, `departments[]`, `applicableGarments[]`, `conditions {bodyTypes[], heightBands[], stylingGoals[]}` (every non-empty list must match), `recommendation {result, reason, confidence}`, `priority` (goals 1, body type 2, height 3); `status` can be `active` only with `reviewStatus: approved` (validated) |
+| `featureCombinations` | shared | Pairs that cannot be made (`incompatible`) or curated pairings | `pairKey` + `kind` unique; `featureIds[2]`, `reason` |
+| `userDesignPreferences` | **user** | Likes / dislikes / explore, goals, fit and occasion preferences; `personalised[]` = the last result per garment | `userId` unique; `featurePreferences[] {featureId, featureCategory, preference}`, `stylingGoals[]`, `personalised[] {garmentType, department, basisKey (SHA-256 of the inputs), computedAt, features[] {featureId, result, ruleIds}}` — no height, body type or measurement is copied |
+| `userDesignSelections` | **user** | The visual customizer's saved combination | unique `{userId, clothingPreference, garmentType}`; `outfitCategory`, `selectedFeatures {category: featureId}`, `customization {necklineDepth, sleeveLength, otherSelectedAttributes}`, `savedAt` |
+
+Both user collections are in `USER_OWNED_COLLECTIONS` (account deletion and tombstone replay). Images are `illustrations` of kind `design_feature` (cards) and `design_feature_layer` (base figures `ILL-2000` / `ILL-3000`, neckline and sleeve layers): static SVGs under `apps/web/public/illustrations/design/`.
+
+---
+
+## 4d. Colour library (D-133)
+
+Monk tone (1 – 10) → undertone (warm, cool, neutral, olive) → 100+ colours. Two shared collections and one user-owned. Built deterministically by `src/colours/library.ts` from openly licensed names (`src/colours/sources.ts`: CSS named colours and the CC0 xkcd survey in `src/colours/data/xkcd-colours.json`) and the reviewed content file, and written by `pnpm --filter @styleme/api colours:seed` (approved content, `src/style-rules/data/colour-library.json`) or `colours:seed -- --drafts` (a future draft, preview only; refused in production). Safe to re-run. Users read only their own category (`/v1/colours/mine`).
+
+| Collection | Owner | Purpose | Key fields and indexes |
+|---|---|---|---|
+| `colourSwatches` | shared | One named colour (`CLR-0001` …) | `colourId` unique; `name`, `hex`, `rgb[3]`, `oklch {l, c, h}`, `family` (12), `temperature`, `depth`, `intensity`, `source` (`css`, `xkcd`), `status` (`published`, `retired`: colours that leave the list are retired, never deleted); index `{family, status}` |
+| `colourCategories` | shared, styling content | One per Monk tone and undertone (`monk-06-warm`), 40 in all | `categoryId` unique; unique `{monkTone, undertone}`; `label`, `skinHex`, `rationale`, `limitations`, `colours[] {colourId, score, rank, reasons[]}`, `contentVersion`, `reviewStatus` (`draft`, `approved`), `reviewedBy`, `reviewedAt` |
+| `userColourPreferences` | **user** | Liked and avoided colours | `userId` unique; `colours[] {colourId, preference: liked \| avoided, savedAt}` (oldest first; at most 600) |
+
+`userColourPreferences` is in `USER_OWNED_COLLECTIONS` (account deletion and tombstone replay). No personal data reaches the shared collections; the user's category is computed per request from `appearanceProfiles`, never stored.
 
 ---
 

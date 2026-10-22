@@ -61,7 +61,7 @@ A feature isn't complete just because the UI works. It needs: UI, API, validatio
 - **Never fabricate** products, prices, availability, ratings, reviews, quality claims or confidence values — in code, seed data, UI copy or docs.
 - **Fixtures** are synthetic, marked `isFixture: true`, live in `apps/api/tests/fixtures/`, and are loaded only by test and seed scripts that refuse to run in production. Never put a fixture where a user could see it.
 - Never use affiliate status or commission in ranking or quality logic.
-- Never send personal photos, measurements, appearance signals or unnecessary personal data to an external AI provider (AI rule 16). The only authorised exception is full-body photos to Gemini under [ImplementationPlan.md](ImplementationPlan.md) D-122, and only after the privacy review is recorded; until then the code runs against mocks behind a disabled flag.
+- Never send personal photos, measurements, appearance signals or unnecessary personal data to an external AI provider (AI rule 16). The only authorised exception is the user's face photo and full-body photo to Gemini under [ImplementationPlan.md](ImplementationPlan.md) D-122 as widened by D-129 (2026-10-22): through `apps/api/src/integrations/ai/vision-client.ts` only, after the user agrees to the photo notice, with nothing else about the user, and with results validated against the listed values. Measurements never leave StyleMe.
 - Get retailer data only through permitted methods. No scrapers.
 - External services only through `src/integrations/`.
 - Secrets server-side and per environment. Never commit `.env`; never use `NEXT_PUBLIC_` for secrets.

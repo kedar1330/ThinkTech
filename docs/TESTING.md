@@ -270,6 +270,21 @@ All run on fixtures and mocked sources. No live retailer calls in CI.
 | W-07 | Wording | Never claims a fabric is "always" right |
 | W-08 | Date beyond the forecast range | Current conditions with a note, or manual entry |
 
+## 10b. My Profile redesign (D-129, 2026-10-22) — automated
+
+| ID | Scenario | Where |
+|---|---|---|
+| T-135 | Clothing Preference accepts only women/men; age group saved; changing it clears a body type the new list lacks | `apps/api/tests/api/profile.test.ts`, `packages/contracts/tests/my-profile.test.ts` |
+| T-136 | Body-type classification for every women's and men's type, and only types of that list | `packages/contracts/tests/my-profile.test.ts` |
+| T-137 | Measurements: Clothing Preference required, merge and clear, wrong-department and out-of-range values refused, body type stored at once for review, values never logged | `apps/api/tests/api/measurements.test.ts` |
+| T-138 | Face photo: stored, analysed by the (fake) provider, result returned at once and unconfirmed; only the photo leaves the API; confirm and correct; newest photo kept; unusable photo explained; values outside the lists refused; nothing logged | `apps/api/tests/api/photos.test.ts` |
+| T-139 | Body photo: needs a Clothing Preference; Gemini may choose only from that list | `apps/api/tests/api/photos.test.ts` |
+| T-140 | Upload rules: notice version, image type and signature, no key / flag off → `PROVIDER_NOT_CONFIGURED`, owner-only list and delete | `apps/api/tests/api/photos.test.ts` |
+| T-141 | My Profile UI: photo or manual (one hides the other), Monk and four-undertone pickers, result review, steppers for women (5) and men (4), men's body-type list, optional fit section | `apps/web/tests/my-profile.test.tsx`, `measurement-form.test.ts`, `profile-form.test.ts` |
+| T-142 | Completeness: Clothing Preference, city, skin tone & undertone, body type | `packages/contracts/tests/profile-completeness.test.ts`, `apps/web/tests/profile-completeness.test.tsx` |
+
+Manual check before launch: one real face photo and one real full-body photo through Gemini with the chosen `GEMINI_VISION_MODEL`, and the founder's review of results on a small consented set.
+
 ## 10a. My Profile and Home scenarios (D-102 … D-106, approved 2026-10-18)
 
 The founder approved these features on 2026-10-18; the scenarios are not implemented yet. Already automated for the dormant schema: `packages/contracts/tests/my-profile.test.ts` and two tests in `apps/api/tests/api/profile.test.ts` (fields rejected and hidden today; account deletion removes `userPhotos` and `appearanceAnalyses`).
