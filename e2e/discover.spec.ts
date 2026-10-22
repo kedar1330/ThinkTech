@@ -63,7 +63,7 @@ test('no department: the summary and the results say no department filter is app
   const results = await requestLooks(page, 'Work');
   await expect(page.getByText('No department filter applied: looks can come from every department.')).toHaveCount(2);
   await expect(results.getByRole('article')).not.toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Edit profile' })).toHaveAttribute('href', '/profile#style-profile');
+  await expect(page.getByRole('link', { name: 'Edit profile' })).toHaveAttribute('href', '/profile#basics');
 });
 
 test('INSUFFICIENT_MATCHES: a request with no matching looks says what to change', async ({ page }) => {
@@ -109,10 +109,12 @@ test('regenerate: after a profile change, new looks say what changed (#49)', asy
   await test.step('change the profile in another tab', async () => {
     const profile = await context.newPage();
     await profile.goto('/profile');
-    await profile.getByRole('radio', { name: 'Show me everything' }).check();
-    await profile.locator('select[name="color_maroon"]').selectOption('avoid');
-    await profile.getByRole('button', { name: 'Save style profile' }).click();
-    await expect(profile.getByText('Your style profile has been saved.')).toBeVisible();
+    const basics = profile.locator('#basics');
+    await basics.getByRole('radio', { name: 'Women’s Wear' }).check();
+    await basics.getByText('Fabrics you like or avoid (optional)').click();
+    await basics.locator('select[name="fabric_linen"]').selectOption('avoid');
+    await basics.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(basics.getByText('Saved.')).toBeVisible();
     await profile.close();
   });
 
@@ -120,8 +122,8 @@ test('regenerate: after a profile change, new looks say what changed (#49)', asy
     await results.getByRole('button', { name: 'Regenerate with my current profile' }).click();
     const regenerated = page.getByRole('region', { name: 'Regenerated looks' });
     await expect(regenerated.getByText('What changed')).toBeVisible();
-    await expect(regenerated.getByText('You chose a department: Show me everything.')).toBeVisible();
-    await expect(regenerated.getByText('Your avoided colours now include maroon.')).toBeVisible();
+    await expect(regenerated.getByText('You chose a department: Women.')).toBeVisible();
+    await expect(regenerated.getByText('Your avoided fabrics now include linen.')).toBeVisible();
     await expect(regenerated.getByRole('article')).not.toHaveCount(0);
   });
 });
