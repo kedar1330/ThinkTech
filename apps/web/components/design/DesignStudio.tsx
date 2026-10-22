@@ -3,7 +3,8 @@
 import { useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, EyeOff, Heart, RotateCcw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, Check, EyeOff, Heart, RotateCcw, Sparkles } from 'lucide-react';
 import {
   STYLING_GOALS,
   type DesignFeatureCategory,
@@ -113,6 +114,7 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
   const [goals, setGoals] = useState<string[]>(stylingGoals);
   const [message, setMessage] = useState<{ error?: string; success?: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const byId = useMemo(() => {
     const map = new Map<string, DesignFeatureItem>();
@@ -150,20 +152,36 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
       if (result?.error) setMessage({ error: result.error });
     });
 
+  const saveSelection = () =>
+    saveDesignAction({
+      selection: {
+        garmentType: data.garmentType.id,
+        outfitCategory,
+        ...(department ? { department } : {}),
+        selectedFeatures: selected,
+        customization: {},
+      },
+      stylingGoals: goals,
+    });
+
   const save = () =>
     startTransition(async () => {
-      const result = await saveDesignAction({
-        selection: {
-          garmentType: data.garmentType.id,
-          outfitCategory,
-          ...(department ? { department } : {}),
-          selectedFeatures: selected,
-          customization: {},
-        },
-        stylingGoals: goals,
-      });
+      const result = await saveSelection();
       setMessage(result?.error ? { error: result.error } : { success: result?.success ?? 'Saved.' });
     });
+
+  /** Saves first, so Discover My Style always builds looks around the design shown here. */
+  const discover = () =>
+    startTransition(async () => {
+      const result = await saveSelection();
+      if (result?.error) {
+        setMessage({ error: result.error });
+        return;
+      }
+      const query = new URLSearchParams({ from: 'design', garment: data.garmentType.id, outfit: outfitCategory });
+      router.push(`/discover/looks?${query.toString()}`);
+    });
+  const hasSelection = Object.keys(selected).length > 0;
 
   const reset = () =>
     startTransition(async () => {
@@ -385,6 +403,19 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
               <RotateCcw /> Reset
             </Button>
           </div>
+          <Button
+            type="button"
+            size="full"
+            className="mt-2"
+            onClick={discover}
+            disabled={pending || !hasSelection}
+            aria-describedby="discover-hint"
+          >
+            <Sparkles aria-hidden /> Discover my style <ArrowRight aria-hidden />
+          </Button>
+          <p id="discover-hint" className="mt-1 text-center text-[11px] text-muted-foreground">
+            {hasSelection ? 'Saves this design, then finds looks that match it.' : 'Pick a neckline or sleeve first.'}
+          </p>
           <p
             role="status"
             className={cn('mt-2 min-h-5 text-center text-xs', message?.error ? 'text-destructive' : 'text-success')}

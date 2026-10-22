@@ -23,6 +23,21 @@ describe('Discover request form → POST /v1/recommendations body', () => {
     });
   });
 
+  it('sends the design (IDs only) when the hidden design fields are set', () => {
+    expect(requestFormToRequest({ occasion: 'festive', designGarment: 'kurti', designOutfit: 'indian' })).toEqual({
+      ok: true,
+      body: {
+        occasion: 'festive',
+        paletteMode: 'suggested',
+        design: { garmentType: 'kurti', outfitCategory: 'indian' },
+      },
+    });
+    expect(requestFormToRequest({ occasion: 'festive', designGarment: 'kurti' })).toEqual({
+      ok: true,
+      body: { occasion: 'festive', paletteMode: 'suggested' },
+    });
+  });
+
   it('requires an occasion', () => {
     expect(requestFormToRequest({})).toEqual({ ok: false, fieldErrors: { occasion: 'Choose an occasion.' } });
   });

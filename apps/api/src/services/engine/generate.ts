@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import {
   MAX_LOOKS,
   type ColorId,
+  type DesignMatch,
   type LookSlot,
   type ProfileResponse,
   type RecommendationRequest,
@@ -9,6 +10,7 @@ import {
 } from '@styleme/contracts';
 import type { Palette, Template } from '../../style-rules/schemas';
 import { wearsContrast } from './contrast';
+import { designRank, matchDesign, type EngineDesign } from './design';
 import { explain, type Explanation } from './explain';
 import { templateWearType, type StyleLibrary } from './library';
 import { resolvePreferences, type EngineSignals, type PreferenceConflict, type Preferences } from './preferences';
@@ -31,6 +33,8 @@ export interface EngineInput {
   signals: EngineSignals | null;
   feedbackSignals?: FeedbackSignals | null;
   library: StyleLibrary;
+  /** A designed garment to build the looks around (ranking only, see design.ts). */
+  design?: EngineDesign | null;
 }
 
 export interface GeneratedLook extends Explanation {
@@ -38,6 +42,8 @@ export interface GeneratedLook extends Explanation {
   paletteId: string;
   slots: LookSlot[];
   combinationSignature: string;
+  /** Present when the request carried a design. */
+  designMatch?: DesignMatch;
 }
 
 export interface EngineResult {
@@ -271,19 +277,26 @@ function outfitKey(candidate: Candidate): string {
  * Up to MAX_LOOKS looks with unique signatures (FR-LOOK-13) and no two with the same garments (two
  * templates or palettes can produce the same visible outfit). For variety, the best look of each wear
  * type is taken first, then of each template, then of each template and palette pair, then the rest
- * in rank order.
+ * in rank order. With a design, looks that have the designed garment go through those passes before the rest.
  */
-function select(candidates: Candidate[]): Candidate[] {
-  const ranked = [...candidates].sort(byRank);
+function select(
+  candidates: Candidate[],
+  compare: (a: Candidate, b: Candidate) => number = byRank,
+  preferred: (c: Candidate) => boolean = () => true,
+): Candidate[] {
+  const ranked = [...candidates].sort(compare);
+  const groups = [ranked.filter(preferred), ranked.filter((c) => !preferred(c))];
   const picked: Candidate[] = [];
   const signatures = new Set<string>();
   const outfits = new Set<string>();
   const seen = { wearType: new Set<string>(), template: new Set<string>(), pair: new Set<string>() };
   const wearType = (c: Candidate) => templateWearType(c.template) ?? '';
   const pair = (c: Candidate) => `${c.template.id}|${c.palette.id}`;
-  for (const pass of ['wearType', 'template', 'pair', 'fill'] as const) {
-    for (const candidate of ranked) {
-      if (picked.length === MAX_LOOKS) return picked.sort(byRank);
+  for (const [group, pass] of groups.flatMap((g) =>
+    (['wearType', 'template', 'pair', 'fill'] as const).map((p) => [g, p] as const),
+  )) {
+    for (const candidate of group) {
+      if (picked.length === MAX_LOOKS) return picked.sort(compare);
       if (signatures.has(candidate.signature) || outfits.has(outfitKey(candidate))) continue;
       if (pass === 'wearType' && seen.wearType.has(wearType(candidate))) continue;
       if (pass === 'template' && seen.template.has(candidate.template.id)) continue;
@@ -296,7 +309,7 @@ function select(candidates: Candidate[]): Candidate[] {
       seen.pair.add(pair(candidate));
     }
   }
-  return picked.sort(byRank);
+  return picked.sort(compare);
 }
 
 export function generateLooks(input: EngineInput): EngineResult {
@@ -331,7 +344,28 @@ export function generateLooks(input: EngineInput): EngineResult {
     if (!produced && cause) eliminated.set(cause[0], (eliminated.get(cause[0]) ?? 0) + 1);
   }
 
-  const looks = select(candidates).map((c): GeneratedLook => {
+  const { design } = input;
+  const matches = new Map<Candidate, DesignMatch>();
+  const matchOf = (c: Candidate) => {
+    if (!matches.has(c))
+      matches.set(
+        c,
+        matchDesign(
+          c.slots.map((s) => s.choice.spec),
+          design!,
+        ),
+      );
+    return matches.get(c)!;
+  };
+  const selected = design
+    ? select(
+        candidates,
+        (a, b) => designRank(matchOf(a)) - designRank(matchOf(b)) || byRank(a, b),
+        (c) => matchOf(c).level !== 'none',
+      )
+    : select(candidates);
+
+  const looks = selected.map((c): GeneratedLook => {
     const explanation = explain({
       template: c.template,
       palette: c.palette,
@@ -347,6 +381,7 @@ export function generateLooks(input: EngineInput): EngineResult {
       slots: c.slots.map((s) => toLookSlot(s, prefs)),
       ...explanation,
       combinationSignature: c.signature,
+      ...(design ? { designMatch: matchOf(c) } : {}),
     };
   });
 

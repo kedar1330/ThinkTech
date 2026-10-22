@@ -1,15 +1,13 @@
 import { expect, signUpAndSkipOnboarding, test } from './fixtures/auth';
+import { looksForDesign } from './fixtures/discover';
 
 // Saving a look from the Discover results (FR-OUT-01, #47) and finding it in Saved Outfits (#41).
 
 test('save a look from the results, then open it in Saved Outfits', async ({ page }) => {
   await signUpAndSkipOnboarding(page);
 
-  const first = await test.step('get looks for an occasion', async () => {
-    await page.goto('/discover/looks');
-    await page.getByRole('radio', { name: 'Everyday' }).check();
-    await page.getByRole('button', { name: 'Show me looks' }).click();
-    const look = page.getByRole('region', { name: 'Your looks' }).getByRole('article', { name: 'Look 1' });
+  const first = await test.step('get looks for a saved design', async () => {
+    const look = (await looksForDesign(page)).getByRole('article', { name: 'Look 1' });
     await expect(look).toBeVisible();
     return look;
   });

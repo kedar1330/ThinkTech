@@ -29,6 +29,13 @@ export class OutfitsController {
     sendData(res, look, 200, look.userItems.length ? ['USER_ENTERED_PRICES'] : undefined);
   };
 
+  /** The look's AI outfit image (raw bytes); private to its owner, never cached by a shared proxy. */
+  image: RequestHandler = async (req, res) => {
+    const { data, contentType } = await this.outfits.image(userOf(req), outfitIdOf(req));
+    res.set({ 'content-type': contentType, 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' });
+    res.send(data);
+  };
+
   save: RequestHandler = async (req, res) => {
     sendData(res, await this.outfits.save(userOf(req), outfitIdOf(req)));
   };

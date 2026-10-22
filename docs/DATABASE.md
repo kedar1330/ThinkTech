@@ -360,9 +360,12 @@ One document per look. `POST /v1/recommendations` creates up to 5 looks sharing 
 | `aiModel` | `null` unless optional AI wording was used |
 | `aiPromptVersion` | Prompt version of the AI wording (e.g. `wording-v1`); `null` unless optional AI wording was used (#55) |
 | `feedback` | `{ value: "love_it" \| "not_for_me", reason? (fixed list), at }` or null |
+| `designMatch` | `{ level: "full" \| "partial" \| "none", differs[] }` when the look was requested around a designed garment (D-132); null otherwise. `request.design` holds `{ garmentType, outfitCategory }` |
 | `priceSummary` | **not stored for user-entered prices**: computed on read from the user's shortlist items (FR-BUD-07). Product layer: stored with the snapshot as `{ itemsTotal, priceBasis: "verified", budget?, budgetRemaining?, label }` |
 | `weatherContext` | Stage 2: `{ source, observedAt, summary, bands }` or manual; never location |
 | `createdAt`, `updatedAt` | timestamps |
+
+**`outfitImages`** (local preview, 2026-10-22; user-owned, in `USER_OWNED_COLLECTIONS`): one AI outfit image per look, model `OutfitImage`. Fields `userId`, `outfitId` (unique index), `data` (the image bytes, never selected by default or logged), `contentType`, `bytes`, `provider`, `model`, `promptVersion` (`outfit-image-v2`), `expiresAt` (copied from the suggested look, TTL index; set to null when the look is saved, so a saved look keeps its image), `createdAt`. Deleted with the look and with the account.
 
 `slots[]` element:
 

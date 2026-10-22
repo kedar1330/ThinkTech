@@ -166,7 +166,8 @@ describe('GET /v1/design/taxonomy and /v1/design/features', () => {
       result: 'not_preferred',
       ruleIds: ['FSR-903'],
     });
-    const raw = JSON.stringify(doc);
+    // IDs and timestamps are left out: a random ObjectId or a time like `.152Z` can contain "152".
+    const raw = JSON.stringify(doc, (key, value: unknown) => (/^_id$|Id$|At$/.test(key) ? undefined : value));
     expect(raw).not.toContain('152');
     expect(raw).not.toContain('pear');
     expect(raw).not.toContain('petite');

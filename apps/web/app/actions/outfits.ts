@@ -8,9 +8,6 @@ import {
   type DeletedResponse,
   type FeedbackRecordedResponse,
   type Look,
-  type LookSlot,
-  type OutfitDetail,
-  type RecommendationResponse,
 } from '@styleme/contracts';
 import { apiRequest } from '@/lib/api/server';
 import { BLOCKED, errorState, redirectIfSignedOut, sameOrigin, str, tokenOrLogin, type FormState } from '@/lib/actions';
@@ -85,41 +82,4 @@ export async function feedbackOutfitAction(_prev: FormState, formData: FormData)
   }
   revalidatePath('/saved');
   return { success: 'Feedback recorded.' };
-}
-
-export type FreshAlternativesState =
-  | {
-      error?: string;
-      slots?: LookSlot[];
-    }
-  | undefined;
-
-/**
- * Gets fresh alternatives from the engine for a saved look's request (#42).
- * Runs the look's original request through the engine with the current profile and feedback signals,
- * returning fresh slot alternatives.
- */
-export async function getFreshAlternativesAction(
-  _prev: FreshAlternativesState,
-  formData: FormData,
-): Promise<FreshAlternativesState> {
-  if (!(await sameOrigin())) return { error: 'Request blocked.' };
-  const token = await tokenOrLogin();
-  const id = objectIdSchema.safeParse(str(formData, 'outfitId'));
-  if (!id.success) return { error: GONE };
-
-  try {
-    const look = await apiRequest<OutfitDetail>(`/v1/outfits/${id.data}`, { token });
-    const rec = await apiRequest<RecommendationResponse>('/v1/recommendations', {
-      method: 'POST',
-      body: look.request,
-      token,
-    });
-    const matched = rec.looks.find((l) => l.templateId === look.templateId) ?? rec.looks[0];
-    if (!matched) return { error: 'Could not generate alternatives for this look.' };
-    return { slots: matched.slots };
-  } catch (err) {
-    redirectIfSignedOut(err);
-    return { error: err instanceof Error ? err.message : 'Could not get fresh alternatives.' };
-  }
 }

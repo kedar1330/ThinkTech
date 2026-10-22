@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
-import type { Types } from 'mongoose';
+import { Types } from 'mongoose';
 import {
   OCCASIONS,
   SAVED_LIMITS,
+  type DesignMatch,
   type Look,
   type LookInputs,
   type LookSlot,
@@ -16,6 +17,7 @@ import type { Models, OutfitDoc, ShortlistItemDoc } from '../models/index';
 import { AppError } from '../utils/errors';
 import { calculatePriceSummary } from './budget';
 import type { StyleLibrary } from './engine';
+import type { OutfitImageService } from './outfit-image.service';
 import { toItem } from './shortlist.service';
 
 // Saved looks (FR-OUT-01 … 03, FR-OUT-05). Every query is scoped by `userId`, so another user's look,
@@ -46,6 +48,7 @@ function toLook(doc: StoredOutfit): Look {
     explanationRefs: doc.explanationRefs,
     combinationSignature: doc.combinationSignature,
     aiModel: doc.aiModel ?? null,
+    ...(doc.designMatch ? { designMatch: doc.designMatch as DesignMatch } : {}),
     ...(doc.feedback
       ? {
           feedback: {
@@ -72,7 +75,24 @@ export class OutfitsService {
     private readonly models: Models,
     private readonly library: StyleLibrary,
     private readonly now: () => Date = () => new Date(),
+    private readonly images?: OutfitImageService,
   ) {}
+
+  /** The looks with their AI image status attached (none when outfit images are off and none is stored). */
+  private async withImages<T extends Look>(userId: Types.ObjectId, looks: T[]): Promise<T[]> {
+    if (!this.images || looks.length === 0) return looks;
+    const status = await this.images.statusFor(
+      userId,
+      looks.map((l) => new Types.ObjectId(l.id)),
+    );
+    return looks.map((l) => (status.has(l.id) ? { ...l, image: status.get(l.id)! } : l));
+  }
+
+  /** `GET /v1/outfits/:id/image`: the look's AI outfit image, made on first view. */
+  async image(userId: Types.ObjectId, id: Types.ObjectId): Promise<{ data: Buffer; contentType: string }> {
+    if (!this.images) throw new AppError('NOT_FOUND');
+    return this.images.image(userId, id);
+  }
 
   /** The user's own looks that still exist: saved ones, and suggestions not yet past their expiry. */
   private owned(userId: Types.ObjectId, id?: Types.ObjectId) {
@@ -92,7 +112,7 @@ export class OutfitsService {
         .lean<StoredOutfit[]>(),
       this.models.Outfit.countDocuments(filter),
     ]);
-    return { looks: docs.map(toLook), page: query.page, limit: query.limit, total };
+    return { looks: await this.withImages(userId, docs.map(toLook)), page: query.page, limit: query.limit, total };
   }
 
   /**
@@ -115,8 +135,9 @@ export class OutfitsService {
             (await this.models.Profile.findOne({ userId }, { budgetPreference: 1 }).lean())?.budgetPreference,
           );
     // The request and inputs snapshot let regenerate (#49) re-run the request and say what changed.
+    const [look] = await this.withImages(userId, [toLook(doc)]);
     return {
-      ...toLook(doc),
+      ...look!,
       request: doc.request as RecommendationRequest,
       inputsUsed: doc.inputsUsed as LookInputs,
       userItems: items.map(toItem),
@@ -149,9 +170,12 @@ export class OutfitsService {
       { returnDocument: 'after' },
     ).lean<StoredOutfit>();
     if (!doc) throw new AppError('NOT_FOUND');
+    // A saved look keeps its AI image for as long as the look is kept.
+    await this.models.OutfitImage.updateOne({ userId, outfitId: id }, { $set: { expiresAt: null } });
 
     await this.upsertSavedItem(userId, doc, identityKey);
-    return toLook(doc);
+    const [look] = await this.withImages(userId, [toLook(doc)]);
+    return look!;
   }
 
   /**
@@ -162,6 +186,7 @@ export class OutfitsService {
     if (!(await this.models.Outfit.exists(this.owned(userId, id)))) throw new AppError('NOT_FOUND');
     await this.models.SavedItem.deleteOne({ userId, identityKey: lookIdentityKey(id) });
     await this.models.ShortlistItem.updateMany({ userId, outfitId: id }, { $set: { outfitId: null, slotId: null } });
+    await this.models.OutfitImage.deleteOne({ userId, outfitId: id });
     const { deletedCount } = await this.models.Outfit.deleteOne(this.owned(userId, id));
     if (deletedCount === 0) throw new AppError('NOT_FOUND');
   }

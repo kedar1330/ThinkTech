@@ -22,9 +22,16 @@ export const vocabLabel = (list: Vocabulary, id: string) => list.find((o) => o.i
 
 export const slotLabel = (slot: string) => vocabLabel(SLOT_TYPES, slot);
 
-/** E.g. "Navy kurta · Ivory trousers": names every piece with its colour in words. */
+const GARMENT_SLOTS = new Set(['layer', 'one_piece', 'top', 'bottom']);
+
+/** The pieces shown for a look: its garments only, without footwear or accessories. */
+export function garmentSlots(look: Pick<Look, 'slots'>): Look['slots'] {
+  return look.slots.filter((s) => GARMENT_SLOTS.has(s.slot));
+}
+
+/** E.g. "Navy kurta · Ivory trousers": names every garment with its colour in words. */
 export function lookTitle(look: Pick<Look, 'slots'>): string {
-  return look.slots
+  return garmentSlots(look)
     .map(
       (s) => `${vocabLabel(COLORS, s.lookSpec.colorId)} ${vocabLabel(CATEGORIES, s.lookSpec.category).toLowerCase()}`,
     )

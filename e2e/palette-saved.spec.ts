@@ -1,4 +1,5 @@
 import { expect, signUpAndSkipOnboarding, test } from './fixtures/auth';
+import { looksForDesign } from './fixtures/discover';
 
 // Palette and Saved Outfits flow (#39 – #42, issue #51; My Colour Palette shows only My colours since #105):
 // open My Colour Palette → request looks → save → feedback → remove, at mobile and desktop viewports,
@@ -23,12 +24,8 @@ test('journey: my colour palette → request looks → save → feedback → rem
     await expect(page).toHaveURL(/\/palette$/);
   });
 
-  const firstLook = await test.step('request looks for an occasion', async () => {
-    await page.goto('/discover/looks');
-    await expect(page.getByRole('heading', { name: 'Find looks for an occasion' })).toBeVisible();
-    await page.getByRole('radio', { name: 'Everyday' }).check();
-    await page.getByRole('button', { name: 'Show me looks' }).click();
-    const region = page.getByRole('region', { name: 'Your looks' });
+  const firstLook = await test.step('save a design and request looks', async () => {
+    const region = await looksForDesign(page);
     await expect(region).toBeVisible();
     const look = region.getByRole('article', { name: 'Look 1' });
     await expect(look).toBeVisible();
@@ -98,10 +95,7 @@ test('responsive: palettes and saved outfits fit at 320, 390, 768 and 1366 px', 
   }
 
   // 3. Request and save a look to check /saved and /saved/[id]
-  await page.goto('/discover/looks');
-  await page.getByRole('radio', { name: 'Everyday' }).check();
-  await page.getByRole('button', { name: 'Show me looks' }).click();
-  const firstLook = page.getByRole('region', { name: 'Your looks' }).getByRole('article', { name: 'Look 1' });
+  const firstLook = (await looksForDesign(page)).getByRole('article', { name: 'Look 1' });
   await firstLook.getByRole('button', { name: 'Save to Saved Outfits' }).click();
   await expect(firstLook.getByRole('status')).toHaveText(/Saved to Saved Outfits\./);
   await firstLook.getByRole('link', { name: 'View in Saved Outfits' }).click();

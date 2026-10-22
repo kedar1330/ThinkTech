@@ -5,6 +5,7 @@ import { createApp } from '../src/app';
 import type { Config } from '../src/config/env';
 import type { AppRateLimits } from '../src/middleware/rate-limit';
 import { connectDatabase, type Database } from '../src/db';
+import type { OutfitImageProvider } from '../src/integrations/ai/image-client';
 import type { PhotoAnalysisProvider } from '../src/integrations/ai/vision-client';
 import type { WordingProvider } from '../src/integrations/ai/wording-client';
 import { createLogger } from '../src/logger';
@@ -41,6 +42,10 @@ export const BASE_CONFIG: Config = {
   PHOTO_ANALYSIS_ENABLED: true,
   GEMINI_VISION_MODEL: 'gemini-test-vision',
   PHOTO_ANALYSIS_TIMEOUT_MS: 30_000,
+  OUTFIT_IMAGES_ENABLED: false,
+  POLLINATIONS_API_KEY: undefined,
+  POLLINATIONS_IMAGE_MODEL: 'test-image-model',
+  OUTFIT_IMAGE_TIMEOUT_MS: 5000,
 };
 
 /** Captures messages instead of sending them; extracts codes and link tokens for the tests. */
@@ -120,6 +125,8 @@ export interface AppOptions {
   wording?: WordingProvider;
   /** A fake photo-analysis provider (tests/fixtures/vision.ts); used while PHOTO_ANALYSIS_ENABLED is true. */
   vision?: PhotoAnalysisProvider;
+  /** A fake outfit image provider (tests/fixtures/outfit-images.ts); used while OUTFIT_IMAGES_ENABLED is true. */
+  outfitImages?: OutfitImageProvider;
   /** Custom rate limits (for rate limit tests). */
   rateLimits?: AppRateLimits;
 }
@@ -162,6 +169,7 @@ export async function startTestEnv(): Promise<TestEnv> {
         styleLibrary: options.styleLibrary,
         wordingProvider: options.wording ?? null,
         photoAnalysisProvider: options.vision ?? null,
+        outfitImageProvider: options.outfitImages ?? null,
         rateLimits: options.rateLimits,
       });
       return { ...app, config, mail, sms };

@@ -2,7 +2,10 @@ import Link from 'next/link';
 import type { Look, ProfileSizes } from '@styleme/contracts';
 import { shopHref } from '@/lib/shop/look-shopper';
 import { Card } from '@/components/ui/card';
+import { garmentSlots } from '@/lib/outfits/look-text';
+import { DesignMatchBadge } from './DesignMatchBadge';
 import { FeedbackButtons } from './FeedbackButtons';
+import { OutfitImage } from './OutfitImage';
 import { SaveLookButton } from './SaveLookButton';
 import { SlotRow } from './SlotRow';
 import { WhyThisWorks } from './WhyThisWorks';
@@ -16,12 +19,16 @@ export function LookCard({ look, position, sizes }: { look: Look; position: numb
   return (
     <Card className="p-4 sm:p-6">
       <article aria-labelledby={headingId} className="space-y-4">
-        <h3 id={headingId} className="font-display text-xl text-primary">
-          Look {position}
-        </h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 id={headingId} className="font-display text-xl text-primary">
+            Look {position}
+          </h3>
+          {look.designMatch && <DesignMatchBadge match={look.designMatch} />}
+        </div>
+        {look.image && <OutfitImage outfitId={look.id} ready={look.image === 'ready'} />}
         <WhyThisWorks explanation={look.explanation} />
         <ul aria-label="Items in this look" className="space-y-3">
-          {look.slots.map((slot) => (
+          {garmentSlots(look).map((slot) => (
             <SlotRow key={slot.slotId} slot={slot} sizes={sizes} />
           ))}
         </ul>
