@@ -8,7 +8,6 @@ const actions = vi.hoisted(() => ({
   saveOutfitAction: vi.fn(),
   removeOutfitAction: vi.fn(),
   feedbackOutfitAction: vi.fn(),
-  getFreshAlternativesAction: vi.fn(),
 }));
 vi.mock('@/app/actions/outfits', () => actions);
 

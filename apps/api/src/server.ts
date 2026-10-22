@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { loadConfig, type Config } from './config/env';
 import { connectDatabase, type Database } from './db';
 import { createLogger } from './logger';
+import { pollinationsImageProvider } from './integrations/ai/image-client';
 import { geminiVisionProvider } from './integrations/ai/vision-client';
 import { geminiWordingProvider } from './integrations/ai/wording-client';
 import { googleVerifier } from './services/google';
@@ -36,6 +37,10 @@ export async function startServer(deps: StartServerDeps = {}) {
     config.PHOTO_ANALYSIS_ENABLED && config.GEMINI_API_KEY
       ? geminiVisionProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
       : null;
+  // AI outfit images: off by default; loadConfig allows them only locally and requires the key when on.
+  const outfitImageProvider = config.OUTFIT_IMAGES_ENABLED
+    ? pollinationsImageProvider(config.POLLINATIONS_API_KEY!, config.POLLINATIONS_IMAGE_MODEL)
+    : null;
 
   // Validate, lint and index the style knowledge base before anything else; an invalid library
   // stops the API (FR-STY-03). The look generator receives this library.
@@ -63,6 +68,7 @@ export async function startServer(deps: StartServerDeps = {}) {
     styleLibrary,
     wordingProvider,
     photoAnalysisProvider,
+    outfitImageProvider,
   });
 
   if (deps.listen === false) {
@@ -79,6 +85,7 @@ export async function startServer(deps: StartServerDeps = {}) {
       google: Boolean(google),
       aiWording: config.AI_WORDING_ENABLED,
       photoAnalysis: Boolean(photoAnalysisProvider),
+      outfitImages: Boolean(outfitImageProvider),
     });
   });
 

@@ -2,11 +2,10 @@ import type { LookSlot, ProfileSizes } from '@styleme/contracts';
 import { categoryLabel, specHints } from '@/lib/discover/look-spec';
 import { SearchPhrase } from './SearchPhrase';
 import { SizeNote } from './SizeNote';
-import { SlotAlternatives } from './SlotAlternatives';
 import { SlotVisual } from './SlotVisual';
 
 // One garment in a look: what it is, its colours, fabric and cut hints, a copyable search phrase, the size
-// note, its slot visual (#50) and its alternatives.
+// note and its slot visual (#50).
 
 export function SlotRow({ slot, sizes }: { slot: LookSlot; sizes: ProfileSizes }) {
   const spec = slot.lookSpec;
@@ -18,7 +17,6 @@ export function SlotRow({ slot, sizes }: { slot: LookSlot; sizes: ProfileSizes }
       {hints.length > 0 && <p className="text-xs text-muted-foreground">{hints.join(' · ')}</p>}
       <SearchPhrase phrase={slot.searchPhrase} />
       <SizeNote category={spec.category} sizes={sizes} />
-      <SlotAlternatives alternatives={slot.alternatives} />
     </li>
   );
 }

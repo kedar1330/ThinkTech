@@ -8,7 +8,6 @@ const actions = vi.hoisted(() => ({
   saveOutfitAction: vi.fn(),
   removeOutfitAction: vi.fn(),
   feedbackOutfitAction: vi.fn(),
-  getFreshAlternativesAction: vi.fn(),
 }));
 vi.mock('@/app/actions/outfits', () => actions);
 
@@ -68,7 +67,6 @@ beforeEach(() => {
   actions.saveOutfitAction.mockReset();
   actions.removeOutfitAction.mockReset();
   actions.feedbackOutfitAction.mockReset();
-  actions.getFreshAlternativesAction.mockReset();
 });
 
 describe('saved look card', () => {

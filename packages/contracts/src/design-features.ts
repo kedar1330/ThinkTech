@@ -212,6 +212,9 @@ export interface DesignSelectionItem {
   selectedFeatures: SelectedFeatures;
   customization: SaveDesignSelectionRequest['customization'];
   savedAt: string;
+  /** Display names, in `GET /v1/design/selections` only (Discover My Style lists the user's designs). */
+  garmentName?: string;
+  features?: Array<{ category: DesignFeatureCategory; featureId: string; name: string }>;
 }
 
 export interface DesignFeaturesResponse {

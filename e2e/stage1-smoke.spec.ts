@@ -1,4 +1,5 @@
 import { enterCode, expect, newUser, registerUser, submitLogin, test, verifyEmail } from './fixtures/auth';
+import { looksForDesign } from './fixtures/discover';
 import { SUBJECT, readOtp } from './fixtures/outbox';
 
 // Full Stage 1 E2E Smoke (issue #59, AC-17):
@@ -31,11 +32,7 @@ test('Stage 1 full smoke journey: register → onboarding → request looks → 
 
   let shopUrl = '';
   await test.step('request personalised looks and save the first look', async () => {
-    await page.goto('/discover/looks');
-    await page.getByRole('radio', { name: 'Everyday' }).check();
-    await page.getByRole('button', { name: 'Show me looks' }).click();
-
-    const results = page.getByRole('region', { name: 'Your looks' });
+    const results = await looksForDesign(page);
     await expect(results).toBeVisible();
     const firstLook = results.getByRole('article', { name: 'Look 1' });
     await expect(firstLook).toBeVisible();

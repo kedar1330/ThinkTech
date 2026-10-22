@@ -64,7 +64,18 @@ function response(looks: Look[], extra: Partial<RecommendationResponse> = {}): R
   });
 }
 
-const FIVE = response([1, 2, 3, 4, 5].map((n) => look(n)));
+/** A saved Outfit Categories design: the request is built from it (occasion tag → festive). */
+const DESIGN = {
+  garmentType: 'kurti',
+  garmentName: 'Kurti',
+  outfitCategory: 'indian' as const,
+  outfitLabel: 'Indian',
+  features: ['V-neck'],
+  layers: [],
+  occasionFeature: 'occasion_festive',
+};
+
+const FULL = response([1, 2, 3].map((n) => look(n)));
 const TWO_LIMITED = response([look(1), look(2)], {
   limitedBy: { constraint: 'wearType', suggestion: 'Choose another wear type, or none to see all three.' },
 });
@@ -72,8 +83,8 @@ const TWO_LIMITED = response([look(1), look(2)], {
 beforeEach(() => actions.requestLooksAction.mockReset());
 
 describe('result flags (FR-LOOK-09 … 11)', () => {
-  it('says nothing extra for a full set of 5 looks', () => {
-    expect(resultNotices(FIVE)).toEqual([]);
+  it('says nothing extra for a full set of looks (MAX_LOOKS)', () => {
+    expect(resultNotices(FULL)).toEqual([]);
   });
 
   it('explains limited results with the suggested change (INSUFFICIENT_MATCHES)', () => {
@@ -93,7 +104,7 @@ describe('result flags (FR-LOOK-09 … 11)', () => {
 
   it('names each default applied and skips unknown names (DEFAULTS_APPLIED)', () => {
     const texts = resultNotices(
-      response(FIVE.looks, { defaultsApplied: ['department', 'colors', 'signals', 'sizes', 'style', 'unknown'] }),
+      response(FULL.looks, { defaultsApplied: ['department', 'colors', 'signals', 'sizes', 'style', 'unknown'] }),
     ).map((n) => n.text);
     expect(texts).toEqual([
       'No department filter applied: looks can come from every department.',
@@ -106,7 +117,7 @@ describe('result flags (FR-LOOK-09 … 11)', () => {
 
   it('explains liked-and-avoided conflicts by name (PREFERENCE_CONFLICT)', () => {
     const texts = resultNotices(
-      response(FIVE.looks, {
+      response(FULL.looks, {
         conflicts: [
           { field: 'colors', value: 'maroon' },
           { field: 'fabrics', value: 'linen' },
@@ -151,11 +162,10 @@ describe('look card', () => {
 });
 
 describe('results on the Discover page', () => {
-  it('shows up to 5 looks in engine order below the form', async () => {
-    actions.requestLooksAction.mockResolvedValue({ result: FIVE });
+  it('shows up to 3 looks in engine order below the form', async () => {
+    actions.requestLooksAction.mockResolvedValue({ result: FULL });
     const user = userEvent.setup();
-    render(<RequestForm sizes={SIZES} />);
-    await user.click(screen.getByRole('radio', { name: 'Work' }));
+    render(<RequestForm sizes={SIZES} designs={[DESIGN]} />);
     await user.click(screen.getByRole('button', { name: 'Show me looks' }));
 
     const results = await screen.findByRole('region', { name: 'Your looks' });
@@ -163,13 +173,13 @@ describe('results on the Discover page', () => {
       within(results)
         .getAllByRole('article')
         .map((a) => a.getAttribute('aria-labelledby')),
-    ).toEqual(FIVE.looks.map((l) => `look-${l.id}`));
+    ).toEqual(FULL.looks.map((l) => `look-${l.id}`));
     // AC-11: each explanation verbatim, in ranking order.
     expect(
       within(results)
         .getAllByText(/^Explanation for look \d\.$/)
         .map((p) => p.textContent),
-    ).toEqual(FIVE.looks.map((l) => l.explanation));
+    ).toEqual(FULL.looks.map((l) => l.explanation));
     expect(within(results).queryByRole('status')).not.toBeInTheDocument();
     // #49: regenerate is offered on the results.
     expect(within(results).getByRole('button', { name: 'Regenerate with my current profile' })).toBeInTheDocument();
@@ -178,8 +188,7 @@ describe('results on the Discover page', () => {
   it('shows 2 looks with the limited-results message', async () => {
     actions.requestLooksAction.mockResolvedValue({ result: TWO_LIMITED });
     const user = userEvent.setup();
-    render(<RequestForm sizes={SIZES} />);
-    await user.click(screen.getByRole('radio', { name: 'Work' }));
+    render(<RequestForm sizes={SIZES} designs={[DESIGN]} />);
     await user.click(screen.getByRole('button', { name: 'Show me looks' }));
 
     const results = await screen.findByRole('region', { name: 'Your looks' });
@@ -190,10 +199,9 @@ describe('results on the Discover page', () => {
   it('offers Retry after an error, which sends the same request again', async () => {
     actions.requestLooksAction
       .mockResolvedValueOnce({ error: 'We could not reach StyleMe.' })
-      .mockResolvedValueOnce({ result: FIVE });
+      .mockResolvedValueOnce({ result: FULL });
     const user = userEvent.setup();
-    render(<RequestForm sizes={SIZES} />);
-    await user.click(screen.getByRole('radio', { name: 'Festive' }));
+    render(<RequestForm sizes={SIZES} designs={[DESIGN]} />);
     await user.click(screen.getByRole('button', { name: 'Show me looks' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('We could not reach StyleMe.');
@@ -211,7 +219,7 @@ describe('results on the Discover page', () => {
       fieldErrors: { occasion: 'Choose an occasion.' },
     });
     const user = userEvent.setup();
-    render(<RequestForm sizes={SIZES} />);
+    render(<RequestForm sizes={SIZES} designs={[DESIGN]} />);
     await user.click(screen.getByRole('button', { name: 'Show me looks' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
@@ -224,8 +232,7 @@ describe('results on the Discover page', () => {
       }),
     });
     const user = userEvent.setup();
-    render(<RequestForm sizes={SIZES} />);
-    await user.click(screen.getByRole('radio', { name: 'Festive' }));
+    render(<RequestForm sizes={SIZES} designs={[DESIGN]} />);
     await user.click(screen.getByRole('button', { name: 'Show me looks' }));
 
     const results = await screen.findByRole('region', { name: 'Your looks' });
@@ -233,29 +240,5 @@ describe('results on the Discover page', () => {
       'No looks matched this request. Choose another wear type, or none to see all three.',
     );
     expect(within(results).queryByRole('article')).not.toBeInTheDocument();
-  });
-
-  it('shows the limited-alternatives message inside a look (ALTERNATIVES_LIMITED)', async () => {
-    const limited = look(1);
-    limited.slots[0] = {
-      ...limited.slots[0]!,
-      alternatives: [
-        {
-          lookSpec: { category: 'kurta', colorFamily: 'blue', colorId: 'navy' },
-          swatches: [{ colorId: 'navy', name: 'Navy', hex: '#1F2A44' }],
-          searchPhrase: 'navy kurta',
-        },
-      ],
-    };
-    actions.requestLooksAction.mockResolvedValue({ result: response([limited, ...FIVE.looks.slice(1)]) });
-    const user = userEvent.setup();
-    render(<RequestForm sizes={SIZES} />);
-    await user.click(screen.getByRole('radio', { name: 'Work' }));
-    await user.click(screen.getByRole('button', { name: 'Show me looks' }));
-
-    const card = await screen.findByRole('article', { name: 'Look 1' });
-    expect(within(card).getByText('1 alternative')).toBeInTheDocument();
-    expect(within(card).getByText('Only 1 suitable alternative was found for this item.')).toBeInTheDocument();
-    expect(within(card).getAllByText('No alternatives for this item yet.')).toHaveLength(1);
   });
 });

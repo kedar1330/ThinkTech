@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { GARMENT_LENGTH_IDS, SLEEVE_LENGTH_IDS } from '@styleme/contracts';
-import { signalsFromAppearance, templateWearType, type EngineResult } from '../../../src/services/engine';
+import { GARMENT_LENGTH_IDS, SLEEVE_LENGTH_IDS, recommendationRequestSchema } from '@styleme/contracts';
+import {
+  filterTemplates,
+  resolvePreferences,
+  signalsFromAppearance,
+  templateWearType,
+  type EngineResult,
+} from '../../../src/services/engine';
+import { buildProfile } from '../../fixtures/profiles';
 import { emptyProfile } from '../../../src/services/profile.service';
 import { library, run, SIGNAL, slotSpec, specs, templateIds, withRule } from './helpers';
 
@@ -15,7 +22,14 @@ describe('filterTemplates: occasion, department, style and wear type', () => {
 
   it('without a department gives general results across departments, flagged as a default', () => {
     const result = run({}, { department: null });
-    expect(templateIds(result)).toEqual(['OUT-001', 'OUT-002', 'OUT-003', 'OUT-005']);
+    // Every department's templates are eligible (only MAX_LOOKS of them make the final looks).
+    const eligible = filterTemplates(
+      library,
+      recommendationRequestSchema.parse({ occasion: 'everyday' }),
+      resolvePreferences(buildProfile({ department: null }), null),
+    ).templates.map((t) => t.id);
+    expect([...eligible].sort()).toEqual(['OUT-001', 'OUT-002', 'OUT-003', 'OUT-005']);
+    expect(templateIds(result).every((id) => eligible.includes(id))).toBe(true);
     expect(result.departmentFiltered).toBe(false);
     expect(result.defaultsApplied).toContain('department');
   });

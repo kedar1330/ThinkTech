@@ -7,10 +7,6 @@ import {
   PATTERN_IDS,
   SILHOUETTE_IDS,
   SLEEVE_LENGTH_IDS,
-  fabricSchema,
-  fitSchema,
-  occasionSchema,
-  wearTypeSchema,
   type ProportionDescriptor,
 } from './style-vocabulary';
 
@@ -268,83 +264,3 @@ export const customPaletteSchema = z
   })
   .strict();
 export type CustomPalette = z.infer<typeof customPaletteSchema>;
-
-// --- Queries for Outfit Categories and Catalogue Endpoints (API.md §3.11, F1 - F4) -----------------------
-
-export const catalogueCategoriesQuerySchema = z.object({
-  department: catalogueDepartmentSchema.optional(),
-  level: catalogueLevelSchema.optional(),
-});
-export type CatalogueCategoriesQuery = z.infer<typeof catalogueCategoriesQuerySchema>;
-
-export const clothingStylesQuerySchema = z.object({
-  department: catalogueDepartmentSchema.optional(),
-  categoryId: z.string().optional(),
-  categoryKey: z.string().optional(),
-  bodyShape: bodyShapeSchema.optional(),
-  goal: stylingGoalSchema.optional(),
-  attribute: garmentAttributeIdSchema.optional(),
-  value: z.string().optional(),
-  fit: fitSchema.optional(),
-  occasion: occasionSchema.optional(),
-  wearType: wearTypeSchema.optional(),
-  fabric: fabricSchema.optional(),
-  q: z.string().trim().optional(),
-  sort: z.enum(['best_match', 'name', 'recently_added']).default('best_match'),
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
-export type ClothingStylesQuery = z.infer<typeof clothingStylesQuerySchema>;
-
-export const compareStylesQuerySchema = z.object({
-  ids: z.string().min(1),
-});
-export type CompareStylesQuery = z.infer<typeof compareStylesQuerySchema>;
-
-export interface CatalogueCategoryItem {
-  key: string;
-  name: string;
-  description: string;
-  level: CatalogueLevel;
-  department: CatalogueDepartment;
-  sortOrder?: number;
-  wearTypes?: string[];
-  garmentTypes?: string[];
-  attributeIds?: string[];
-}
-
-export interface ClothingStyleItem {
-  styleId: string;
-  slug: string;
-  name: string;
-  description: string;
-  department: CatalogueDepartment;
-  categoryKey: string;
-  definingAttribute?: { attributeId: string; valueId: string };
-  attributes?: Array<{ attributeId: string; valueId: string }>;
-  wearTypes?: string[];
-  occasions?: string[];
-  styles?: string[];
-  stylingGoals?: string[];
-  bodyShapes?: string[];
-  explanation?: {
-    summary: string;
-    benefits: string[];
-    tradeOffs: string[];
-    stylingTips: string[];
-  };
-  illustrations?: Array<{
-    illustrationId?: string;
-    kind?: string;
-    url?: string;
-    alt?: string;
-  }>;
-}
-
-export interface ClothingStylesResponse {
-  items: ClothingStyleItem[];
-  total: number;
-  page: number;
-  limit: number;
-  pages: number;
-}

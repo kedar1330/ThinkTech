@@ -20,6 +20,7 @@ import {
   wearTypeSchema,
 } from './style-vocabulary';
 import { objectIdSchema, paginationQuerySchema, paletteIdSchema, slotIdSchema, templateIdSchema } from './common';
+import { garmentTypeIdSchema } from './design-features';
 import { userPriceSummarySchema, userShortlistItemSchema } from './product';
 import { FIT_GROUPS, SIZED_GROUPS_STAGE_1 } from './profile';
 
@@ -44,12 +45,22 @@ export type PaletteMode = z.infer<typeof paletteModeSchema>;
  * `POST /v1/recommendations` (FR-LOOK-01). Only `occasion` is required. `wearType`, when sent, is a
  * hard filter for this request (D-96); without it, the profile's preferred wear types only rank results.
  */
+/**
+ * Looks built around a garment the user designed in Outfit Categories (D-132). IDs only: the API reads the
+ * chosen features from the user's own saved selection, never from the request.
+ */
+export const designRequestSchema = z
+  .object({ garmentType: garmentTypeIdSchema, outfitCategory: wearTypeSchema })
+  .strict();
+export type DesignRequest = z.infer<typeof designRequestSchema>;
+
 export const recommendationRequestSchema = z
   .object({
     occasion: occasionSchema,
     style: styleSchema.optional(),
     wearType: uniqueList(wearTypeSchema, 3).min(1).optional(),
     paletteMode: paletteModeSchema.default('suggested'),
+    design: designRequestSchema.optional(),
   })
   .strict();
 export type RecommendationRequest = z.infer<typeof recommendationRequestSchema>;
@@ -83,7 +94,16 @@ export const swatchSchema = z
 export type Swatch = z.infer<typeof swatchSchema>;
 
 /** A labelled style illustration, shown only where a cleared asset exists (FR-DATA-06). */
-export const illustrationSchema = z.object({ url: z.string().min(1), licenceLabel: z.string().trim().min(1) }).strict();
+export const illustrationSchema = z
+  .object({
+    url: z.string().min(1),
+    licenceLabel: z.string().trim().min(1),
+    /** How the illustration was created – 'ai' or 'manual'. */
+    generatedBy: z.enum(['ai', 'manual']).optional(),
+    /** Founder‑approved flag – defaults to false so un‑cleared assets stay hidden. */
+    approved: z.boolean().default(false),
+  })
+  .strict();
 
 /** A meaningfully different variation of one slot (FR-LOOK-14). */
 export const slotAlternativeSchema = z
@@ -157,6 +177,24 @@ export const lookFeedbackSchema = z
   });
 export type LookFeedback = z.infer<typeof lookFeedbackSchema>;
 
+/** The look attributes a design is compared on. */
+export const DESIGN_MATCH_ATTRIBUTES = ['neckline', 'sleeve', 'fit', 'silhouette', 'length'] as const;
+export const designMatchAttributeSchema = z.enum(DESIGN_MATCH_ATTRIBUTES);
+export type DesignMatchAttribute = z.infer<typeof designMatchAttributeSchema>;
+
+/**
+ * How a look compares with the design it was requested for: `full` (the garment with every chosen feature),
+ * `partial` (the garment, but `differs` lists what is different) or `none` (no slot of that garment).
+ */
+export const designMatchSchema = z
+  .object({ level: z.enum(['full', 'partial', 'none']), differs: z.array(designMatchAttributeSchema) })
+  .strict();
+export type DesignMatch = z.infer<typeof designMatchSchema>;
+
+export const LOOK_IMAGE_STATUSES = ['ready', 'on_request'] as const;
+export const lookImageStatusSchema = z.enum(LOOK_IMAGE_STATUSES);
+export type LookImageStatus = z.infer<typeof lookImageStatusSchema>;
+
 export const lookSchema = z
   .object({
     id: objectIdSchema,
@@ -175,6 +213,10 @@ export const lookSchema = z
     /** `null` unless optional AI wording was used (FR-LOOK-16). */
     aiModel: z.string().min(1).nullable(),
     feedback: lookFeedbackSchema.nullable().optional(),
+    /** The look's AI outfit image: stored (`ready`), made on first view (`on_request`), or none. */
+    image: lookImageStatusSchema.nullable().optional(),
+    /** Present only on looks requested with a `design`. */
+    designMatch: designMatchSchema.nullable().optional(),
   })
   .strict();
 export type Look = z.infer<typeof lookSchema>;
@@ -186,7 +228,7 @@ export const preferenceConflictSchema = z.object({ field: z.string().min(1), val
 /** The constraint that limited the results and a suggested relaxation (FR-LOOK-11). */
 export const limitedBySchema = z.object({ constraint: z.string().min(1), suggestion: z.string().min(1) }).strict();
 
-export const MAX_LOOKS = 5;
+export const MAX_LOOKS = 3;
 
 /** `POST /v1/recommendations` data. Fewer looks (even none) is a success, never padded (FR-LOOK-11). */
 export const recommendationResponseSchema = z

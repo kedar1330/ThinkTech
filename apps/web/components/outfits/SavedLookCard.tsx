@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import type { Look } from '@styleme/contracts';
 import { Card } from '@/components/ui/card';
-import { lookTitle, slotLabel } from '@/lib/outfits/look-text';
+import { garmentSlots, lookTitle, slotLabel } from '@/lib/outfits/look-text';
+import { OutfitImage } from './OutfitImage';
 import { RemoveLookButton } from './RemoveLookButton';
 import { SwatchList } from './SwatchList';
 
@@ -18,8 +19,10 @@ export function SavedLookCard({ look }: { look: Look }) {
           {title}
         </Link>
       </h2>
+      {/* Only a stored image here: opening the look creates one, so the list never starts many at once. */}
+      {look.image === 'ready' && <OutfitImage outfitId={look.id} ready />}
       <ul className="space-y-2">
-        {look.slots.map((slot) => (
+        {garmentSlots(look).map((slot) => (
           <li key={slot.slotId} className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{slotLabel(slot.slot)}</p>
             <SwatchList swatches={slot.swatches} />

@@ -9,6 +9,7 @@ vi.mock('@/app/actions/discover', () => actions);
 
 import { ProfileSummary } from '@/components/discover/ProfileSummary';
 import { RequestForm } from '@/components/discover/RequestForm';
+import type { DesignSummary } from '@/lib/discover/design-summary';
 
 const EMPTY: ProfileResponse = {
   department: null,
@@ -31,70 +32,96 @@ const EMPTY: ProfileResponse = {
 
 beforeEach(() => actions.requestLooksAction.mockReset());
 
-describe('Discover My Style request form', () => {
-  it('marks the occasion as required and every other field as optional', () => {
-    render(<RequestForm sizes={EMPTY.sizes} />);
-    const occasion = screen.getByRole('group', { name: 'Occasion (required)' });
-    for (const radio of within(occasion).getAllByRole('radio')) expect(radio).toBeRequired();
-    expect(screen.getByLabelText(/^Style/)).toHaveValue('');
-    expect(screen.getByRole('radio', { name: /Suggested for me/ })).toBeChecked();
+const design = (
+  garmentType: string,
+  outfitCategory: DesignSummary['outfitCategory'],
+  occasionFeature: string | null,
+) => ({
+  garmentType,
+  garmentName: garmentType === 'kurti' ? 'Kurti' : 'Shirt',
+  outfitCategory,
+  outfitLabel: outfitCategory === 'indian' ? 'Indian' : 'Western',
+  features: ['V-neck'],
+  layers: [],
+  occasionFeature,
+});
+const KURTI = design('kurti', 'indian', 'occasion_festive');
+const SHIRT = design('shirt', 'western', null);
+
+const sent = (call = 0) => actions.requestLooksAction.mock.calls[call]![1] as FormData;
+
+describe('Discover My Style request (built from Outfit Categories)', () => {
+  it('has no occasion, style, wear type or colour fields', () => {
+    render(<RequestForm sizes={EMPTY.sizes} designs={[KURTI]} />);
+    expect(screen.queryByRole('group', { name: /Occasion/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Style/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
   });
 
-  it('sends the chosen values to the action', async () => {
+  it('asks for a design in Outfit Categories when there is none', () => {
+    render(<RequestForm sizes={EMPTY.sizes} />);
+    expect(screen.getByRole('heading', { name: 'Start with a design' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to Outfit Categories' })).toHaveAttribute('href', '/categories');
+    expect(screen.queryByRole('button', { name: 'Show me looks' })).not.toBeInTheDocument();
+  });
+
+  it('sends the design’s occasion tag, outfit category and the suggested colours', async () => {
     actions.requestLooksAction.mockResolvedValue({ success: 'We found 3 looks for this request.' });
     const user = userEvent.setup();
-    render(<RequestForm sizes={EMPTY.sizes} />);
-    await user.click(screen.getByRole('radio', { name: 'Festive' }));
-    await user.selectOptions(screen.getByLabelText(/^Style/), 'fusion');
-    await user.click(screen.getByRole('checkbox', { name: 'Indian' }));
-    await user.click(screen.getByRole('radio', { name: /Explore/ }));
-    await user.click(screen.getByRole('button', { name: 'Show me looks' }));
+    render(<RequestForm sizes={EMPTY.sizes} designs={[KURTI, SHIRT]} />);
+    const summary = screen.getByRole('region', { name: 'From Outfit Categories' });
+    expect(within(summary).getByText('Festive')).toBeInTheDocument();
+    expect(within(summary).getByText('Indian')).toBeInTheDocument();
+    expect(within(summary).getByText('From My Colour Palette')).toBeInTheDocument();
 
-    const formData = actions.requestLooksAction.mock.calls[0]![1] as FormData;
-    expect(formData.get('occasion')).toBe('festive');
-    expect(formData.get('style')).toBe('fusion');
-    expect(formData.getAll('wearType')).toEqual(['indian']);
-    expect(formData.get('paletteMode')).toBe('explore');
+    await user.click(screen.getByRole('button', { name: 'Show me looks' }));
+    expect(Object.fromEntries(sent())).toEqual({
+      designGarment: 'kurti',
+      designOutfit: 'indian',
+      occasion: 'festive',
+      wearType: 'indian',
+      paletteMode: 'suggested',
+    });
     expect(await screen.findByRole('status')).toHaveTextContent('We found 3 looks');
   });
 
-  it('shows field errors returned by the action', async () => {
-    actions.requestLooksAction.mockResolvedValue({
-      error: 'Please check the highlighted fields.',
-      fieldErrors: { occasion: 'Choose an occasion.' },
-    });
+  it('takes the occasion from the occasion preferences, else Everyday, and says so', async () => {
     const user = userEvent.setup();
-    render(<RequestForm sizes={EMPTY.sizes} />);
-    await user.click(screen.getByRole('button', { name: 'Show me looks' }));
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Please check the highlighted fields.');
-    expect(screen.getByRole('group', { name: 'Occasion (required)' })).toHaveAccessibleDescription(
-      'Choose an occasion.',
+    const { unmount } = render(
+      <RequestForm sizes={EMPTY.sizes} designs={[SHIRT]} occasionPreferences={['occasion_office']} />,
     );
-    expect(screen.getByRole('radio', { name: 'Work' })).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('From your occasion preferences in Outfit Categories.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show me looks' }));
+    expect(sent().get('occasion')).toBe('work');
+    unmount();
+
+    render(<RequestForm sizes={EMPTY.sizes} designs={[SHIRT]} />);
+    expect(screen.getByText(/No occasion chosen in Outfit Categories/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show me looks' }));
+    expect(sent(1).get('occasion')).toBe('everyday');
+    expect(sent(1).get('wearType')).toBe('western');
+  });
+
+  it('builds around another saved design when chosen', async () => {
+    const user = userEvent.setup();
+    render(<RequestForm sizes={EMPTY.sizes} designs={[KURTI, SHIRT]} />);
+    await user.click(screen.getByRole('button', { name: /Shirt · Western/ }));
+    expect(screen.getByRole('heading', { name: 'Shirt · Western' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show me looks' }));
+    expect(sent().get('designGarment')).toBe('shirt');
   });
 
   it('disables the submit button while the request is sending', async () => {
     let finish: (state: { success: string }) => void = () => {};
     actions.requestLooksAction.mockReturnValue(new Promise((resolve) => (finish = resolve)));
     const user = userEvent.setup();
-    render(<RequestForm sizes={EMPTY.sizes} />);
-    await user.click(screen.getByRole('radio', { name: 'Work' }));
+    render(<RequestForm sizes={EMPTY.sizes} designs={[KURTI]} />);
     await user.click(screen.getByRole('button', { name: 'Show me looks' }));
     expect(await screen.findByRole('button', { name: /Finding looks/ })).toBeDisabled();
 
     finish({ success: 'Done.' });
     expect(await screen.findByRole('button', { name: 'Show me looks' })).toBeEnabled();
-  });
-
-  it('can be filled in with the keyboard', async () => {
-    const user = userEvent.setup();
-    render(<RequestForm sizes={EMPTY.sizes} />);
-    await user.tab();
-    const everyday = screen.getByRole('radio', { name: 'Everyday' });
-    expect(everyday).toHaveFocus();
-    await user.keyboard(' ');
-    expect(everyday).toBeChecked();
   });
 });
 

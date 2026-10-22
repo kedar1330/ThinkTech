@@ -8,6 +8,9 @@ export interface RequestFormFields {
   style?: string;
   wearType?: string[];
   paletteMode?: string;
+  /** Hidden fields set when the request is built around a designed garment (D-132). */
+  designGarment?: string;
+  designOutfit?: string;
 }
 
 export type RequestFormResult =
@@ -19,6 +22,10 @@ export function requestFormToRequest(fields: RequestFormFields): RequestFormResu
     style: fields.style || undefined,
     wearType: fields.wearType?.length ? fields.wearType : undefined,
     paletteMode: fields.paletteMode || undefined,
+    design:
+      fields.designGarment && fields.designOutfit
+        ? { garmentType: fields.designGarment, outfitCategory: fields.designOutfit }
+        : undefined,
   });
   if (parsed.success) return { ok: true, body: parsed.data };
 

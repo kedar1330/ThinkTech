@@ -1,19 +1,12 @@
-import type { Page } from '@playwright/test';
 import { expect, signUpAndSkipOnboarding, test } from './fixtures/auth';
+import { looksForDesign } from './fixtures/discover';
 
 // Shop My Look, Stage 1 (#43): the user's own shortlist items on the parts of a saved look. Synthetic data
 // only; the link uses an example domain and is never opened.
 
-async function looks(page: Page) {
-  await page.goto('/discover/looks');
-  await page.getByRole('radio', { name: 'Everyday' }).check();
-  await page.getByRole('button', { name: 'Show me looks' }).click();
-  return page.getByRole('region', { name: 'Your looks' });
-}
-
 test('shop a saved look: add your own item to a part and see the labelled total', async ({ page }) => {
   await signUpAndSkipOnboarding(page);
-  const results = await looks(page);
+  const results = await looksForDesign(page);
   const first = results.getByRole('article', { name: 'Look 1' });
 
   await test.step('save the look and open it in Shop My Look', async () => {
@@ -71,7 +64,7 @@ test('shop a saved look: add your own item to a part and see the labelled total'
 
 test('Shop My Look lists saved looks, and asks to save a suggested look first', async ({ page }) => {
   await signUpAndSkipOnboarding(page);
-  const results = await looks(page);
+  const results = await looksForDesign(page);
 
   await test.step('an unsaved look must be saved before items can be added', async () => {
     await results.getByRole('article', { name: 'Look 2' }).getByRole('link', { name: 'Shop this look' }).click();

@@ -1,27 +1,63 @@
 import type { Metadata } from 'next';
-import type { ProfileResponse } from '@styleme/contracts';
+import {
+  garmentTypeIdSchema,
+  type ColourPreferencesResponse,
+  type DesignFeaturesResponse,
+  type DesignPreferencesResponse,
+  type DesignSelectionItem,
+  type ProfileResponse,
+} from '@styleme/contracts';
+import { PaletteColours } from '@/components/discover/PaletteColours';
 import { ProfileSummary } from '@/components/discover/ProfileSummary';
 import { RequestForm } from '@/components/discover/RequestForm';
 import { apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
+import { designSummary, savedDesigns } from '@/lib/discover/design-summary';
 
 export const metadata: Metadata = { title: 'Discover My Style' };
 
-export default async function DiscoverLooksPage() {
+export default async function DiscoverLooksPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ from?: string; garment?: string }>;
+} = {}) {
+  const params = searchParams ? await searchParams : {};
   const { accessToken } = await requireOnboarded();
-  const profile = await apiRequest<ProfileResponse>('/v1/profile', { token: accessToken });
+  const garment = params.from === 'design' ? garmentTypeIdSchema.safeParse(params.garment) : null;
+  // What the user chose elsewhere: designs saved in Outfit Categories and colours from My Colour Palette.
+  // Each section loads on its own, so one failure never blocks the page.
+  const [profile, selections, designPreferences, colours, designData] = await Promise.all([
+    apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }),
+    apiRequest<DesignSelectionItem[]>('/v1/design/selections', { token: accessToken }).catch(() => []),
+    apiRequest<DesignPreferencesResponse>('/v1/design/preferences', { token: accessToken }).catch(() => null),
+    apiRequest<ColourPreferencesResponse>('/v1/colours/preferences', { token: accessToken }).catch(() => null),
+    // The design comes from the user's own saved selection, never from the link.
+    garment?.success
+      ? apiRequest<DesignFeaturesResponse>(`/v1/design/features?garmentType=${garment.data}&view=all`, {
+          token: accessToken,
+        }).catch(() => null)
+      : null,
+  ]);
+  const opened = designData ? designSummary(designData) : null;
+  const designs = savedDesigns(selections, opened);
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-3">
         <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">Discover My Style</p>
-        <h1 className="font-display text-4xl text-primary">Find looks for an occasion</h1>
+        <h1 className="font-display text-4xl text-primary">Find looks for your design</h1>
         <p className="text-sm text-muted-foreground">
-          Choose an occasion and, if you like, a style, wear type and colour approach. Your profile is applied
-          automatically.
+          Looks are built around a garment you designed in Outfit Categories, with its occasion and wear type, in
+          colours from My Colour Palette. Your profile is applied automatically.
         </p>
       </header>
       <ProfileSummary profile={profile} />
-      <RequestForm sizes={profile.sizes} />
+      <PaletteColours colours={colours} />
+      <RequestForm
+        sizes={profile.sizes}
+        designs={designs}
+        initialDesign={opened?.garmentType ?? null}
+        occasionPreferences={designPreferences?.occasionPreferences ?? []}
+      />
     </div>
   );
 }

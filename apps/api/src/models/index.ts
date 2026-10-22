@@ -413,6 +413,8 @@ const outfitSchema = new Schema(
     aiPromptVersion: { type: String, default: null },
     // FR-OUT-04 `{ value, reason?, at }`; written by #42.
     feedback: { type: Schema.Types.Mixed, default: null },
+    // `{ level, differs }` when the look was requested around a designed garment (D-132); null otherwise.
+    designMatch: { type: Schema.Types.Mixed, default: null },
     expiresAt: { type: Date, default: null },
   },
   { timestamps: true, minimize: false },
@@ -420,6 +422,28 @@ const outfitSchema = new Schema(
 outfitSchema.index({ userId: 1, status: 1, createdAt: -1 });
 // Suggested looks expire 7 days after creation (D-23); saved looks have no `expiresAt`.
 outfitSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+// The AI outfit image of one look, generated on first view and stored here with the look's lifetime: it
+// expires with a suggested look and is kept (no `expiresAt`) once the look is saved. The bytes (`data`) are
+// never selected by default and never logged. The prompt held only garments, colours and the occasion.
+const outfitImageSchema = new Schema(
+  {
+    ...fixtureField,
+    userId: { type: Schema.Types.ObjectId, required: true },
+    outfitId: { type: Schema.Types.ObjectId, required: true },
+    data: { type: Schema.Types.Mixed, select: false },
+    contentType: { type: String, enum: ['image/jpeg', 'image/png', 'image/webp'], required: true },
+    bytes: { type: Number, required: true },
+    provider: { type: String, required: true },
+    model: { type: String, required: true },
+    promptVersion: { type: String, required: true },
+    expiresAt: { type: Date, default: null },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+outfitImageSchema.index({ outfitId: 1 }, { unique: true });
+outfitImageSchema.index({ userId: 1 });
+outfitImageSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Items the user found elsewhere (DATABASE.md §3.6, D-77 = B, D-80). Everything is the user's own entry:
 // nothing is verified, and there is no retailer, stock, rating, image or quality field (FR-LIST-03).
@@ -474,6 +498,7 @@ export type TombstoneDoc = InferSchemaType<typeof tombstoneSchema>;
 export type AppearanceProfileDoc = InferSchemaType<typeof appearanceProfileSchema>;
 export type ProfileDoc = InferSchemaType<typeof profileSchema>;
 export type OutfitDoc = InferSchemaType<typeof outfitSchema>;
+export type OutfitImageDoc = InferSchemaType<typeof outfitImageSchema>;
 export type ShortlistItemDoc = InferSchemaType<typeof shortlistItemSchema>;
 export type AiCacheDoc = InferSchemaType<typeof aiCacheSchema>;
 export type UserPhotoDoc = InferSchemaType<typeof userPhotoSchema>;
@@ -508,6 +533,7 @@ export interface Models {
   AppearanceProfile: Model<AppearanceProfileDoc>;
   Profile: Model<ProfileDoc>;
   Outfit: Model<OutfitDoc>;
+  OutfitImage: Model<OutfitImageDoc>;
   ShortlistItem: Model<ShortlistItemDoc>;
   AiCache: Model<AiCacheDoc>;
   UserPhoto: Model<UserPhotoDoc>;
@@ -554,6 +580,7 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     AppearanceProfile: main.model('AppearanceProfile', appearanceProfileSchema, 'appearanceProfiles'),
     Profile: main.model('Profile', profileSchema, 'profiles'),
     Outfit: main.model('Outfit', outfitSchema, 'outfits'),
+    OutfitImage: main.model('OutfitImage', outfitImageSchema, 'outfitImages'),
     ShortlistItem: main.model('ShortlistItem', shortlistItemSchema, 'shortlistItems'),
     AiCache: main.model('AiCache', aiCacheSchema, 'aiCache'),
     UserPhoto: main.model('UserPhoto', userPhotoSchema, 'userPhotos'),
@@ -608,6 +635,8 @@ export const USER_OWNED_COLLECTIONS = [
   'userPhotos',
   'appearanceAnalyses',
   'outfits',
+  // AI outfit images, one per look; the bytes are stored in the document, so they go with it.
+  'outfitImages',
   'shortlistItems',
   // Specified feature collections (D-115, D-116, D-120; DATABASE.md §3.10 – §3.14, §4b). `adminAccounts`
   // goes with the admin's user account; `adminAuditLogs` is a security record keyed by `adminId` and ages
