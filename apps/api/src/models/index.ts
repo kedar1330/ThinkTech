@@ -28,7 +28,12 @@ import {
   userDesignPreferenceSchema,
   userDesignSelectionSchema,
 } from './design';
-import { colourCategorySchema, colourSwatchSchema, userColourPreferenceSchema } from './colours';
+import {
+  colourCategorySchema,
+  colourSwatchSchema,
+  userColourCombinationSchema,
+  userColourPreferenceSchema,
+} from './colours';
 
 // Stage 1 account collections (DATABASE.md §3.1 – §3.1d). Collection names are explicit so they
 // match the documentation and the tombstone replay list.
@@ -541,6 +546,7 @@ export interface Models {
   ColourSwatch: Model<InferSchemaType<typeof colourSwatchSchema>>;
   ColourCategory: Model<InferSchemaType<typeof colourCategorySchema>>;
   UserColourPreference: Model<InferSchemaType<typeof userColourPreferenceSchema>>;
+  UserColourCombination: Model<InferSchemaType<typeof userColourCombinationSchema>>;
 }
 
 export function registerModels(main: Connection, tombstones: Connection): Models {
@@ -588,6 +594,7 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     ColourSwatch: main.model('ColourSwatch', colourSwatchSchema, 'colourSwatches'),
     ColourCategory: main.model('ColourCategory', colourCategorySchema, 'colourCategories'),
     UserColourPreference: main.model('UserColourPreference', userColourPreferenceSchema, 'userColourPreferences'),
+    UserColourCombination: main.model('UserColourCombination', userColourCombinationSchema, 'userColourCombinations'),
   };
 }
 
@@ -623,4 +630,5 @@ export const USER_OWNED_COLLECTIONS = [
   'userDesignSelections',
   // Colour library (D-133, DATABASE.md §4d).
   'userColourPreferences',
+  'userColourCombinations',
 ] as const;

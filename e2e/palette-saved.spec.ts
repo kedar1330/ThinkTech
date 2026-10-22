@@ -1,25 +1,26 @@
 import { expect, signUpAndSkipOnboarding, test } from './fixtures/auth';
 
-// Palette and Saved Outfits flow (#39 – #42, issue #51):
-// browse palettes → request looks → save → feedback → remove, at mobile and desktop viewports,
+// Palette and Saved Outfits flow (#39 – #42, issue #51; My Colour Palette shows only My colours since #105):
+// open My Colour Palette → request looks → save → feedback → remove, at mobile and desktop viewports,
 // plus responsive checks across all required widths (320, 390, 768, 1366 px).
 
-test('journey: browse palettes → request looks → save → feedback → remove', async ({ page }) => {
+test('journey: my colour palette → request looks → save → feedback → remove', async ({ page }) => {
   await signUpAndSkipOnboarding(page);
 
-  await test.step('browse palettes: list and details', async () => {
+  await test.step('my colour palette: own colours only, no curated palette cards', async () => {
     await page.goto('/palette');
-    await expect(page.getByRole('heading', { name: 'Curated colour palettes' })).toBeVisible();
-    const palettes = page.getByRole('region', { name: 'Curated palettes' }).getByRole('article');
-    await expect(palettes.first()).toBeVisible();
-    const firstPaletteLink = palettes.first().getByRole('heading', { level: 2 }).getByRole('link');
-    const paletteName = await firstPaletteLink.textContent();
-    await firstPaletteLink.click();
-    await expect(page).toHaveURL(/\/palette\/[a-zA-Z0-9_-]+$/);
-    await expect(page.getByRole('heading', { level: 1, name: paletteName! })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Palette colours' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Coordinating colours' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Curated combinations' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Your colours' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Palette view' })).toHaveCount(0);
+    const why = page.getByRole('region', { name: 'Why am I seeing these?' });
+    await expect(why).toBeVisible();
+    // A new user has no skin tone yet, so the page says so instead of showing colours.
+    await expect(why.getByText('Not personalised yet')).toBeVisible();
+    await page.getByRole('link', { name: /See combinations/ }).click();
+    await expect(page).toHaveURL(/\/palette\/colours\?view=combinations$/);
+    await expect(page.getByText('Add your skin tone to see your colours')).toBeVisible();
+    // Old palette links go back to My Colour Palette.
+    await page.goto('/palette/PAL-001');
+    await expect(page).toHaveURL(/\/palette$/);
   });
 
   const firstLook = await test.step('request looks for an occasion', async () => {
@@ -76,24 +77,23 @@ test('responsive: palettes and saved outfits fit at 320, 390, 768 and 1366 px', 
 
   // 1. Check /palette
   await page.goto('/palette');
-  await expect(page.getByRole('heading', { name: 'Curated colour palettes' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Your colours' })).toBeVisible();
   for (const width of [320, 390, 768, 1366]) {
-    await test.step(`palettes list at ${width} px`, async () => {
+    await test.step(`my colour palette at ${width} px`, async () => {
       await page.setViewportSize({ width, height: 900 });
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `horizontal overflow at ${width} px on /palette`).toBeLessThanOrEqual(0);
     });
   }
 
-  // 2. Check /palette/[id]
-  const palettes = page.getByRole('region', { name: 'Curated palettes' }).getByRole('article');
-  await palettes.first().getByRole('heading', { level: 2 }).getByRole('link').click();
-  await expect(page.getByRole('heading', { name: 'Palette colours' })).toBeVisible();
+  // 2. Check /palette/colours (combinations view)
+  await page.goto('/palette/colours?view=combinations');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   for (const width of [320, 390, 768, 1366]) {
-    await test.step(`palette detail at ${width} px`, async () => {
+    await test.step(`my colours at ${width} px`, async () => {
       await page.setViewportSize({ width, height: 900 });
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-      expect(overflow, `horizontal overflow at ${width} px on /palette/[id]`).toBeLessThanOrEqual(0);
+      expect(overflow, `horizontal overflow at ${width} px on /palette/colours`).toBeLessThanOrEqual(0);
     });
   }
 

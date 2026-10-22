@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto';
 import type { Types } from 'mongoose';
 import {
   COLOUR_FAMILIES,
   COLOUR_LIBRARY_LIMITS,
+  COMBINATION_HARMONIES,
   LIBRARY_UNDERTONE_IDS,
   colourCategoryId,
   type CategoryColourItem,
@@ -10,12 +12,21 @@ import {
   type ColourItem,
   type ColourPreference,
   type ColourPreferencesResponse,
+  type CombinationHarmony,
+  type CombinationRole,
   type ColourReviewStatus,
   type LibraryUndertone,
   type MyColoursMissing,
+  type MyColourCombinationsResponse,
   type MyColoursResponse,
   type UpdateColourPreferencesRequest,
 } from '@styleme/contracts';
+import {
+  COMBINATION_REASONS,
+  COMBINATION_RULES_VERSION,
+  generateCombinations,
+  type GeneratedCombinations,
+} from '../colours/combinations';
 import type { Config } from '../config/env';
 import type { Models } from '../models/index';
 import { AppError } from '../utils/errors';
@@ -48,6 +59,7 @@ interface CategoryDoc {
   rationale: string;
   limitations: string;
   reviewStatus: string;
+  contentVersion: number;
   colours: Array<{ colourId: string; score: number; rank: number; reasons: string[] }>;
 }
 
@@ -160,6 +172,103 @@ export class ColourLibraryService {
       })).filter((f) => f.count > 0),
       colours,
       saved,
+    };
+  }
+
+  // --- Coordinating colours and curated combinations (#105) ----------------------------------------------
+
+  /**
+   * Built from the user's own category, minus avoided colours, and stored. Rebuilt on read whenever the
+   * category, its content version, the rules or the liked / avoided colours have changed since.
+   */
+  async combinations(userId: UserId): Promise<MyColourCombinationsResponse> {
+    const [{ cat, missing }, prefs] = await Promise.all([this.ownCategory(userId), this.preferenceMap(userId)]);
+    if (!cat) {
+      return { missing, colours: [], harmonies: [], combinations: [], coordinating: [], generatedAt: null };
+    }
+
+    const swatches = await this.swatches(cat.colours.map((c) => c.colourId));
+    const own = cat.colours.flatMap((c) => {
+      const s = swatches.get(c.colourId);
+      return s ? [{ entry: c, swatch: s, preference: prefs.get(c.colourId) ?? null }] : [];
+    });
+    const choices = own
+      .filter((o) => o.preference)
+      .map((o) => `${o.entry.colourId}:${o.preference}`)
+      .sort();
+    const inputsKey = createHash('sha256')
+      .update([COMBINATION_RULES_VERSION, cat.categoryId, cat.contentVersion, cat.reviewStatus, ...choices].join('|'))
+      .digest('hex');
+
+    let stored = (await this.models.UserColourCombination.findOne({ userId }).lean()) as
+      (GeneratedCombinations & { inputsKey: string; generatedAt: Date }) | null;
+    if (stored?.inputsKey !== inputsKey) {
+      const generated = generateCombinations(
+        own.map((o) => ({
+          colourId: o.entry.colourId,
+          family: o.swatch.family,
+          oklch: o.swatch.oklch,
+          score: o.entry.score,
+          preference: o.preference,
+        })),
+      );
+      stored = { ...generated, inputsKey, generatedAt: new Date() };
+      await this.models.UserColourCombination.updateOne(
+        { userId },
+        { $set: { ...stored, categoryId: cat.categoryId } },
+        { upsert: true, runValidators: true },
+      );
+    }
+
+    const visible = own.filter((o) => o.preference !== 'avoided');
+    const byId = new Map(visible.map((o) => [o.entry.colourId, o]));
+    const combinations = stored.combinations.flatMap((c) => {
+      const colours = c.colours.flatMap((col) => {
+        const o = byId.get(col.colourId);
+        return o
+          ? [
+              {
+                colourId: col.colourId,
+                name: o.swatch.name,
+                hex: o.swatch.hex,
+                role: col.role as CombinationRole,
+                preference: o.preference,
+              },
+            ]
+          : [];
+      });
+      if (colours.length !== c.colours.length) return [];
+      const harmony = c.harmony as CombinationHarmony;
+      return [
+        {
+          combinationId: c.combinationId,
+          harmony,
+          colours,
+          score: c.score,
+          reason: COMBINATION_REASONS[harmony],
+          likedCount: c.likedCount,
+        },
+      ];
+    });
+    return {
+      missing: null,
+      colours: visible.map((o) => ({
+        colourId: o.entry.colourId,
+        name: o.swatch.name,
+        hex: o.swatch.hex,
+        family: o.swatch.family as ColourItem['family'],
+        preference: o.preference,
+      })),
+      harmonies: COMBINATION_HARMONIES.map((h) => ({
+        id: h.id,
+        label: h.label,
+        count: combinations.filter((c) => c.harmony === h.id).length,
+      })).filter((h) => h.count > 0),
+      combinations,
+      coordinating: stored.coordinating
+        .filter((c) => byId.has(c.colourId))
+        .map((c) => ({ colourId: c.colourId, matches: c.matches.filter((m) => byId.has(m)) })),
+      generatedAt: stored.generatedAt.toISOString(),
     };
   }
 

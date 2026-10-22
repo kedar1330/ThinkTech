@@ -593,8 +593,9 @@ Monk tone (1 – 10) → undertone (warm, cool, neutral, olive) → 100+ colours
 | `colourSwatches` | shared | One named colour (`CLR-0001` …) | `colourId` unique; `name`, `hex`, `rgb[3]`, `oklch {l, c, h}`, `family` (12), `temperature`, `depth`, `intensity`, `source` (`css`, `xkcd`), `status` (`published`, `retired`: colours that leave the list are retired, never deleted); index `{family, status}` |
 | `colourCategories` | shared, styling content | One per Monk tone and undertone (`monk-06-warm`), 40 in all | `categoryId` unique; unique `{monkTone, undertone}`; `label`, `skinHex`, `rationale`, `limitations`, `colours[] {colourId, score, rank, reasons[]}`, `contentVersion`, `reviewStatus` (`draft`, `approved`), `reviewedBy`, `reviewedAt` |
 | `userColourPreferences` | **user** | Liked and avoided colours | `userId` unique; `colours[] {colourId, preference: liked \| avoided, savedAt}` (oldest first; at most 600) |
+| `userColourCombinations` | **user** | Coordinating colours and curated combinations (#105), built from the user's own category minus avoided colours | `userId` unique; `inputsKey` (hash of rules version, category, content version, review status and liked / avoided colours: rebuilt on read when it changes), `categoryId`, `combinations[] {combinationId, harmony, colours[] {colourId, role: base \| accent \| pop}, score, likedCount}` (at most 40 per harmony), `coordinating[] {colourId, matches[] (≤ 8)}`, `generatedAt` |
 
-`userColourPreferences` is in `USER_OWNED_COLLECTIONS` (account deletion and tombstone replay). No personal data reaches the shared collections; the user's category is computed per request from `appearanceProfiles`, never stored.
+`userColourPreferences` and `userColourCombinations` are in `USER_OWNED_COLLECTIONS` (account deletion and tombstone replay). No personal data reaches the shared collections; the user's category is computed per request from `appearanceProfiles`, never stored.
 
 ---
 
