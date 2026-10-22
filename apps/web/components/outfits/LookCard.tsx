@@ -7,11 +7,13 @@ import { DesignMatchBadge } from './DesignMatchBadge';
 import { FeedbackButtons } from './FeedbackButtons';
 import { OutfitImage } from './OutfitImage';
 import { SaveLookButton } from './SaveLookButton';
+import { ShopLookButton } from './ShopLookButton';
 import { SlotRow } from './SlotRow';
 import { WhyThisWorks } from './WhyThisWorks';
 
 /**
- * One generated look (FR-LOOK), with Save (FR-OUT-01), Shop this look (#43) and Feedback (#42). Reused by explanations
+ * One generated look (FR-LOOK), with Save (FR-OUT-01), Shop this look (#43; it saves the look first, #115) and
+ * Feedback (#42). Reused by explanations
  * and alternatives (#48) and slot visuals (#50).
  */
 export function LookCard({ look, position, sizes }: { look: Look; position: number; sizes: ProfileSizes }) {
@@ -34,12 +36,16 @@ export function LookCard({ look, position, sizes }: { look: Look; position: numb
         </ul>
         <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
           <SaveLookButton outfitId={look.id} saved={look.status === 'saved'} />
-          <Link
-            href={shopHref(look.id)}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-plum underline"
-          >
-            Shop this look
-          </Link>
+          {look.status === 'saved' ? (
+            <Link
+              href={shopHref(look.id)}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-plum underline"
+            >
+              Shop this look
+            </Link>
+          ) : (
+            <ShopLookButton outfitId={look.id} />
+          )}
         </div>
         <FeedbackButtons outfitId={look.id} initialFeedback={look.feedback} />
       </article>
