@@ -12,5 +12,8 @@ export * from './product';
 export * from './my-profile';
 export * from './photos';
 export * from './catalogue';
+export * from './design-features';
+export * from './colour-library';
 export * from './saved-items';
 export * from './admin';
+export * from './manual';

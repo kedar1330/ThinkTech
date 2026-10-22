@@ -30,6 +30,16 @@ export const DEPARTMENT_IDS = ids(DEPARTMENTS);
 export const departmentSchema = z.enum(DEPARTMENT_IDS);
 export type Department = z.infer<typeof departmentSchema>;
 
+// Clothing Preference (My Profile, D-129): what the user wears. It is stored as the profile's
+// `department`; the profile offers only these two options (`any` remains for existing data and features).
+export const CLOTHING_PREFERENCES = [
+  { id: 'women', label: 'Women’s Wear' },
+  { id: 'men', label: 'Men’s Wear' },
+] as const;
+export const CLOTHING_PREFERENCE_IDS = ids(CLOTHING_PREFERENCES);
+export const clothingPreferenceSchema = z.enum(CLOTHING_PREFERENCE_IDS);
+export type ClothingPreference = z.infer<typeof clothingPreferenceSchema>;
+
 // --- Occasions and styles (founder approval, D-62) -----------------------------------------------
 
 export const OCCASIONS = [
@@ -464,3 +474,28 @@ export const PROPORTION_DESCRIPTORS = [
 export const PROPORTION_DESCRIPTOR_IDS = ids(PROPORTION_DESCRIPTORS);
 export const proportionDescriptorSchema = z.enum(PROPORTION_DESCRIPTOR_IDS);
 export type ProportionDescriptor = z.infer<typeof proportionDescriptorSchema>;
+
+// Height band (D-131), derived from the height in the profile; rules use it only as a soft preference.
+// Bands differ by Clothing Preference because typical heights do. They never set a size (FR-SIZE-03).
+export const HEIGHT_BANDS = [
+  { id: 'petite', label: 'Petite' },
+  { id: 'average', label: 'Average height' },
+  { id: 'tall', label: 'Tall' },
+] as const;
+export const HEIGHT_BAND_IDS = ids(HEIGHT_BANDS);
+export const heightBandSchema = z.enum(HEIGHT_BAND_IDS);
+export type HeightBand = z.infer<typeof heightBandSchema>;
+
+/** Below `petiteBelowCm` is petite; from `tallFromCm` up is tall (whole centimetres). */
+export const HEIGHT_BAND_LIMITS = {
+  women: { petiteBelowCm: 157, tallFromCm: 170 },
+  men: { petiteBelowCm: 168, tallFromCm: 183 },
+} as const satisfies Record<Exclude<Department, 'any'>, { petiteBelowCm: number; tallFromCm: number }>;
+
+/** The height band for a height, or null without a height or a Women's / Men's Wear preference. */
+export function heightBand(department: Department | null, heightCm: number | null): HeightBand | null {
+  if (heightCm === null || department === null || department === 'any') return null;
+  const { petiteBelowCm, tallFromCm } = HEIGHT_BAND_LIMITS[department];
+  if (heightCm < petiteBelowCm) return 'petite';
+  return heightCm >= tallFromCm ? 'tall' : 'average';
+}

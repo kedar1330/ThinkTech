@@ -8,6 +8,7 @@ import {
   fabricSchema,
   fitSchema,
   garmentLengthSchema,
+  heightBandSchema,
   necklineDepthSchema,
   necklineSchema,
   occasionSchema,
@@ -244,6 +245,8 @@ export const lookInputsSchema = z
     fabricPreferences: z.object({ liked: z.array(fabricSchema), avoided: z.array(fabricSchema) }),
     preferredStyles: z.array(styleSchema),
     sizesSaved: z.array(z.enum(SIZED_GROUPS_STAGE_1)),
+    // The height band used (D-131), never the height itself; absent on looks made before it existed.
+    heightBand: heightBandSchema.nullable().optional(),
     signalsUsed: z.boolean(),
   })
   .strict();
