@@ -16,7 +16,15 @@
     "style-rules": "tsx scripts/style-rules.ts",
     "evaluate": "tsx scripts/evaluate.ts",
     "migrate": "tsx --env-file=.env scripts/migrate.ts",
-    "catalogue:import": "tsx --env-file=.env scripts/catalogue-import.ts"
+    "catalogue:import": "tsx --env-file=.env scripts/catalogue-import.ts",
+    "illustrations:generate": "tsx scripts/profile-illustrations.ts generate",
+    "illustrations:seed": "tsx --env-file=.env scripts/profile-illustrations.ts seed",
+    "design:generate": "tsx scripts/design-catalogue.ts generate",
+    "design:seed": "tsx --env-file=.env scripts/design-catalogue.ts seed",
+    "design:drafts": "tsx scripts/design-catalogue.ts drafts",
+    "colours:report": "tsx scripts/colour-library.ts report",
+    "colours:drafts": "tsx scripts/colour-library.ts drafts",
+    "colours:seed": "tsx --env-file=.env scripts/colour-library.ts seed"
   },
   "dependencies": {
     "@styleme/contracts": "workspace:*",

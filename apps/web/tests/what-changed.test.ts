@@ -101,6 +101,8 @@ describe('inputsFromProfile', () => {
   it('takes the compared fields from a profile, with sizes named by group only', () => {
     const profile = {
       department: 'men',
+      ageGroup: null,
+      heightCm: 180,
       sizes: { tops: { letter: 'M' }, bottoms: null, ethnicTops: null, ethnicSets: null, shoes: { uk: 9 } },
       fitPreferences: BEFORE.fitPreferences,
       likedColors: ['navy'],
@@ -126,6 +128,19 @@ describe('inputsFromProfile', () => {
       fabricPreferences: { liked: [], avoided: [] },
       preferredStyles: ['casual'],
       sizesSaved: ['tops', 'shoes'],
+      heightBand: 'average',
     });
+  });
+});
+
+describe('height band (D-131)', () => {
+  it('says when the height band changed, and ignores looks made before height existed', () => {
+    expect(whatChanged({ ...BEFORE, heightBand: null }, { ...BEFORE, heightBand: 'petite' })).toEqual([
+      'Your height band changed to petite.',
+    ]);
+    expect(whatChanged({ ...BEFORE, heightBand: 'tall' }, { ...BEFORE, heightBand: null })).toEqual([
+      'Your height band was cleared.',
+    ]);
+    expect(whatChanged(BEFORE, { ...BEFORE, heightBand: 'tall' })).toEqual([]);
   });
 });

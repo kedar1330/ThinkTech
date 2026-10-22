@@ -131,7 +131,13 @@ export const BODY_SHAPES = [
     proportion: 'balanced_straight_waist',
   },
   { id: 'apple', label: 'Apple (oval)', departments: ['women'], proportion: 'fuller_midsection' },
-  { id: 'oval', label: 'Oval', departments: ['men'], proportion: 'fuller_midsection' },
+  { id: 'oval', label: 'Oval', departments: ['women', 'men'], proportion: 'fuller_midsection' },
+  // My Profile body types (D-129, founder list 2026-10-22).
+  { id: 'top_hourglass', label: 'Top hourglass', departments: ['women'], proportion: 'balanced_defined_waist' },
+  { id: 'bottom_hourglass', label: 'Bottom hourglass', departments: ['women'], proportion: 'balanced_defined_waist' },
+  { id: 'spoon', label: 'Spoon', departments: ['women'], proportion: 'hips_wider_than_shoulders' },
+  { id: 'diamond', label: 'Diamond', departments: ['women'], proportion: 'fuller_midsection' },
+  { id: 'trapezoid', label: 'Trapezoid', departments: ['men'], proportion: 'shoulders_wider_than_hips' },
   { id: 'not_sure', label: 'Not sure', departments: ['women', 'men'], proportion: null },
 ] as const satisfies readonly {
   id: string;
@@ -176,6 +182,10 @@ export const ILLUSTRATION_KINDS = [
   'tryon_layer', // transparent garment layer for the 2D try-on
   'palette_mood', // palette imagery
   'editorial_photo', // curated, licensed fashion photograph (supplementary)
+  'measurement_guide', // My Profile: how to take one body measurement, on a figure in white shirt and pants (D-129)
+  'undertone_guide', // My Profile: hand showing an undertone (D-129)
+  'design_feature', // Outfit Categories: one neckline, sleeve … on a dress form (D-132)
+  'design_feature_layer', // transparent layer of one feature, stacked by the visual customizer (D-132)
 ] as const;
 export const illustrationKindSchema = z.enum(ILLUSTRATION_KINDS);
 export type IllustrationKind = z.infer<typeof illustrationKindSchema>;

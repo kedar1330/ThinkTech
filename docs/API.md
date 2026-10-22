@@ -98,6 +98,7 @@ Remaining numbered endpoints (continuing the first table):
 | 21 | DELETE | `/v1/shortlist/:id` | Remove an item | 1 |
 | 21a | PUT | `/v1/shortlist/:id/attach` | Put an item on a slot of a saved look (#43) | 1 |
 | 21b | DELETE | `/v1/shortlist/:id/attach` | Take an item off its look (#43) | 1 |
+| 21c | GET | `/v1/manual` | Website manual workflow steps with feature metadata and imagery | 1 |
 | 22 | GET | `/v1/products` | Browse verified products | Product layer |
 | 23 | GET | `/v1/products/:id` | Product detail with provenance and quality | Product layer |
 | 24 | GET | `/v1/products/:id/alternatives` | Eligible alternatives for a slot | Product layer |
@@ -160,13 +161,13 @@ All bodies are validated by the Zod schemas in `packages/contracts/src/auth.ts` 
 
 **`GET /v1/profile`** — returns the profile, or `null` fields if not yet set.
 
-**`PUT /v1/profile`** — input: the profile fields in [DATABASE.md](DATABASE.md) §3.2. `department` is required; everything else is optional. `budgetPreference` (optional, ₹ > 0) is used only to compare with totals of user-entered prices in Stage 1. `preferredWearTypes` (optional) is a soft ranking preference (D-96) — **specified but not yet accepted**: `updateProfileRequestSchema` is strict and has no such field, so sending it today returns `INVALID_REQUEST` until #63 adds it. `measurements` is accepted only when the product layer with size charts is active. Fields not sent are unchanged; sending `null` (or an empty list) clears a field. Unknown fields — including `ageRange`, `height` and, in Stage 1, `measurements` — are rejected with `INVALID_REQUEST`. A colour may be both liked and disliked; the generator applies the more restrictive choice (FR-LOOK-10). Returns the saved profile. Before the first save, `GET` returns `department: null` with every list empty.
+**`PUT /v1/profile`** — input: the profile fields in [DATABASE.md](DATABASE.md) §3.2. `department` is required; everything else is optional. `budgetPreference` (optional, ₹ > 0) is used only to compare with totals of user-entered prices in Stage 1. `preferredWearTypes` (optional) is a soft ranking preference (D-96) — **specified but not yet accepted**: `updateProfileRequestSchema` is strict and has no such field, so sending it today returns `INVALID_REQUEST` until #63 adds it. `measurements` is accepted only when the product layer with size charts is active. Fields not sent are unchanged; sending `null` (or an empty list) clears a field. Unknown fields — including `ageRange`, `height` (the field is `heightCm`) and, in Stage 1, `measurements` — are rejected with `INVALID_REQUEST`. A colour may be both liked and disliked; the generator applies the more restrictive choice (FR-LOOK-10). Returns the saved profile. Before the first save, `GET` returns `department: null` with every list empty. *D-129 (2026-10-22):* `department` (the Clothing Preference) accepts only `women` or `men`; `ageGroup` (optional, `AGE_GROUPS`) is accepted and returned; changing the Clothing Preference clears an `appearanceProfiles.bodyType` that the new list doesn't offer. My Profile sends the removed preferences cleared (§3.9b). *D-131 (2026-10-22):* `heightCm` (optional, whole cm, 120 – 230) is accepted and returned; the engine uses its height band, and it is sent to Gemini with a full-body photo only (`POST /v1/photos?kind=body`).
 
 ### 3.3 Appearance (`appearance.ts`)
 
 **`GET /v1/appearance`** — returns `{ skinTone, undertone, bodyProportions, useInRecommendations }`; each attribute uses the model in [DATABASE.md](DATABASE.md) §5.
 
-**`PUT /v1/appearance`** — input: any of `skinTone.value`, `undertone.value`, `bodyProportions.value` (or `null` to clear), and `useInRecommendations`. Stores the values as `source: "self_reported"`, `userConfirmed: true`, with no confidence. Fields not sent are unchanged; an empty body, unknown fields or a `confidence` are rejected with `INVALID_REQUEST`. Values come from the shared vocabulary (`monkRange` as `a-b`, span at most 2 tones). Returns the updated attributes. With no stored signals, `GET` returns all attributes `null` and `useInRecommendations: true`.
+**`PUT /v1/appearance`** — input: any of `skinTone.value`, `undertone.value`, `bodyProportions.value` (or `null` to clear), and `useInRecommendations`. Stores the values as `source: "self_reported"`, `userConfirmed: true`, with no confidence. Fields not sent are unchanged; an empty body, unknown fields or a `confidence` are rejected with `INVALID_REQUEST`. Values come from the shared vocabulary (`monkRange` as `a-b`, span at most 2 tones). Returns the updated attributes. With no stored signals, `GET` returns all attributes `null` and `useInRecommendations: true`. *D-129 (2026-10-22):* the response also has `bodyType`; attributes may come from `self_reported`, `photo_estimate`, `measurements` or `user_corrected`, with `userConfirmed` false until reviewed and `estimate: { analysisId, confidence }` for photo/measurement results. `PUT` accepts `bodyType` (also sets `bodyProportions`); replacing a photo or measurement result records `user_corrected`. **`POST /v1/appearance/confirm`** `{ attributes: ["skinTone" | "undertone" | "bodyType"] }` marks results as reviewed and correct (§3.9b).
 
 ### 3.4 Style (contract: `palette.ts`)
 
@@ -257,7 +258,21 @@ These are specified only at the level needed for planning. Their full contracts 
 | `POST /v1/tailor/pdf` | PDF from a saved design |
 | `POST /v1/tryon`, `GET /v1/tryon/:id` | **Not approved.** The earlier design (user photo + `consent: true` → Leffa / Hugging Face / Qwen) is superseded by AI rule 16. Consent alone does not authorise sending a personal photo to an external provider. Requires D-48 |
 
+### 3.9b My Profile redesign — built (D-129, 2026-10-22)
+
+Implemented. Every endpoint is authenticated, scoped to the user, uses the envelope and never logs bodies, measurements, photos, results or model replies.
+
+| Method | Path | Purpose | Contract / data |
+|---|---|---|---|
+| GET / PUT | `/v1/measurements` | Read or save body measurements (centimetres; `displayUnit` remembered). `PUT { displayUnit, valuesCm, clear? }` merges: given values are saved, `clear` removes, the rest stay. Every ID must belong to the user's Clothing Preference (`MEASUREMENT_ORDER`), else `INVALID_REQUEST`; no Clothing Preference → `CONFLICT`. When the body-type measurements change and are complete, the body type is identified (`classifyBodyType`, `measurements-v1`), stored in `appearanceProfiles.bodyType` (source `measurements`, unconfirmed) with an `appearanceAnalyses` record. Returns `{ displayUnit, valuesCm, updatedAt, bodyTypeFromMeasurements }` | `updateMeasurementsRequestSchema`; `profiles.measurements` |
+| POST | `/v1/photos?kind=face\|body&notice=<PHOTO_NOTICE_VERSION>` | Body: the raw image (`image/jpeg`, `image/png`, `image/webp`, ≤ 8 MB; file signature checked). Rate-limited (5/min, 20/h per user). Sends the photo to Gemini (`GEMINI_VISION_MODEL`), validates the reply against the lists (face: Monk 1 – 10 and warm/cool/neutral/olive; body: the user's Clothing Preference list), stores the photo (newest per kind) and the analysis, records consent, applies the result unconfirmed and returns `201 { photo, analysis, appearance }`. Errors: `PHOTO_UNUSABLE` (422, message says why), `AI_UNAVAILABLE` (provider failure or a value outside the lists), `RATE_LIMITED`, `PROVIDER_NOT_CONFIGURED` (no key or `PHOTO_ANALYSIS_ENABLED=false`), `CONFLICT` (body photo without a Clothing Preference) | `uploadPhotoQuerySchema`, `PhotoAnalysisResponse`; `userPhotos`, `appearanceAnalyses`, `appearanceProfiles` |
+| GET | `/v1/photos` | The user's photo metadata (never bytes, keys or URLs) and `analysisAvailable` | `PhotosResponse` |
+| DELETE | `/v1/photos/:id` | Delete one photo; results already derived stay until changed | `userPhotos` |
+| POST | `/v1/appearance/confirm` | Mark photo/measurement results as reviewed and correct | `confirmAppearanceRequestSchema` |
+
 ### 3.9a My Profile and Home — approved (D-102 … D-106, 2026-10-18), not implemented
+
+> Photo upload, measurements and confirmation were built differently by D-129 (§3.9b): `POST /v1/photos` analyses at once (no separate `/analyze` or consent endpoint), `PUT /v1/measurements` replaces P2, and `POST /v1/appearance/confirm` replaces #28.
 
 Approved by the founder on 2026-10-18; not implemented yet. Photo endpoints and the age group ship only after the privacy review and the D-74 legal review; full-body analysis may call Gemini only under D-122. Shapes come from `packages/contracts/src/my-profile.ts` and `photos.ts` (dormant). Every endpoint is authenticated, scoped to the user, uses the envelope and never logs bodies, measurements, photos or image URLs. Endpoints #27 and #28 above are the analysis endpoints of this proposal (no new ones are added for the same purpose).
 
@@ -359,6 +374,29 @@ Every endpoint is authenticated (all feature pages require login), uses the enve
 | F43 | GET | `/v1/admin/audit-logs?adminId=&targetType=&from=&to=` | `audit.view` |
 | F44 | GET / POST / PATCH | `/v1/admin/admins`, `/v1/admin/admins/:id` | `admins.manage` — create (existing verified user only), change role, disable; no self-escalation |
 
+### 3.12 Design features (D-132)
+
+Authenticated, password set. Everything follows the profile's Clothing Preference; `department` is honoured only when the profile says `any`.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/v1/design/taxonomy?department=` | Outfit categories (Indian, Western, Indo-Western) with their garment types for the user's department; `canSwitchDepartment` |
+| GET | `/v1/design/features?garmentType=&view=suits\|all&department=` | The garment's feature categories; each feature with `image`, `layer`, `suitability {result, reasons}` and the user's `preference`. `suits` (default) shows recommended and alternative features plus liked ones, never disliked; a category with no approved rule shows everything with `personalised: false`. Also `basis {bodyType, heightBand, stylingGoals}`, `baseFigure`, `incompatible` pairs and the saved `selection`. 404 for a garment outside the department; 400 when no department is known |
+| GET / PUT | `/v1/design/preferences` | `featurePreferences[] {featureId, preference: liked/disliked/explore/no_preference}` (merged; `no_preference` clears), `stylingGoals[]`, `fitPreferences[]` (fit features only), `occasionPreferences[]` (occasion features only) |
+| GET | `/v1/design/selections` | The user's saved combinations, newest first |
+| PUT | `/v1/design/selections` | `{garmentType, outfitCategory, department?, selectedFeatures {category: featureId}, customization}`; one per garment (replaces). 400 if a feature is unknown, in the wrong category, not for the department or garment, not selectable, or clashes (`featureCombinations`) |
+| DELETE | `/v1/design/selections/:garmentType?department=` | Reset |
+
+### 3.13 Colour library (D-133)
+
+Authenticated, password set. Categories are styling content: production serves only founder-approved ones; local and staging also serve a seeded draft, with `reviewStatus: "draft"`.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/v1/colours/mine` | **Only the user's own category**, from the appearance skin tone (middle of the Monk range) and undertone; the other 39 categories are never served and there is no endpoint that lists them. `category {categoryId, monkTone, undertone, label, colourCount, preview[3], skinHex, rationale, limitations, reviewStatus}`, `families[] {id, label, count}`, `colours[]` in rank order `{colourId, name, hex, family, temperature, depth, intensity, oklch {l, c, h}, source, score 0 – 100, rank, reasons[], preference}`, `saved {liked, avoided}`. When there is no category: `category: null`, `colours: []` and `missing` = `skin_tone`, `undertone` (unset or `not_sure`), `signals_off`, or `not_published` |
+| GET | `/v1/colours/preferences` | `liked[]`, `avoided[]` (colour items, newest first), `updatedAt` |
+| PUT | `/v1/colours/preferences` | `{colourIds: CLR-0001 …, 1 – 200, preference: liked \| avoided \| none}`. Only colours from the user's own category, or colours already saved (so they can be moved or cleared after a profile change). A colour is liked or avoided, never both (the latest wins); `none` clears. 400 for an unknown or out-of-category colour, or more than 600 saved in all.\| avoided \| none}`. A colour is liked or avoided, never both (the latest wins); `none` clears. 400 for an unknown colour or more than 600 saved in all. Returns the preferences |
+
 ### 3.10 Health
 
 **`GET /health`** — returns `{ status: "ok", version, time }` without authentication (D-69). Used by the hosting platform's health check. In maintenance mode (`MAINTENANCE_MODE=true`, used during a restore, D-85) it returns `{ status: "maintenance", version, time }`, and every `/v1` endpoint returns `SERVICE_UNAVAILABLE`.
@@ -389,14 +427,15 @@ Every endpoint is authenticated (all feature pages require login), uses the enve
 | `PASSWORD_SETUP_REQUIRED` | 403 | A Google sign-up hasn't created a StyleMe password yet |
 | `GOOGLE_ACCOUNT_EXISTS` | 409 | Google sign-up for an email that already has an account |
 | `GOOGLE_NO_ACCOUNT` | 404 | Google login for an email without an account |
-| `PROVIDER_NOT_CONFIGURED` | 503 | Google or SMS isn't configured in this environment |
+| `PROVIDER_NOT_CONFIGURED` | 503 | Google, SMS or photo analysis (no Gemini key, or `PHOTO_ANALYSIS_ENABLED=false`) isn't configured in this environment |
+| `PHOTO_UNUSABLE` | 422 | A profile photo can't be analysed (too dark, too bright, blurry, no face, body not fully visible, several people); the message says why (D-129) |
 | `NOT_FOUND` | 404 | Resource doesn't exist or isn't owned by the user |
 | `CONFLICT` | 409 | Conflicting state (e.g. a shortlist slot already has an item, the item limit is reached) |
 | `PRODUCT_UNAVAILABLE` | 409 | Product layer: product inactive, expired, out of stock, broken-linked or rejected |
 | `RATE_LIMITED` | 429 | Rate limit exceeded (D-38) |
 | `INTERNAL_ERROR` | 500 | Unexpected server error (no details exposed) |
 | `SERVICE_UNAVAILABLE` | 503 | A core dependency (e.g. the database) is unreachable |
-| `AI_UNAVAILABLE` | 503 | Only for deferred features that **require** AI (chatbot, sketch). Never for recommendations |
+| `AI_UNAVAILABLE` | 503 | Only for features that **require** AI: photo analysis (D-129; the user can choose manually instead) and the deferred chatbot and sketch. Never for recommendations |
 | `ADMIN_FORBIDDEN` | 403 | *Specified (D-120).* Not an admin, admin record disabled, or the role lacks the permission |
 | `NOT_APPROVED` | 409 | *Specified (D-120).* Publishing styling content without recorded founder approval, or an asset without verified rights |
 | `RECORD_IN_USE` | 409 | *Specified (D-120).* Archiving or deleting a catalogue record that other records still reference, without a replacement |

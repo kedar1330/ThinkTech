@@ -18,6 +18,17 @@ import {
   savedItemSchema,
   userFeedbackSchema,
 } from './user-collections';
+import { manualStepSchema, type ManualStepDoc } from './manual';
+import {
+  designFeatureCategorySchema,
+  designFeatureSchema,
+  featureCombinationSchema,
+  featureSuitabilityRuleSchema,
+  outfitCategorySchema,
+  userDesignPreferenceSchema,
+  userDesignSelectionSchema,
+} from './design';
+import { colourCategorySchema, colourSwatchSchema, userColourPreferenceSchema } from './colours';
 
 // Stage 1 account collections (DATABASE.md §3.1 – §3.1d). Collection names are explicit so they
 // match the documentation and the tombstone replay list.
@@ -199,13 +210,19 @@ const tombstoneSchema = new Schema({
   expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } },
 });
 
-// Appearance signals (DATABASE.md §3.3 and §5). Each attribute keeps the value used for
-// recommendations apart from any model estimate. Stage 1 stores only self-reported values: no
-// confidence, `estimate: null`. `null` means the attribute isn't set.
+// Appearance (DATABASE.md §3.3 and §5, D-129). Each attribute keeps the value used for recommendations
+// and where it came from: the user's choice, a photo estimate (Gemini), the user's measurements, or the
+// user's correction. Photo and measurement results are stored at once with `userConfirmed: false` until
+// the user reviews them; `estimate` then points at the analysis (`{ analysisId, confidence }`).
+// `null` means the attribute isn't set.
 const appearanceAttributeSchema = new Schema(
   {
     value: { type: Schema.Types.Mixed, required: true },
-    source: { type: String, enum: ['self_reported', 'photo_estimate', 'user_corrected'], required: true },
+    source: {
+      type: String,
+      enum: ['self_reported', 'photo_estimate', 'measurements', 'user_corrected'],
+      required: true,
+    },
     userConfirmed: { type: Boolean, required: true },
     confirmedAt: { type: Date, default: null },
     estimate: { type: Schema.Types.Mixed, default: null },
@@ -220,12 +237,13 @@ const appearanceProfileSchema = new Schema(
     skinTone: { type: appearanceAttributeSchema, default: null },
     undertone: { type: appearanceAttributeSchema, default: null },
     bodyProportions: { type: appearanceAttributeSchema, default: null },
+    // Body type (D-129): one of BODY_TYPES_BY_DEPARTMENT; setting it also sets `bodyProportions`.
+    bodyType: { type: appearanceAttributeSchema, default: null },
     // Signals are used only while this is on (FR-SIG-03).
     useInRecommendations: { type: Boolean, default: true, required: true },
-    // Photo-analysis estimates only (D-103, approved, not built).
+    // Prompt version of the latest photo analysis (D-129).
     analysisVersion: { type: String, default: null },
-    // Approved (D-103), not built: no endpoint writes these yet. Consent per photo kind,
-    // asked before the first analysis and revocable; `noticeVersion` is the disclosure the user saw.
+    // Consent per photo kind (D-129): recorded with each upload; `noticeVersion` is the notice the user agreed to.
     photoConsent: {
       type: new Schema(
         {
@@ -254,17 +272,21 @@ const appearanceProfileSchema = new Schema(
   { timestamps: true },
 );
 
-// Approved, not built (DATABASE.md §3.7, D-103): metadata of private profile photos. The image itself lives in
-// private object storage under `storageKey`; it is never public and never returned to clients. Two
-// separate uploads: `face` (skin tone and undertone) and `body` (front/side/back, body shape). Before any
-// upload endpoint ships, account deletion must also delete the stored objects, not only this metadata.
+// Private profile photos (DATABASE.md §3.7, D-103, D-129). The image bytes are stored here in MongoDB
+// (`data`, never selected by default and never returned to clients or logged), so deleting the account
+// deletes the photo with this document. Two separate uploads: `face` (skin tone and undertone) and `body`
+// (full-body front view, body type; kept for the later 2D/3D try-on). `storageKey` is for a future object
+// store (D-107) and is unset while photos live in MongoDB.
 const userPhotoSchema = new Schema(
   {
     ...fixtureField,
     userId: { type: Schema.Types.ObjectId, required: true },
     kind: { type: String, enum: ['face', 'body'], required: true },
     angle: { type: String, enum: ['front', 'side', 'back'], default: null },
-    storageKey: { type: String, required: true, unique: true },
+    storage: { type: String, enum: ['mongodb', 'object_storage'], default: 'mongodb', required: true },
+    // Mixed (stored as BSON binary): the bytes go only to the analysis provider and back to their owner.
+    data: { type: Schema.Types.Mixed, select: false },
+    storageKey: { type: String, default: undefined },
     contentType: { type: String, enum: ['image/jpeg', 'image/png', 'image/webp'], required: true },
     bytes: { type: Number, required: true },
     retention: { type: String, enum: ['keep', 'delete_after_analysis'], required: true },
@@ -277,10 +299,16 @@ const userPhotoSchema = new Schema(
 );
 userPhotoSchema.index({ userId: 1, kind: 1, uploadedAt: -1 });
 userPhotoSchema.index({ deleteAfter: 1 }, { partialFilterExpression: { deleteAfter: { $type: 'date' } } });
+// Named, so it never clashes with the old non-partial `storageKey_1` (dropped by migration 002).
+userPhotoSchema.index(
+  { storageKey: 1 },
+  { name: 'storageKey_when_set', unique: true, partialFilterExpression: { storageKey: { $type: 'string' } } },
+);
 
-// Approved, not built (DATABASE.md §3.8, D-103): history of appearance analyses. The value in use stays in
-// `appearanceProfiles`; a result is applied there only after the user confirms or corrects it.
-// Deleting a photo does not delete results derived from it (they are deleted separately).
+// History of appearance analyses (DATABASE.md §3.8, D-103, D-129): photo analyses by Gemini and body types
+// identified from measurements. The value in use lives in `appearanceProfiles`; a new result is applied
+// there at once (unconfirmed) and the user confirms or corrects it. Deleting a photo does not delete
+// results derived from it (they are deleted separately).
 const appearanceAnalysisSchema = new Schema(
   {
     ...fixtureField,
@@ -306,12 +334,12 @@ appearanceAnalysisSchema.index({ userId: 1, kind: 1, createdAt: -1 });
 appearanceAnalysisSchema.index({ userId: 1, source: 1 });
 
 // Style profile (DATABASE.md §3.2), one per user. Nested values are validated by the Zod contract
-// (`updateProfileRequestSchema`) before they reach the database. No age range, height or measurements
-// in Stage 1 (FR-PROF-04, FR-SIZE-06).
+// (`updateProfileRequestSchema`) before they reach the database.
 const profileSchema = new Schema(
   {
     ...fixtureField,
     userId: { type: Schema.Types.ObjectId, required: true, unique: true },
+    // The Clothing Preference (D-129): `women` or `men`. `any` remains only on profiles saved before D-129.
     department: { type: String, enum: ['women', 'men', 'any'], required: true },
     sizes: { type: Schema.Types.Mixed, default: () => ({}) },
     fitPreferences: { type: Schema.Types.Mixed, default: () => ({}) },
@@ -325,13 +353,15 @@ const profileSchema = new Schema(
     preferredStyles: { type: [String], default: [] },
     preferredOccasions: { type: [String], default: [] },
     budgetPreference: { type: Number, default: null },
-    // My Profile fields (DATABASE.md §3.2, D-102 … D-104, approved 2026-10-18, not built). The profile
-    // contract does not accept them yet and responses never include them; `default: undefined` keeps
-    // existing documents unchanged, so no migration is needed.
+    // My Profile fields (DATABASE.md §3.2, D-102 … D-104, D-129). `default: undefined` keeps existing
+    // documents unchanged, so no migration is needed.
     ageGroup: { type: String, enum: ['under_18', '18_24', '25_34', '35_44', '45_plus'], default: undefined },
-    // Body measurements, entered manually, stored in cm (`{ displayUnit, valuesCm, updatedAt }`).
+    // Height in whole centimetres (D-131); unset until the user gives it.
+    heightCm: { type: Number, min: 120, max: 230, default: undefined },
+    // Body measurements entered by the user, stored in cm (`{ displayUnit, valuesCm, updatedAt }`, D-129):
+    // body-type measurements and optional fit measurements for the user's Clothing Preference.
     measurements: { type: Schema.Types.Mixed, default: undefined },
-    // Manual body-shape choice (a proportion descriptor or "not_sure") when no analysis is used.
+    // Unused since D-129 (the body type lives in `appearanceProfiles.bodyType`); kept for existing documents.
     bodyShapeChoice: { type: String, default: undefined },
     defaultFit: { type: String, default: undefined },
     categoryBudgets: { type: Schema.Types.Mixed, default: undefined },
@@ -463,6 +493,10 @@ export type CustomPaletteDoc = InferSchemaType<typeof customPaletteSchema>;
 export type UserFeedbackDoc = InferSchemaType<typeof userFeedbackSchema>;
 export type AdminAccountDoc = InferSchemaType<typeof adminAccountSchema>;
 export type AdminAuditLogDoc = InferSchemaType<typeof adminAuditLogSchema>;
+export type DesignFeatureDoc = InferSchemaType<typeof designFeatureSchema>;
+export type FeatureSuitabilityRuleDoc = InferSchemaType<typeof featureSuitabilityRuleSchema>;
+export type UserDesignPreferenceDoc = InferSchemaType<typeof userDesignPreferenceSchema>;
+export type UserDesignSelectionDoc = InferSchemaType<typeof userDesignSelectionSchema>;
 
 export interface Models {
   User: Model<UserDoc>;
@@ -494,6 +528,19 @@ export interface Models {
   UserFeedback: Model<UserFeedbackDoc>;
   AdminAccount: Model<AdminAccountDoc>;
   AdminAuditLog: Model<AdminAuditLogDoc>;
+  ManualStep: Model<ManualStepDoc>;
+  // Design features (D-132).
+  OutfitCategory: Model<InferSchemaType<typeof outfitCategorySchema>>;
+  DesignFeatureCategory: Model<InferSchemaType<typeof designFeatureCategorySchema>>;
+  DesignFeature: Model<DesignFeatureDoc>;
+  FeatureSuitabilityRule: Model<FeatureSuitabilityRuleDoc>;
+  FeatureCombination: Model<InferSchemaType<typeof featureCombinationSchema>>;
+  UserDesignPreference: Model<UserDesignPreferenceDoc>;
+  UserDesignSelection: Model<UserDesignSelectionDoc>;
+  // Colour library (D-133).
+  ColourSwatch: Model<InferSchemaType<typeof colourSwatchSchema>>;
+  ColourCategory: Model<InferSchemaType<typeof colourCategorySchema>>;
+  UserColourPreference: Model<InferSchemaType<typeof userColourPreferenceSchema>>;
 }
 
 export function registerModels(main: Connection, tombstones: Connection): Models {
@@ -526,6 +573,21 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     UserFeedback: main.model('UserFeedback', userFeedbackSchema, 'userFeedback'),
     AdminAccount: main.model('AdminAccount', adminAccountSchema, 'adminAccounts'),
     AdminAuditLog: main.model('AdminAuditLog', adminAuditLogSchema, 'adminAuditLogs'),
+    ManualStep: main.model('ManualStep', manualStepSchema, 'manualSteps'),
+    OutfitCategory: main.model('OutfitCategory', outfitCategorySchema, 'outfitCategories'),
+    DesignFeatureCategory: main.model('DesignFeatureCategory', designFeatureCategorySchema, 'designFeatureCategories'),
+    DesignFeature: main.model('DesignFeature', designFeatureSchema, 'designFeatures'),
+    FeatureSuitabilityRule: main.model(
+      'FeatureSuitabilityRule',
+      featureSuitabilityRuleSchema,
+      'featureSuitabilityRules',
+    ),
+    FeatureCombination: main.model('FeatureCombination', featureCombinationSchema, 'featureCombinations'),
+    UserDesignPreference: main.model('UserDesignPreference', userDesignPreferenceSchema, 'userDesignPreferences'),
+    UserDesignSelection: main.model('UserDesignSelection', userDesignSelectionSchema, 'userDesignSelections'),
+    ColourSwatch: main.model('ColourSwatch', colourSwatchSchema, 'colourSwatches'),
+    ColourCategory: main.model('ColourCategory', colourCategorySchema, 'colourCategories'),
+    UserColourPreference: main.model('UserColourPreference', userColourPreferenceSchema, 'userColourPreferences'),
   };
 }
 
@@ -542,7 +604,7 @@ export const USER_OWNED_COLLECTIONS = [
   'passwordResetTokens',
   'profiles',
   'appearanceProfiles',
-  // My Profile collections (D-103, approved, not built). Photo objects in private storage are deleted separately.
+  // My Profile collections (D-103, D-129). Photo bytes are stored in `userPhotos` itself, so they go with it.
   'userPhotos',
   'appearanceAnalyses',
   'outfits',
@@ -556,4 +618,9 @@ export const USER_OWNED_COLLECTIONS = [
   'userFeedback',
   'productReports',
   'adminAccounts',
+  // Design features (D-132, DATABASE.md §4c).
+  'userDesignPreferences',
+  'userDesignSelections',
+  // Colour library (D-133, DATABASE.md §4d).
+  'userColourPreferences',
 ] as const;

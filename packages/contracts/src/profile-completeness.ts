@@ -1,19 +1,19 @@
+import type { AppearanceResponse } from './appearance';
 import type { ProfileResponse } from './profile';
 import type { Department } from './style-vocabulary';
 
-// Profile completeness (FR-ONB-05). Users may skip the style profile during onboarding; Home, the
-// navigation and features then show what is missing and how to add it. Only the details that shape
-// recommendations count. Appearance signals and the finer preferences (fit, coverage, fabrics,
-// comfort, contrast) stay optional and never make a profile "incomplete".
+// Profile completeness (FR-ONB-05, revised by D-129). Users may skip the profile during onboarding; Home,
+// the navigation and features then show what is missing and how to add it. My Profile asks for the
+// Clothing Preference, height (D-131), skin tone and undertone, and body type; the city comes from the
+// account. Fit measurements, budget, fabrics and age group stay optional and never make a profile
+// "incomplete".
 
 export const PROFILE_COMPLETENESS_ITEMS = [
-  { id: 'department', label: 'Department', hint: 'Which clothes to suggest: women, men or everything.' },
+  { id: 'department', label: 'Clothing preference', hint: 'Women’s Wear or Men’s Wear.' },
+  { id: 'height', label: 'Height', hint: 'The most useful detail for lengths and cuts that suit you.' },
   { id: 'city', label: 'City', hint: 'For region-aware styling.' },
-  { id: 'sizes', label: 'Sizes', hint: 'At least one size, so suggestions fit.' },
-  { id: 'likedColors', label: 'Colours you love', hint: 'Colours StyleMe should favour.' },
-  { id: 'occasions', label: 'Occasions', hint: 'What you dress for most often.' },
-  { id: 'styles', label: 'Styles', hint: 'The looks you like, such as classic or fusion.' },
-  { id: 'budget', label: 'Budget per look', hint: 'Keeps ideas within what you want to spend.' },
+  { id: 'skinTone', label: 'Skin tone & undertone', hint: 'From a face photo, or choose them yourself.' },
+  { id: 'bodyType', label: 'Body type', hint: 'From your measurements or a full-body photo.' },
 ] as const;
 
 export type ProfileCompletenessItemId = (typeof PROFILE_COMPLETENESS_ITEMS)[number]['id'];
@@ -28,22 +28,22 @@ export interface ProfileCompleteness {
   missing: ProfileCompletenessItem[];
 }
 
-/** What is still missing from a user's profile. `city` comes from the account, the rest from the profile. */
+/**
+ * What is still missing from a user's profile. `city` comes from the account, the Clothing Preference from
+ * the profile, and skin tone, undertone and body type from appearance (`null` when it couldn't be loaded:
+ * those items then count as missing). A pre-D-129 `any` department counts as not chosen.
+ */
 export function profileCompleteness(
-  profile: Pick<
-    ProfileResponse,
-    'department' | 'sizes' | 'likedColors' | 'preferredOccasions' | 'preferredStyles' | 'budgetPreference'
-  >,
+  profile: Pick<ProfileResponse, 'department' | 'heightCm'>,
   user: { city: string | null },
+  appearance: Pick<AppearanceResponse, 'skinTone' | 'undertone' | 'bodyType'> | null,
 ): ProfileCompleteness {
   const present: Record<ProfileCompletenessItemId, boolean> = {
-    department: profile.department !== null,
+    department: profile.department === 'women' || profile.department === 'men',
+    height: profile.heightCm !== null,
     city: Boolean(user.city),
-    sizes: Object.values(profile.sizes ?? {}).some((size) => size !== null && size !== undefined),
-    likedColors: profile.likedColors.length > 0,
-    occasions: profile.preferredOccasions.length > 0,
-    styles: profile.preferredStyles.length > 0,
-    budget: profile.budgetPreference !== null,
+    skinTone: Boolean(appearance?.skinTone && appearance.undertone),
+    bodyType: Boolean(appearance?.bodyType),
   };
   const missing = PROFILE_COMPLETENESS_ITEMS.filter((item) => !present[item.id]);
   return {

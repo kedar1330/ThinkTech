@@ -21,6 +21,8 @@ import { ProfileCompletenessCard } from '@/components/app/ProfileCompleteness';
 
 const EMPTY: ProfileResponse = {
   department: null,
+  ageGroup: null,
+  heightCm: null,
   sizes: { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null, shoes: null },
   fitPreferences: { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null },
   likedColors: [],
@@ -46,42 +48,49 @@ describe('Skip for now (onboarding)', () => {
   });
 });
 
-describe('Complete your profile card', () => {
+const attr = <T,>(value: T) => ({
+  value,
+  source: 'self_reported' as const,
+  userConfirmed: true,
+  confirmedAt: '2026-10-22T10:00:00.000Z',
+  estimate: null,
+});
+const NO_APPEARANCE = { skinTone: null, undertone: null, bodyType: null };
+
+describe('Complete your profile card (D-129)', () => {
   it('after skipping: lists every missing item with a link to where it is added', () => {
-    render(<ProfileCompletenessCard completeness={profileCompleteness(EMPTY, { city: null })} />);
+    render(<ProfileCompletenessCard completeness={profileCompleteness(EMPTY, { city: null }, NO_APPEARANCE)} />);
     const card = screen.getByRole('region', { name: 'Complete your profile' });
-    expect(card).toHaveTextContent('0 of 7 done');
+    expect(card).toHaveTextContent('0 of 5 done');
     expect(within(card).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
     expect(within(card).getByRole('link', { name: /City/ })).toHaveAttribute('href', '/settings#details');
-    expect(within(card).getByRole('link', { name: /Department/ })).toHaveAttribute('href', '/profile#style-profile');
-    expect(within(card).getByRole('link', { name: /Complete my profile/ })).toHaveAttribute(
-      'href',
-      '/profile#style-profile',
-    );
+    expect(within(card).getByRole('link', { name: /Clothing preference/ })).toHaveAttribute('href', '/profile#basics');
+    expect(within(card).getByRole('link', { name: /Height/ })).toHaveAttribute('href', '/profile#basics');
+    expect(within(card).getByRole('link', { name: /Skin tone/ })).toHaveAttribute('href', '/profile#skin-tone');
+    expect(within(card).getByRole('link', { name: /Body type/ })).toHaveAttribute('href', '/profile#body-type');
+    expect(within(card).getByRole('link', { name: /Complete my profile/ })).toHaveAttribute('href', '/profile#basics');
   });
 
   it('shows only what is missing for a partial profile', () => {
-    const partial = { ...EMPTY, department: 'women' as const, likedColors: ['navy' as const] };
-    render(<ProfileCompletenessCard completeness={profileCompleteness(partial, { city: 'pune' })} />);
+    const partial = { ...EMPTY, department: 'women' as const };
+    render(<ProfileCompletenessCard completeness={profileCompleteness(partial, { city: 'pune' }, NO_APPEARANCE)} />);
     const card = screen.getByRole('region', { name: 'Complete your profile' });
-    expect(card).toHaveTextContent('3 of 7 done');
-    expect(within(card).queryByRole('link', { name: /Department/ })).toBeNull();
+    expect(card).toHaveTextContent('2 of 5 done');
+    expect(within(card).queryByRole('link', { name: /Clothing preference/ })).toBeNull();
     expect(within(card).queryByRole('link', { name: /^City/ })).toBeNull();
-    expect(within(card).getByRole('link', { name: /Budget per look/ })).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: /Body type/ })).toBeInTheDocument();
   });
 
   it('renders nothing once the profile is complete', () => {
-    const full: ProfileResponse = {
-      ...EMPTY,
-      department: 'men',
-      sizes: { ...EMPTY.sizes, shoes: { uk: 9 } as never },
-      likedColors: ['navy'],
-      preferredOccasions: ['work'],
-      preferredStyles: ['classic'],
-      budgetPreference: 3000,
+    const appearance = {
+      skinTone: attr({ monkRange: '5-5' }),
+      undertone: attr('warm' as const),
+      bodyType: attr('rectangle' as const),
     };
     const { container } = render(
-      <ProfileCompletenessCard completeness={profileCompleteness(full, { city: 'pune' })} />,
+      <ProfileCompletenessCard
+        completeness={profileCompleteness({ ...EMPTY, department: 'men', heightCm: 178 }, { city: 'pune' }, appearance)}
+      />,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -100,7 +109,7 @@ describe('navigation hint for an incomplete profile', () => {
     await user.click(account);
     expect(
       within(document.getElementById('profile-menu')!).getByRole('link', { name: 'Complete your profile' }),
-    ).toHaveAttribute('href', '/profile#style-profile');
+    ).toHaveAttribute('href', '/profile#basics');
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Open menu' }));
     expect(

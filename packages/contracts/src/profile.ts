@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import {
+  clothingPreferenceSchema,
   colorIdSchema,
   comfortOptionSchema,
   contrastPreferenceSchema,
-  departmentSchema,
   fabricSchema,
   fitSchema,
   garmentLengthSchema,
@@ -27,8 +27,33 @@ import {
 } from './style-vocabulary';
 
 // Style profile (FR-PROF-01 … 06, FR-SIZE-01 … 04, API.md §3.2, DATABASE.md §3.2).
-// Only `department` is required. Age range, height and measurements are not collected in Stage 1
-// (FR-PROF-04, FR-SIZE-06); the schema rejects them.
+// Only `department` (shown as "Clothing Preference", D-129) is required. My Profile now asks only for the
+// Clothing Preference, age group, budget and fabrics here; measurements have their own endpoint
+// (`PUT /v1/measurements`). The older preference fields stay accepted so existing data and features keep
+// working, but My Profile no longer asks for them (D-129). No date of birth is collected. Height is optional
+// (D-131): the engine uses its height band, and it goes to Gemini with the full-body photo.
+
+// --- Age group (D-104): optional; no date of birth is ever collected ---------------------------------
+
+export const AGE_GROUPS = [
+  { id: 'under_18', label: 'Under 18' },
+  { id: '18_24', label: '18–24' },
+  { id: '25_34', label: '25–34' },
+  { id: '35_44', label: '35–44' },
+  { id: '45_plus', label: '45+' },
+] as const;
+export const AGE_GROUP_IDS = AGE_GROUPS.map((a) => a.id) as [
+  (typeof AGE_GROUPS)[number]['id'],
+  ...(typeof AGE_GROUPS)[number]['id'][],
+];
+export const ageGroupSchema = z.enum(AGE_GROUP_IDS);
+export type AgeGroup = z.infer<typeof ageGroupSchema>;
+
+// --- Height (D-131): optional, stored in whole centimetres -----------------------------------------
+
+export const HEIGHT_CM_MIN = 120;
+export const HEIGHT_CM_MAX = 230;
+export const heightCmSchema = z.number().int().min(HEIGHT_CM_MIN).max(HEIGHT_CM_MAX);
 
 // --- Sizes per category group (D-54). Body shape and signals never set a size (FR-SIZE-03). -------
 
@@ -106,12 +131,14 @@ const uniqueList = <T extends z.ZodType>(item: T, max: number) =>
 export const budgetPreferenceSchema = z.number().int().positive().max(1_000_000);
 
 /**
- * `PUT /v1/profile`. `department` is always required; every other field is optional — omitted fields
- * are unchanged and `null` clears a field (an empty list clears a list).
+ * `PUT /v1/profile`. `department` (the Clothing Preference: women or men) is always required; every other
+ * field is optional — omitted fields are unchanged and `null` clears a field (an empty list clears a list).
  */
 export const updateProfileRequestSchema = z
   .object({
-    department: departmentSchema,
+    department: clothingPreferenceSchema,
+    ageGroup: nullableOptional(ageGroupSchema),
+    heightCm: nullableOptional(heightCmSchema),
     sizes: nullableOptional(profileSizesSchema),
     fitPreferences: nullableOptional(fitPreferencesSchema),
     likedColors: nullableOptional(uniqueList(colorIdSchema, 50)),
@@ -138,7 +165,11 @@ export interface ProfileSizes {
 
 /** `GET /v1/profile`. Before the user saves a profile, `department` is `null` and everything is empty. */
 export interface ProfileResponse {
+  /** The Clothing Preference. `any` only on profiles saved before D-129; My Profile asks to choose again. */
   department: Department | null;
+  ageGroup: AgeGroup | null;
+  /** Height in whole centimetres (D-131). */
+  heightCm: number | null;
   sizes: ProfileSizes;
   fitPreferences: Record<(typeof FIT_GROUPS)[number], Fit | null>;
   likedColors: ColorId[];

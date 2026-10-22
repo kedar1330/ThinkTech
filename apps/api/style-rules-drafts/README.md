@@ -17,6 +17,18 @@ pnpm --filter @styleme/api style-rules coverage --include-drafts  # coverage wit
 
 Add or change records here with `reviewStatus: "draft"`, `reviewedBy: null` and `reviewedAt: null`, following the checklist in CONTRIBUTING.md §6. Never set a record to `approved` yourself.
 
+## Colour library (D-133)
+
+The colour library content (the hues each undertone leans towards and every sentence users see) was approved on 2026-10-22 and ships in `src/style-rules/data/colour-library.json`; nothing is waiting here. To change it, copy that file here as `colour-library.json` with `reviewStatus: "draft"`, `reviewedBy: null`, `reviewedAt: null`, edit it, and check it:
+
+```bash
+pnpm --filter @styleme/api colours:drafts               # validate (100+ colours per category, inclusive language)
+pnpm --filter @styleme/api colours:report               # what each category holds
+pnpm --filter @styleme/api colours:seed -- --drafts     # preview in local or staging (refused in production)
+```
+
+To approve a new draft: copy it over `src/style-rules/data/colour-library.json`, set `reviewStatus: "approved"`, `reviewedBy` and `reviewedAt`, bump `version`, delete the draft, then run `colours:seed`.
+
 ## After founder approval
 
 Only once the founder has actually approved the records:

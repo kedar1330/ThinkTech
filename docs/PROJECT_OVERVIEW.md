@@ -67,7 +67,7 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 | Owner | Kedar (maintains account, onboarding, Home and navigation — see [TEAM_TASK_ASSIGNMENTS.md](TEAM_TASK_ASSIGNMENTS.md) §2) |
 | Docs | [FRD.md](FRD.md) FR-AUTH, FR-ONB-01 … 05, FR-UI; [API.md](API.md) §3.1; [DATABASE.md](DATABASE.md) §3.1 |
 
-**Profile completeness** counts seven items: department, city, at least one size, liked colours, occasions, styles and budget per look. Appearance signals and finer preferences never make a profile incomplete.
+**Profile completeness** (D-129) counts four items: Clothing Preference, city, skin tone & undertone, and body type. Fit measurements, budget, fabrics and age group stay optional.
 
 **Home redesign — ⏳ approved 2026-10-18 (D-106), not built** ([FRD.md](FRD.md) §4.1b, FR-HOME-01 … 18). Two-row desktop header (logo, global search, notification bell, account menu; then all nine sections with icons), mobile ☰ menu at the top left; hero with first name and a personalised look; outfit carousel (personalised, general and seasonal looks) with quick view; all eight feature cards with images and accurate availability; recent activity, continue links, quick actions and a profile-completion chart; skeletons and per-section retry; light/dark/system theme. The style summary shows only preferred styles and occasions. No `home` collection — Home reads existing collections; only notifications and recent activity are stored ([DATABASE.md](DATABASE.md) §3.9). Not built: today's Home is as described above.
 
@@ -84,12 +84,14 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 | Name, city, marketing consent, email change (verified), password change (emailed code), optional phone | ✅ | `/settings` |
 | Account deletion (emailed code + confirmation; tombstone so backups can't restore it) | ✅ | `/settings#delete`, D-85 |
 | **Body measurements** (PDF p4, p11) | ⏳ | Approved 2026-10-18 (D-102, revises FR-SIZE-06); not built. Size recommendations still need size charts |
-| **Face / full-body photos and photo-based estimates** (PDF p1, p11) | ⏳ | Approved 2026-10-18 (D-103); not built. Ships only after the privacy review; face photos never go to external AI, full-body photos may use Gemini (D-122) |
+| **Face / full-body photos and photo-based estimates** (PDF p1, p11) | ✅ (uncommitted) | Built 2026-10-22 (D-129): face photo → skin tone + undertone, full-body photo → body type, analysed by Gemini when `GEMINI_API_KEY` is set; results stored at once and reviewable; photos in MongoDB. Privacy review (D-74) still to be recorded before public launch |
 | **Request a copy of my data** (PDF p4 "Request Data") | ⬜ | Not specified in the FRD — needs a founder decision (§15 #8) |
 
 **Owner:** Kedar for account and settings; the profile form is shared — fields that styling features consume are agreed with Shreya ([TEAM_TASK_ASSIGNMENTS.md](TEAM_TASK_ASSIGNMENTS.md) §6).
 
-**My Profile redesign — ⏳ approved 2026-10-18 (D-102 … D-105), not built** ([FRD.md](FRD.md) §4.3a, FR-MYP-01 … 19). Sections with their own Save (plus Save all): Basic information (name, optional age group, optional city, Men's / Women's), Skin tone & undertone (face photo or manual cards), Body shape (full-body photos, measurements and/or manual cards, with confidence and review), Body measurements (essential + detailed, cm/in, manual only), Style & fit (Slim/Regular/Relaxed/Oversized per category, styles, colours, occasions incl. custom, default and per-category budgets). Consent per photo kind, retention choice, separate deletion of photos, results and measurements, reset preferences, JSON/PDF export, completion chart. Storage: extend `profiles`, new `userPhotos` (files in private object storage) and `appearanceAnalyses` — **declared in the models but unused; no endpoint accepts these fields** ([DATABASE.md](DATABASE.md) §3.2, §3.7, §3.8). Release gates: the age group and photo analysis need the privacy review and D-74 legal review; photo upload needs storage deletion on account deletion and D-107 storage.
+**My Profile redesign — ✅ built 2026-10-22 (D-129), uncommitted.** Clothing Preference (Women's Wear / Men's Wear), age group, budget, fabrics; skin tone & undertone by face photo (Gemini) or manual Monk swatches and four undertone cards; body type by step-by-step measurements (deterministic) or full-body photo (Gemini) with women's and men's lists; optional fit measurements; results stored at once with confirm/correct; new plum-and-gold logo (D-130). Not built from the 2026-10-18 list below: per-section save, reset, export, confidence-gated evaluation, retention choice ([FRD.md](FRD.md) §4.3b).
+
+**Earlier approval — approved 2026-10-18 (D-102 … D-105)** ([FRD.md](FRD.md) §4.3a, FR-MYP-01 … 19). Sections with their own Save (plus Save all): Basic information (name, optional age group, optional city, Men's / Women's), Skin tone & undertone (face photo or manual cards), Body shape (full-body photos, measurements and/or manual cards, with confidence and review), Body measurements (essential + detailed, cm/in, manual only), Style & fit (Slim/Regular/Relaxed/Oversized per category, styles, colours, occasions incl. custom, default and per-category budgets). Consent per photo kind, retention choice, separate deletion of photos, results and measurements, reset preferences, JSON/PDF export, completion chart. Storage: extend `profiles`, new `userPhotos` (files in private object storage) and `appearanceAnalyses` — **declared in the models but unused; no endpoint accepts these fields** ([DATABASE.md](DATABASE.md) §3.2, §3.7, §3.8). Release gates: the age group and photo analysis need the privacy review and D-74 legal review; photo upload needs storage deletion on account deletion and D-107 storage.
 
 ---
 
@@ -137,6 +139,8 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ## 7. My Colour Palette (PDF p15) — ⬜ Placeholder
 
+**Colour library — built, uncommitted (D-133, 2026-10-22); content approved by the founder.** `/palette/colours` (My colours) shows **only** the 120 colours for the user's own Monk skin tone and undertone from My Profile, each with name, hex, match score and reasons; without a skin tone or undertone it asks for them instead. Other skin tones and undertones are never shown. Colours are selected like photos in an album and saved as liked or avoided; `/palette/colours/saved` lists them. 607 openly licensed colours (CSS named colours, CC0 xkcd survey) scored by deterministic colour-theory rules; no AI.
+
 **Purpose.** Show palettes that suit the user — personalised when tone/undertone or colour preferences exist, otherwise the general curated collection — with swatches, names and colour codes, and coordinating colours.
 
 | | |
@@ -157,6 +161,8 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 ---
 
 ## 8. Outfit Categories (PDF p16) — ⬜ Placeholder
+
+**Design features — built, uncommitted (D-132, 2026-10-22).** `/categories` follows the Clothing Preference from My Profile, asks Indian / Western / Indo-Western, then the garment; `/categories/design/[garment]` shows illustrated neckline cards, a sleeve grid, filter tags for fit, length, pattern and the rest, and a visual customizer that stacks the chosen neckline and sleeve, with Save Preferences and Reset. Only features that suit the user are shown (body type, height band, goals; "Show all" lists everything). The 136 suitability rules are drafts awaiting founder approval; until approved every option is shown, unranked.
 
 **Purpose.** Browse outfit designs by clothing category and garment type rather than starting from an occasion.
 

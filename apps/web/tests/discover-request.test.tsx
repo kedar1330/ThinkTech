@@ -12,6 +12,8 @@ import { RequestForm } from '@/components/discover/RequestForm';
 
 const EMPTY: ProfileResponse = {
   department: null,
+  ageGroup: null,
+  heightCm: null,
   sizes: { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null, shoes: null },
   fitPreferences: { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null },
   likedColors: [],
@@ -100,7 +102,7 @@ describe('profile summary on the request page', () => {
   it('says no department filter is applied when the profile has no department, with an edit link', () => {
     render(<ProfileSummary profile={EMPTY} />);
     expect(screen.getByRole('status')).toHaveTextContent('No department filter applied');
-    expect(screen.getByRole('link', { name: 'Edit profile' })).toHaveAttribute('href', '/profile#style-profile');
+    expect(screen.getByRole('link', { name: 'Edit profile' })).toHaveAttribute('href', '/profile#basics');
   });
 
   it('shows the department, sizes, colours and coverage that will be applied', () => {

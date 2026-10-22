@@ -47,6 +47,8 @@ export interface AppRateLimits extends AuthRateLimits {
   recommendations: Limits;
   feedback: Limits;
   shortlistWrite: Limits;
+  /** Photo uploads: each one is a paid Gemini analysis (D-129). */
+  photoAnalysis: Limits;
 }
 
 export function createAuthRateLimits(): AuthRateLimits {
@@ -69,5 +71,6 @@ export function createRateLimits(): AppRateLimits {
     recommendations: [limiter(MINUTE, 20, byUser)],
     feedback: [limiter(MINUTE, 60, byUser)],
     shortlistWrite: [limiter(MINUTE, 30, byUser)],
+    photoAnalysis: [limiter(MINUTE, 5, byUser), limiter(HOUR, 20, byUser)],
   };
 }

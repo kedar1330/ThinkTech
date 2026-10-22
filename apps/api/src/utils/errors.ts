@@ -27,6 +27,7 @@ const STATUS: Record<ErrorCode, number> = {
   GOOGLE_ACCOUNT_EXISTS: 409,
   GOOGLE_NO_ACCOUNT: 404,
   PROVIDER_NOT_CONFIGURED: 503,
+  PHOTO_UNUSABLE: 422,
 };
 
 const DEFAULT_MESSAGE: Record<ErrorCode, string> = {
@@ -56,6 +57,7 @@ const DEFAULT_MESSAGE: Record<ErrorCode, string> = {
   GOOGLE_ACCOUNT_EXISTS: AUTH_MESSAGES.googleAccountExists,
   GOOGLE_NO_ACCOUNT: AUTH_MESSAGES.googleNoAccount,
   PROVIDER_NOT_CONFIGURED: 'This feature is not available yet.',
+  PHOTO_UNUSABLE: 'This photo can’t be analysed. Please try another one, or choose manually.',
 };
 
 /** An expected error with a safe, user-facing message. Anything else becomes INTERNAL_ERROR. */

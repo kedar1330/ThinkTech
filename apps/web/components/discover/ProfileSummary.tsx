@@ -54,7 +54,7 @@ export function ProfileSummary({ profile }: { profile: ProfileResponse }) {
     <Card className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-xl text-primary">From your profile</h2>
-        <Link href="/profile#style-profile" className="text-sm font-medium text-plum underline">
+        <Link href="/profile#basics" className="text-sm font-medium text-plum underline">
           Edit profile
         </Link>
       </div>

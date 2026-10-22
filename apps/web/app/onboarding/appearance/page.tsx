@@ -1,24 +1,31 @@
 import type { Metadata } from 'next';
-import type { AppearanceResponse } from '@styleme/contracts';
+import type { AppearanceResponse, MeasurementsResponse, PhotosResponse, ProfileResponse } from '@styleme/contracts';
 import { OnboardingFrame } from '@/components/app/OnboardingFrame';
 import { FinishAppearanceButtons } from '@/components/app/OnboardingForms';
-import { AppearanceForm } from '@/components/profile/AppearanceForm';
+import { BodyTypeSection } from '@/components/profile/BodyTypeSection';
+import { SkinToneSection } from '@/components/profile/SkinToneSection';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { apiRequest } from '@/lib/api/server';
 import { requireStep } from '@/lib/auth/session';
 
-export const metadata: Metadata = { title: 'Appearance signals' };
+export const metadata: Metadata = { title: 'Skin tone and body type' };
 
 export default async function AppearanceStepPage({ searchParams }: { searchParams: Promise<{ phone?: string }> }) {
   const { accessToken } = await requireStep('appearance');
   const { phone } = await searchParams;
-  const appearance = await apiRequest<AppearanceResponse>('/v1/appearance', { token: accessToken });
+  const [profile, appearance, measurements, photos] = await Promise.all([
+    apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }),
+    apiRequest<AppearanceResponse>('/v1/appearance', { token: accessToken }),
+    apiRequest<MeasurementsResponse>('/v1/measurements', { token: accessToken }),
+    apiRequest<PhotosResponse>('/v1/photos', { token: accessToken }),
+  ]);
+  const department = profile.department === 'women' || profile.department === 'men' ? profile.department : null;
   return (
     <OnboardingFrame
       current="appearance"
-      title="Appearance signals (optional)"
-      intro="Share as much or as little as you like — or skip this step entirely."
+      title="Skin tone and body type (optional)"
+      intro="Upload photos for an instant analysis, or enter them yourself — or skip this step and add them later."
     >
       {phone === 'sent' && (
         <Alert tone="info">We sent a code to your phone. You can verify it any time in Settings → Phone.</Alert>
@@ -29,8 +36,18 @@ export default async function AppearanceStepPage({ searchParams }: { searchParam
           one.
         </Alert>
       )}
-      <Card>
-        <AppearanceForm initial={appearance} />
+      <Card className="space-y-4">
+        <h2 className="font-display text-2xl text-primary">Skin tone &amp; undertone</h2>
+        <SkinToneSection appearance={appearance} analysisAvailable={photos.analysisAvailable} />
+      </Card>
+      <Card className="space-y-4">
+        <h2 className="font-display text-2xl text-primary">Body type</h2>
+        <BodyTypeSection
+          department={department}
+          appearance={appearance}
+          measurements={measurements}
+          analysisAvailable={photos.analysisAvailable}
+        />
       </Card>
       <FinishAppearanceButtons />
     </OnboardingFrame>

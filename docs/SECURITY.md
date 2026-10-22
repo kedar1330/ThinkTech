@@ -136,7 +136,22 @@ Registration — by email or Google — requires an invite when `PUBLIC_SIGNUP_E
 - **Logs** never contain passwords, tokens, reset codes, measurements, appearance signals, photos, precise location or full request bodies (D-17).
 - **Legal context (not legal advice):** India's Digital Personal Data Protection Rules, 2025 were notified in November 2025 (secondary sources give 13 or 14 November). Rules 1, 2 and 17–21 applied on publication; consent-manager registration (Rule 4) one year after publication; most substantive obligations, including notice and consent (Rule 3), 18 months after publication, around 13–14 May 2027 (as reported by secondary sources checked on 2026-10-10); the exact dates and their applicability to StyleMe are for the legal review (D-74) to confirm against the Gazette text. Source previously cited: [Delhi IT memo](https://it.delhi.gov.in/sites/default/files/IT/generic_multiple_files/dpdp_om.pdf). These safeguards are designed with that in mind. Documentation alone doesn't guarantee compliance: a qualified legal review (D-74) is a dependency for public launch.
 
+### 6.0 My Profile photos and Gemini — as built (D-129, 2026-10-22)
+
+The founder decided on 2026-10-22 (D-129) that face and full-body photos are analysed by Gemini as soon as the API has a key, and that photos are stored in MongoDB. Controls in the code:
+
+| Data | Controls as built |
+|---|---|
+| Face photo, full-body photo | Uploaded only when the user chooses; the browser redraws the photo (drops EXIF/location) and caps its size; the user agrees to the photo notice on each upload (`notice=PHOTO_NOTICE_VERSION`, recorded in `appearanceProfiles.photoConsent`); file signature and ≤ 8 MB checked; rate-limited (5/min, 20/h per user). **Only the image bytes go to Gemini** (`vision-client.ts`), never name, email, IDs, measurements or profile data. Stored in `userPhotos.data` (never selected by default, never returned or logged); newest per kind; deletable in My Profile; deleted with the account (`USER_OWNED_COLLECTIONS`) |
+| Gemini replies | Validated against the listed values only (Monk 1 – 10; warm/cool/neutral/olive; the user's body-type list); anything else is refused (`AI_UNAVAILABLE`) and nothing is stored. Failures are logged with a cause code only |
+| Results | Stored unconfirmed and shown for review; the user confirms or corrects; soft styling inputs only, never a size |
+| Measurements | Typed by the user; range-checked; never sent to any AI provider; never logged |
+
+**Open risks (recorded in D-129):** the privacy review and the D-74 legal review are not yet recorded; before public launch confirm Google's current Gemini API terms (use a paid tier whose terms exclude training on content and limit retention), update the privacy notice text, and decide how under-18 users (age group) are handled.
+
 ### 6.1 My Profile photos, measurements and age group (D-102 … D-105, approved 2026-10-18; not built)
+
+> Superseded where it differs by §6.0 (D-129): face photos now go to Gemini, photos are stored in MongoDB, and there is no retention choice.
 
 The founder approved the My Profile requirements ([FRD.md](FRD.md) §4.3a) on 2026-10-18. These controls are required before any of it ships; until it ships, the rows above describe what is collected today (no photos, no measurements, no age).
 
@@ -148,7 +163,7 @@ The founder approved the My Profile requirements ([FRD.md](FRD.md) §4.3a) on 20
 | Age group | Aggregate statistics; age-appropriate experience | Optional; no date of birth; admins see aggregated counts only. **Under-18 users:** DPDP treats them as children — the legal review (D-74) must define parental consent and restrictions before this ships |
 | Data export (JSON, PDF) | User's right to a copy | Generated on request for the signed-in owner only; not cached; download link single-use |
 
-Logs never contain photos, image URLs or storage keys, measurements, age groups or analysis results (D-17). Account deletion must also delete the user's stored photo objects (DATABASE.md §3.7, §10).
+Logs never contain photos, image URLs or storage keys, measurements, age groups or analysis results (D-17). Account deletion must also delete the user's stored photo objects (DATABASE.md §3.7, §10); since D-129 the bytes live in `userPhotos` and are deleted with it.
 
 ### 6.2 Feature specifications (D-109 … D-128)
 

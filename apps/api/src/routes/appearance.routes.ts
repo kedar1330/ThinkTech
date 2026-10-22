@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from 'express';
-import { updateAppearanceRequestSchema } from '@styleme/contracts';
+import { confirmAppearanceRequestSchema, updateAppearanceRequestSchema } from '@styleme/contracts';
 import type { AppearanceController } from '../controllers/appearance.controller';
 import { validateBody } from '../middleware/validate';
 
@@ -8,5 +8,7 @@ export function appearanceRoutes(controller: AppearanceController, auth: Request
   const router = Router();
   router.get('/appearance', ...auth, controller.get);
   router.put('/appearance', ...auth, validateBody(updateAppearanceRequestSchema), controller.update);
+  // The user reviewed a photo or measurement result and it is right (D-129).
+  router.post('/appearance/confirm', ...auth, validateBody(confirmAppearanceRequestSchema), controller.confirm);
   return router;
 }

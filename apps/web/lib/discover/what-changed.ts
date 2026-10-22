@@ -6,10 +6,12 @@ import {
   FABRICS,
   FITS,
   GARMENT_LENGTHS,
+  HEIGHT_BANDS,
   NECKLINE_DEPTHS,
   SILHOUETTES,
   SLEEVE_LENGTHS,
   STYLES,
+  heightBand,
   type LookInputs,
   type ProfileResponse,
 } from '@styleme/contracts';
@@ -56,6 +58,7 @@ export function inputsFromProfile(profile: ProfileResponse): ComparableInputs {
     fabricPreferences: profile.fabricPreferences,
     preferredStyles: profile.preferredStyles,
     sizesSaved: (Object.keys(profile.sizes) as (keyof ProfileResponse['sizes'])[]).filter((g) => profile.sizes[g]),
+    heightBand: heightBand(profile.department, profile.heightCm),
   };
 }
 
@@ -110,6 +113,10 @@ export function whatChanged(before: LookInputs, after: ComparableInputs): string
     ),
     ...valueChange('Your minimum garment length', GARMENT_LENGTHS, coverage.minGarmentLength, now.minGarmentLength),
   );
+
+  // Looks made before height existed (D-131) have no height band; nothing to compare then.
+  if (before.heightBand !== undefined)
+    changes.push(...valueChange('Your height band', HEIGHT_BANDS, before.heightBand, after.heightBand ?? null));
 
   const addedSizes = after.sizesSaved
     .filter((g) => !before.sizesSaved.includes(g))

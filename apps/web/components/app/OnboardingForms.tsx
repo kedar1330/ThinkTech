@@ -134,7 +134,7 @@ export function FinishAppearanceButtons() {
         Continue to my home
       </SubmitButton>
       <p className="text-center text-xs text-muted-foreground">
-        Appearance signals are optional — continue without saving any to skip this step. You can add them later.
+        These are optional — continue without them to skip this step. You can add them later in My Profile.
       </p>
     </form>
   );

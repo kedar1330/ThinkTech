@@ -14,7 +14,7 @@ export default async function StyleProfileStepPage() {
     <OnboardingFrame
       current="style_profile"
       title="Tell us about your style"
-      intro="Set it up now — only the department is required, and everything else helps StyleMe understand you — or skip and finish it later."
+      intro="Choose your clothing preference — it is the only required answer — or skip and finish it later."
     >
       <SkipStyleProfile />
       <StyleProfileStep initial={profile} askCity={!user.city} />

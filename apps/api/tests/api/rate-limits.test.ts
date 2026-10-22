@@ -30,6 +30,7 @@ describe('T-36: Rate limits (D-38, SECURITY.md §5, §11)', () => {
       recommendations: [limiter(MINUTE, 2, byUser)],
       feedback: [limiter(MINUTE, 2, byUser)],
       shortlistWrite: [limiter(MINUTE, 2, byUser)],
+      photoAnalysis: [limiter(MINUTE, 2, byUser)],
     };
 
     const { app, mail } = env.makeApp({}, { rateLimits: customLimits });
@@ -75,6 +76,7 @@ describe('T-36: Rate limits (D-38, SECURITY.md §5, §11)', () => {
       recommendations: [limiter(MINUTE, 2, byUser)],
       feedback: [limiter(MINUTE, 2, byUser)],
       shortlistWrite: [limiter(MINUTE, 2, byUser)],
+      photoAnalysis: [limiter(MINUTE, 2, byUser)],
     };
 
     const { app, mail } = env.makeApp({}, { rateLimits: customLimits });

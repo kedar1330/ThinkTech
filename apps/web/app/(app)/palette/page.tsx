@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import type { PaletteListResponse } from '@styleme/contracts';
 import { PaletteCard } from '@/components/palette/PaletteCard';
 import { ViewToggle } from '@/components/palette/ViewToggle';
@@ -38,6 +39,19 @@ export default async function PalettePage({
 
         {palettes.length > 0 && <ViewToggle currentView={view} />}
       </header>
+
+      <Link
+        href="/palette/colours"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-5 shadow-xs transition-shadow hover:shadow-md"
+      >
+        <span className="space-y-1">
+          <span className="block font-display text-2xl text-primary">My colours</span>
+          <span className="block text-sm text-muted-foreground">
+            100+ colours chosen for your own skin tone and undertone. Select the ones you like or want to avoid.
+          </span>
+        </span>
+        <span className="text-sm font-medium text-plum">See my colours →</span>
+      </Link>
 
       {palettes.length === 0 ? (
         <section aria-labelledby="empty-palette-heading">

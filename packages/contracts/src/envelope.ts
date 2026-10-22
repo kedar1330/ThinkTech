@@ -28,6 +28,8 @@ export const ERROR_CODES = [
   'GOOGLE_ACCOUNT_EXISTS',
   'GOOGLE_NO_ACCOUNT',
   'PROVIDER_NOT_CONFIGURED',
+  // Photo analysis (D-129): the photo can't be analysed (too dark, blurry, no face …); retake or choose manually.
+  'PHOTO_UNUSABLE',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ProsePage } from '@/components/site/ProsePage';
-import { BRAND_IMAGES } from '@/lib/brand/images';
+import { BRAND_IMAGES, LOOKBOOK_IMAGES } from '@/lib/brand/images';
 
 export const metadata: Metadata = { title: 'About' };
 
@@ -24,9 +24,9 @@ export default function AboutPage() {
         style assistant are on the way and are clearly marked &ldquo;Coming soon&rdquo;.
       </p>
       <h2>Image credits</h2>
-      <p>Photography from Unsplash, used under the Unsplash License:</p>
+      <p>Photography from Unsplash, used under the Unsplash License, and outfit photos supplied by the StyleMe team:</p>
       <ul>
-        {Object.values(BRAND_IMAGES).map((img) => (
+        {[...Object.values(BRAND_IMAGES), ...LOOKBOOK_IMAGES].map((img) => (
           <li key={img.src}>
             {img.alt} — {img.credit}
           </li>

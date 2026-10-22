@@ -223,7 +223,7 @@ describe('T-10 signals switched off or cleared', () => {
     confirmedAt: '',
     estimate: null,
   });
-  const appearance = { skinTone: null, undertone: attribute('cool' as const), bodyProportions: null };
+  const appearance = { skinTone: null, undertone: attribute('cool' as const), bodyProportions: null, bodyType: null };
 
   it('T-10 signals are not passed to the engine while useInRecommendations is off', () => {
     expect(signalsFromAppearance({ ...appearance, useInRecommendations: false })).toBeNull();

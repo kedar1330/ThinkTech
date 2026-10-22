@@ -1,0 +1,2861 @@
+{
+  "limitations": "General styling guidance for common proportions, not a rule about what anyone may wear. Body type and height band are soft signals the user chose to give; liked features are always shown and the user can switch to \"Show all\".",
+  "rules": [
+    {
+      "ruleId": "FSR-001",
+      "featureId": "neckline_v_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval", "diamond", "top_hourglass", "inverted_triangle", "hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The V-shaped opening creates a vertical line through the upper body and draws the eye towards the face.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-002",
+      "featureId": "neckline_u_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval", "diamond", "top_hourglass", "inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The deep U shape creates a long, open line through the upper body.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-003",
+      "featureId": "neckline_deep_v_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval", "inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A deeper V lengthens the upper body even more; choose it when you like a more open neckline.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-004",
+      "featureId": "neckline_scoop_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "rectangle", "hourglass", "bottom_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The wide scoop opens up the neckline and brings attention to the upper body.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-005",
+      "featureId": "neckline_square_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "rectangle", "bottom_hourglass", "hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The straight lines add structure across the collarbones and balance fuller hips.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-006",
+      "featureId": "neckline_boat_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "bottom_hourglass", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The wide, shallow line extends the shoulders, balancing the hips.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-007",
+      "featureId": "neckline_boat_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A boat neck adds width at the shoulders, which are already your widest point; a V or scoop keeps the focus vertical.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-008",
+      "featureId": "neckline_off_shoulder",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "bottom_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The open shoulder line adds width up top and balances the hips.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-009",
+      "featureId": "neckline_off_shoulder",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "An off-shoulder line widens the shoulders further; a halter or V-neck draws the eye inward instead.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-010",
+      "featureId": "neckline_sweetheart",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["hourglass", "pear", "rectangle", "bottom_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The curved edges add softness and shape to the bust line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-011",
+      "featureId": "neckline_sweetheart",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["top_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A sweetheart frames the bust; a shallower version keeps the look balanced.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-012",
+      "featureId": "neckline_halter",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The straps cut in towards the neck, drawing the eye inward from the shoulders.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-013",
+      "featureId": "neckline_one_shoulder",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The diagonal line breaks up the width of the shoulders and adds movement.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-014",
+      "featureId": "neckline_asymmetric",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "An uneven neckline adds a diagonal line that softens a straight shoulder line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-015",
+      "featureId": "neckline_high_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "bottom_hourglass", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A high neckline draws attention upward to the face and shoulders.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-016",
+      "featureId": "neckline_turtleneck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["top_hourglass", "inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A tall, closed neckline adds volume to the upper body; an open V or scoop keeps it lighter.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-017",
+      "featureId": "neckline_turtleneck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A turtleneck brings the focus to the face and adds weight to the upper body.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-018",
+      "featureId": "neckline_cowl",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "pear", "spoon"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Soft folds add gentle volume at the bust, balancing the lower body.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-019",
+      "featureId": "neckline_cowl",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["top_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "Draped folds add volume at the bust; a V-neck gives a cleaner line here.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-020",
+      "featureId": "neckline_queen_anne",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "rectangle", "hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The raised sides frame the shoulders while the open front keeps the neckline light.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-021",
+      "featureId": "neckline_keyhole",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "pear"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A keyhole adds a small point of interest at the centre front of a high neckline.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-022",
+      "featureId": "neckline_round_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "pear", "spoon", "inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A simple round neckline works as an easy everyday option.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-023",
+      "featureId": "neckline_crew_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "pear", "spoon"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A close crew neck is a simple, versatile option that keeps the focus up.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-024",
+      "featureId": "neckline_angrakha",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["hourglass", "oval", "top_hourglass", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The crossover wrap creates a diagonal line and shapes the waist.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-025",
+      "featureId": "neckline_notched",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval", "rectangle", "diamond"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "The small notch adds a short vertical line to a round neckline.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-026",
+      "featureId": "neckline_mandarin_collar",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "pear", "spoon"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A standing collar adds structure at the neck and draws the eye up.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-027",
+      "featureId": "neckline_collar",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A collar gives a crisp, structured neckline.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-028",
+      "featureId": "neckline_strapless",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "hourglass", "bottom_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A strapless top edge shows the shoulders and collarbones, adding width up top.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-029",
+      "featureId": "neckline_v_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A V-neck adds a vertical line that lengthens a petite frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-030",
+      "featureId": "neckline_u_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A deep U adds vertical length to the upper body.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-031",
+      "featureId": "neckline_turtleneck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A tall frame carries the height of a turtleneck in proportion.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-032",
+      "featureId": "neckline_boat_neck",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "The horizontal line of a boat neck sits in proportion on a tall frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-033",
+      "featureId": "sleeve_raglan",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The diagonal raglan seam softens the shoulder line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-034",
+      "featureId": "sleeve_dolman",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A dolman sleeve blurs the shoulder line and adds soft volume.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-035",
+      "featureId": "sleeve_dolman",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval", "diamond"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A dolman sleeve adds volume through the middle; a fitted three-quarter sleeve keeps a cleaner line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-036",
+      "featureId": "sleeve_puff",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "bottom_hourglass", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Volume at the shoulder balances fuller hips and adds shape.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-037",
+      "featureId": "sleeve_puff",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "top_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A puff sleeve adds width at the shoulder; a raglan or fitted sleeve keeps it streamlined.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-038",
+      "featureId": "sleeve_cap",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "bottom_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A cap sleeve adds a little width to the shoulder line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-039",
+      "featureId": "sleeve_cap",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A cap sleeve ends right at the widest point of the shoulders; a longer or raglan sleeve is smoother.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-040",
+      "featureId": "sleeve_flutter",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "rectangle", "bottom_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The soft ripple adds movement and a little width at the shoulder.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-041",
+      "featureId": "sleeve_leg_of_mutton",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A full shoulder balances fuller hips; it makes a statement.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-042",
+      "featureId": "sleeve_leg_of_mutton",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "top_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "The full shoulder adds width where you are already widest; a bishop or bell sleeve moves volume lower.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-043",
+      "featureId": "sleeve_bell",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "inverted_triangle", "hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The flare at the hem adds movement low on the arm, away from the shoulders.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-044",
+      "featureId": "sleeve_bishop",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "rectangle", "hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The fullness gathers near the wrist, keeping the shoulder line neat.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-045",
+      "featureId": "sleeve_three_quarter",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval", "diamond", "hourglass", "top_hourglass", "bottom_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A fitted sleeve that ends between the elbow and wrist shows the narrowest part of the arm.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-046",
+      "featureId": "sleeve_elbow_length",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval", "diamond", "hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "An elbow-length sleeve gives coverage with a clean line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-047",
+      "featureId": "sleeve_full_length",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["hourglass", "top_hourglass", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A fitted full sleeve gives a long, unbroken line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-048",
+      "featureId": "sleeve_kimono",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A wide kimono sleeve softens the shoulder and adds ease.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-049",
+      "featureId": "sleeve_cold_shoulder",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["pear", "rectangle", "bottom_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "The cut-out adds interest at the shoulder line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-050",
+      "featureId": "sleeve_lantern",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "pear"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "Volume in the middle of the arm adds shape without widening the shoulders.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-051",
+      "featureId": "sleeve_sleeveless",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "hourglass", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A sleeveless cut keeps the shoulder line simple.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-052",
+      "featureId": "sleeve_three_quarter",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Showing the wrist lengthens the arm line on a petite frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-053",
+      "featureId": "sleeve_bishop",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A lot of sleeve volume can take over a petite frame; a slimmer or three-quarter sleeve keeps the line long.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-054",
+      "featureId": "sleeve_balloon",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "Large balloon sleeves can take over a petite frame; a fitted or three-quarter sleeve keeps it balanced.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-055",
+      "featureId": "sleeve_dolman",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A dolman adds a lot of fabric on a petite frame; a raglan gives a similar ease with less volume.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-056",
+      "featureId": "sleeve_bishop",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A tall frame carries the volume of a bishop sleeve in proportion.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-057",
+      "featureId": "sleeve_balloon",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A tall frame carries a balloon sleeve in proportion.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-058",
+      "featureId": "sleeve_bell",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Longer arms show off the flare of a bell sleeve.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-059",
+      "featureId": "sleeve_lantern",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A lantern sleeve sits in proportion on longer arms.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-060",
+      "featureId": "fit_wrap",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["hourglass", "oval", "top_hourglass", "bottom_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A wrap shapes the waist and creates a diagonal line through the body.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-061",
+      "featureId": "fit_a_line",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "bottom_hourglass", "oval"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Gradual width towards the hem skims the hips and thighs.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-062",
+      "featureId": "fit_bodycon",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A close fit follows a defined waist; choose it if you like a body-skimming look.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-063",
+      "featureId": "fit_tailored",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["rectangle", "inverted_triangle", "hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Darts and seams add shape at the waist.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-064",
+      "featureId": "fit_relaxed",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["relaxed_comfort"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A relaxed fit matches your wish for comfortable, less body-defining clothes.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-065",
+      "featureId": "fit_oversized",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "An oversized cut can swamp a petite frame; a relaxed or regular fit keeps the proportions.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-066",
+      "featureId": "silhouette_a_line",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece"],
+      "conditions": {
+        "bodyTypes": ["pear", "spoon", "bottom_hourglass", "oval"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The A shape flows away from the hips and thighs.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-067",
+      "featureId": "silhouette_fit_and_flare",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece"],
+      "conditions": {
+        "bodyTypes": ["pear", "rectangle", "hourglass", "spoon"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A fitted top and flared skirt define the waist.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-068",
+      "featureId": "silhouette_empire",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece"],
+      "conditions": {
+        "bodyTypes": ["oval", "diamond", "top_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The high waist seam falls past the middle and creates a long line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-069",
+      "featureId": "silhouette_wrap",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece"],
+      "conditions": {
+        "bodyTypes": ["hourglass", "oval", "top_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The wrap defines the waist with a diagonal line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-070",
+      "featureId": "silhouette_sheath",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece"],
+      "conditions": {
+        "bodyTypes": ["hourglass", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A narrow sheath follows the body in one clean line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-071",
+      "featureId": "silhouette_mermaid",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece"],
+      "conditions": {
+        "bodyTypes": ["hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A mermaid shape follows a defined waist and hips before flaring.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-072",
+      "featureId": "silhouette_straight",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A straight silhouette keeps clean, simple lines.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-073",
+      "featureId": "silhouette_flared",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Volume at the hem balances wider shoulders.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-074",
+      "featureId": "silhouette_mermaid",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A tall frame carries the long fitted line of a mermaid silhouette.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-075",
+      "featureId": "length_knee",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A knee-length hem keeps the leg line long on a petite frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-076",
+      "featureId": "length_above_knee",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A hem above the knee shows more leg and lengthens a petite frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-077",
+      "featureId": "length_calf",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A hem at mid-calf can shorten the leg line; above the knee or ankle length keeps it long.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-078",
+      "featureId": "length_midi",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A midi works best just below the knee on a petite frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-079",
+      "featureId": "length_midi",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A midi length sits in proportion on a tall frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-080",
+      "featureId": "length_floor",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A floor-length hem shows off a tall frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-081",
+      "featureId": "length_tunic",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A longer tunic length sits in proportion on a tall frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-082",
+      "featureId": "length_tunic",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A shorter tunic length, ending at the hip, keeps the leg line longer.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-083",
+      "featureId": "waistline_high_waist",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A higher waistline makes the legs look longer.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-084",
+      "featureId": "waistline_high_waist",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["longer_line", "taller_silhouette"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A higher waistline lengthens the leg line, as you asked.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-085",
+      "featureId": "waistline_empire",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["oval", "diamond", "top_hourglass"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The seam under the bust creates a long line over the middle.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-086",
+      "featureId": "waistline_drop",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A dropped waist can shorten the leg line on a petite frame; a natural or high waist keeps it long.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-087",
+      "featureId": "waistline_drop",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A dropped waist sits in proportion on a longer torso.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-088",
+      "featureId": "waistline_natural",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["define_waist"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A seam at the natural waist defines it, as you asked.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-089",
+      "featureId": "neckline_v_neck",
+      "departments": ["women", "men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["taller_silhouette", "longer_line"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A V-neck adds the vertical line you asked for.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-090",
+      "featureId": "sleeve_three_quarter",
+      "departments": ["women", "men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["taller_silhouette", "longer_line"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Showing the wrist lengthens the arm line, as you asked.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-091",
+      "featureId": "sleeve_kimono",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["relaxed_comfort"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A wide kimono sleeve gives the relaxed, comfortable feel you asked for.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-092",
+      "featureId": "neckline_angrakha",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["define_waist"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The wrap ties near the waist and defines it, as you asked.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-093",
+      "featureId": "fit_wrap",
+      "departments": ["women"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["define_waist"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A wrap defines the waist, as you asked.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-094",
+      "featureId": "sleeve_puff",
+      "departments": ["women"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["add_structure"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A puff sleeve adds the shoulder structure you asked for.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-095",
+      "featureId": "neckline_v_neck",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval", "inverted_triangle", "trapezoid"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The V-shaped opening creates a vertical line through the chest.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-096",
+      "featureId": "neckline_crew_neck",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A crew neck adds width to the chest and shoulders.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-097",
+      "featureId": "neckline_crew_neck",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A crew neck is a simple option; a V-neck adds a longer line.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-098",
+      "featureId": "neckline_henley",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The placket adds a short vertical line while the round neck keeps width up top.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-099",
+      "featureId": "neckline_scoop_neck",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "trapezoid"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A scoop opens the neckline and keeps the focus vertical.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-100",
+      "featureId": "neckline_spread_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["triangle", "rectangle", "oval"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Wide collar points add width at the neck and balance the frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-101",
+      "featureId": "neckline_cutaway_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Cutaway points extend horizontally, adding width up top.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-102",
+      "featureId": "neckline_cutaway_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "Cutaway points widen the neckline; a classic or button-down collar is calmer.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-103",
+      "featureId": "neckline_button_down_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "trapezoid", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A button-down collar keeps a neat, narrow line at the neck.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-104",
+      "featureId": "neckline_peak_lapel",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Upward-pointing lapels draw the eye to the shoulders and broaden them.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-105",
+      "featureId": "neckline_notched_lapel",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "trapezoid", "oval"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A classic notched lapel keeps the shoulders in balance.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-106",
+      "featureId": "neckline_shawl_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["oval", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The smooth curve of a shawl collar creates a long line down the front.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-107",
+      "featureId": "neckline_mandarin_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "trapezoid"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A standing collar gives a clean, structured neckline.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-108",
+      "featureId": "neckline_band_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "trapezoid"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A band collar gives a clean, minimal neckline.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-109",
+      "featureId": "neckline_cuban_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "trapezoid", "oval"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "The open collar creates a V at the chest.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-110",
+      "featureId": "neckline_camp_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "trapezoid", "oval"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "The relaxed open collar forms a V at the chest.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-111",
+      "featureId": "neckline_polo_collar",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["triangle", "rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A polo collar adds structure at the neck.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-112",
+      "featureId": "neckline_peak_lapel",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Lapels that point upward draw the eye up and add height.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-113",
+      "featureId": "neckline_high_neck",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A high neckline sits in proportion on a tall frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-114",
+      "featureId": "sleeve_raglan",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "trapezoid"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "The diagonal raglan seam softens broad shoulders.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-115",
+      "featureId": "sleeve_drop_shoulder",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["rectangle", "triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A dropped seam gives a relaxed line across the shoulders.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-116",
+      "featureId": "sleeve_drop_shoulder",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A dropped shoulder seam can shorten the arm line on a shorter frame; a set-in sleeve keeps it neat.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-117",
+      "featureId": "sleeve_roll_up",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Rolled sleeves show the forearm and keep the look light.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-118",
+      "featureId": "sleeve_short",
+      "departments": ["men"],
+      "applicableGarments": ["top", "one_piece", "layer"],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "trapezoid"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A short sleeve that ends mid-upper-arm keeps the shoulders in proportion.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-119",
+      "featureId": "fit_slim",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["rectangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A slim cut adds definition to a straight frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-120",
+      "featureId": "fit_slim",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A slim fit keeps clean lines on a shorter frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-121",
+      "featureId": "fit_athletic",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "trapezoid"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Room through the chest and shoulders with a tapered waist follows your frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-122",
+      "featureId": "fit_regular",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["oval", "triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A regular fit gives comfortable room through the middle.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-123",
+      "featureId": "fit_relaxed",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["oval"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A relaxed fit skims the middle comfortably.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-124",
+      "featureId": "fit_relaxed",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": [],
+        "stylingGoals": ["relaxed_comfort"]
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A relaxed fit matches your wish for comfortable clothes.",
+        "confidence": "rule_based"
+      },
+      "priority": 1,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-125",
+      "featureId": "fit_oversized",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "An oversized cut can swamp a shorter frame; a regular or slim fit keeps the proportions.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-126",
+      "featureId": "leg_shape_straight",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["inverted_triangle", "trapezoid", "oval"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A straight leg balances a broader upper body.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-127",
+      "featureId": "leg_shape_tapered",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": ["rectangle", "triangle"],
+        "heightBands": [],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A tapered leg is roomy at the thigh and neat at the ankle.",
+        "confidence": "rule_based"
+      },
+      "priority": 2,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-128",
+      "featureId": "leg_shape_slim",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A slim leg keeps a long, unbroken line.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-129",
+      "featureId": "leg_shape_wide",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "Wide trousers sit in proportion on a tall frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-130",
+      "featureId": "leg_shape_wide",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "Very wide legs can shorten a shorter frame; a straight or slim leg keeps the line long.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-131",
+      "featureId": "pleats_flat_front",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A flat front keeps a clean line from waist to hem.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-132",
+      "featureId": "pleats_double",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "Double pleats add room and sit in proportion on a tall frame.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-133",
+      "featureId": "bottom_hem_turn_up",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "not_preferred",
+        "reason": "A turn-up cuts across the leg and shortens the line; a standard hem keeps it long.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-134",
+      "featureId": "bottom_hem_turn_up",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["tall"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "recommended",
+        "reason": "A turn-up adds weight at the hem and suits a longer leg.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-135",
+      "featureId": "length_ankle",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "An ankle length shows a little ankle and keeps the look light.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "ruleId": "FSR-136",
+      "featureId": "waistline_high_rise",
+      "departments": ["men"],
+      "applicableGarments": [],
+      "conditions": {
+        "bodyTypes": [],
+        "heightBands": ["petite"],
+        "stylingGoals": []
+      },
+      "recommendation": {
+        "result": "alternative",
+        "reason": "A higher rise lengthens the leg line.",
+        "confidence": "rule_based"
+      },
+      "priority": 3,
+      "version": 1,
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null
+    }
+  ]
+}

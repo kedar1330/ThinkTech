@@ -1,70 +1,68 @@
 import { describe, expect, it } from 'vitest';
-import { PROFILE_COMPLETENESS_ITEMS, departmentScope, profileCompleteness, type ProfileResponse } from '../src';
+import {
+  PROFILE_COMPLETENESS_ITEMS,
+  departmentScope,
+  heightBand,
+  profileCompleteness,
+  type AppearanceAttribute,
+} from '../src';
 
-const EMPTY: ProfileResponse = {
-  department: null,
-  sizes: { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null, shoes: null },
-  fitPreferences: { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null },
-  likedColors: [],
-  dislikedColors: [],
-  contrastPreference: null,
-  silhouettePreferences: [],
-  coveragePreferences: { minSleeveLength: null, minNecklineCoverage: null, minGarmentLength: null },
-  comfortPreferences: [],
-  fabricPreferences: { liked: [], avoided: [] },
-  preferredStyles: [],
-  preferredOccasions: [],
-  budgetPreference: null,
-  updatedAt: null,
+const attr = <T>(value: T): AppearanceAttribute<T> => ({
+  value,
+  source: 'self_reported',
+  userConfirmed: true,
+  confirmedAt: '2026-10-22T10:00:00.000Z',
+  estimate: null,
+});
+
+const NO_APPEARANCE = { skinTone: null, undertone: null, bodyType: null };
+const FULL_APPEARANCE = {
+  skinTone: attr({ monkRange: '5-5' }),
+  undertone: attr('warm' as const),
+  bodyType: attr('pear' as const),
 };
 
-const FULL: ProfileResponse = {
-  ...EMPTY,
-  department: 'women',
-  sizes: { ...EMPTY.sizes, tops: { letter: 'M' } },
-  likedColors: ['emerald'],
-  preferredOccasions: ['work'],
-  preferredStyles: ['classic'],
-  budgetPreference: 4000,
-};
-
-describe('profileCompleteness', () => {
+describe('profileCompleteness (D-129, D-131)', () => {
   it('a skipped profile (nothing saved, no city) is missing every item, in display order', () => {
-    const result = profileCompleteness(EMPTY, { city: null });
+    const result = profileCompleteness({ department: null, heightCm: null }, { city: null }, NO_APPEARANCE);
     expect(result.complete).toBe(false);
     expect(result.done).toBe(0);
     expect(result.total).toBe(PROFILE_COMPLETENESS_ITEMS.length);
-    expect(result.missing.map((i) => i.id)).toEqual([
-      'department',
-      'city',
-      'sizes',
-      'likedColors',
-      'occasions',
-      'styles',
-      'budget',
-    ]);
+    expect(result.missing.map((i) => i.id)).toEqual(['department', 'height', 'city', 'skinTone', 'bodyType']);
   });
 
-  it('a partial profile lists only what is missing', () => {
-    const result = profileCompleteness({ ...EMPTY, department: 'men', likedColors: ['navy'] }, { city: 'pune' });
-    expect(result.complete).toBe(false);
+  it('a partial profile lists only what is missing; skin tone needs the undertone too', () => {
+    const result = profileCompleteness(
+      { department: 'men', heightCm: 175 },
+      { city: 'pune' },
+      { ...NO_APPEARANCE, skinTone: FULL_APPEARANCE.skinTone },
+    );
     expect(result.done).toBe(3);
-    expect(result.missing.map((i) => i.id)).toEqual(['sizes', 'occasions', 'styles', 'budget']);
+    expect(result.missing.map((i) => i.id)).toEqual(['skinTone', 'bodyType']);
+  });
+
+  it('a profile without a height is not complete', () => {
+    const result = profileCompleteness({ department: 'women', heightCm: null }, { city: 'mumbai' }, FULL_APPEARANCE);
+    expect(result.missing.map((i) => i.id)).toEqual(['height']);
   });
 
   it('a full profile with a city is complete', () => {
-    expect(profileCompleteness(FULL, { city: 'mumbai' })).toEqual({ complete: true, done: 7, total: 7, missing: [] });
+    expect(profileCompleteness({ department: 'women', heightCm: 160 }, { city: 'mumbai' }, FULL_APPEARANCE)).toEqual({
+      complete: true,
+      done: 5,
+      total: 5,
+      missing: [],
+    });
   });
 
-  it('optional details never make a profile incomplete (appearance, fit, coverage, fabrics, comfort, contrast)', () => {
-    // FULL has none of them set and is still complete.
-    expect(FULL.fitPreferences.tops).toBeNull();
-    expect(FULL.comfortPreferences).toEqual([]);
-    expect(profileCompleteness(FULL, { city: 'mumbai' }).complete).toBe(true);
+  it('an old "Show me everything" department must be chosen again', () => {
+    const result = profileCompleteness({ department: 'any', heightCm: 160 }, { city: 'mumbai' }, FULL_APPEARANCE);
+    expect(result.missing.map((i) => i.id)).toEqual(['department']);
   });
 
-  it('the city comes from the account and is required for completeness', () => {
-    expect(profileCompleteness(FULL, { city: null }).missing.map((i) => i.id)).toEqual(['city']);
+  it('appearance that could not be loaded counts as missing', () => {
+    const result = profileCompleteness({ department: 'women', heightCm: 160 }, { city: 'mumbai' }, null);
+    expect(result.missing.map((i) => i.id)).toEqual(['skinTone', 'bodyType']);
   });
 
   it('every item has a label and a hint for the UI', () => {
@@ -72,6 +70,22 @@ describe('profileCompleteness', () => {
       expect(item.label.length).toBeGreaterThan(0);
       expect(item.hint.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('heightBand (D-131)', () => {
+  it('uses the band limits of the Clothing Preference', () => {
+    expect(heightBand('women', 156)).toBe('petite');
+    expect(heightBand('women', 157)).toBe('average');
+    expect(heightBand('women', 170)).toBe('tall');
+    expect(heightBand('men', 167)).toBe('petite');
+    expect(heightBand('men', 175)).toBe('average');
+    expect(heightBand('men', 183)).toBe('tall');
+  });
+  it('is null without a height or a Women’s / Men’s Wear preference', () => {
+    expect(heightBand('women', null)).toBeNull();
+    expect(heightBand(null, 160)).toBeNull();
+    expect(heightBand('any', 160)).toBeNull();
   });
 });
 
