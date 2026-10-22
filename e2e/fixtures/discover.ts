@@ -18,7 +18,8 @@ export async function saveDesign(
   page: Page,
   { garment = 'kurta', outfit = 'indian', occasion }: DesignChoice = {},
 ): Promise<void> {
-  await page.goto(`/categories/design/${garment}?outfit=${outfit}`);
+  // Design features need a department; passing one here leaves the profile without one.
+  await page.goto(`/categories/design/${garment}?outfit=${outfit}&department=women`);
   // Feature cards are described by their reason; the like and hide buttons are not.
   const necklines = page.getByRole('region', { name: 'Necklines and collars' });
   await necklines.locator('button[aria-describedby]:enabled').first().click();

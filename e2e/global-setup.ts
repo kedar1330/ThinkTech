@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -72,12 +72,21 @@ export default async function globalSetup(): Promise<void> {
 
     // Discover My Style builds looks around a design saved in Outfit Categories (D-132), so the design
     // catalogue and its approved rules are seeded first (`design:seed`).
-    const seed = spawnSync(process.execPath, [TSX_CLI, join('scripts', 'design-catalogue.ts'), 'seed'], {
-      cwd: API_DIR,
-      env: apiEnv,
-      encoding: 'utf8',
+    // Asynchronous on purpose: the in-memory MongoDB's output is read by this process, so blocking it
+    // (spawnSync) would stall the database the seed is writing to.
+    await new Promise<void>((resolve, reject) => {
+      const seed = spawn(process.execPath, [TSX_CLI, join('scripts', 'design-catalogue.ts'), 'seed'], {
+        cwd: API_DIR,
+        env: apiEnv,
+        stdio: ['ignore', 'ignore', 'pipe'],
+      });
+      let stderr = '';
+      seed.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
+      seed.on('error', reject);
+      seed.on('exit', (code) =>
+        code === 0 ? resolve() : reject(new Error(`[e2e] Seeding the design catalogue failed:\n${stderr}`)),
+      );
     });
-    if (seed.status !== 0) throw new Error(`[e2e] Seeding the design catalogue failed:\n${seed.stderr}`);
 
     const api = startNode('api', [API_ENTRY], { cwd: API_DIR, env: apiEnv });
     await waitForHttp('api', `${API_URL}/health`, api);
