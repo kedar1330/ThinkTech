@@ -19,7 +19,7 @@ export const FEATURES: Feature[] = [
     icon: 'sparkles',
     // The occasion → looks form until the FR-DMS catalogue page (TD-FS-DMS-01) replaces it.
     href: '/discover/looks',
-    summary: 'Your style profile and optional appearance signals — sizes, fit, colours, coverage and more.',
+    summary: 'Looks for your occasion, matched to your skin tone, undertone and body type from My Profile.',
   },
   {
     slug: 'colour-palette',

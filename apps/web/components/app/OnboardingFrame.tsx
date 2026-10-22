@@ -29,7 +29,7 @@ export function OnboardingFrame({
     <div className="min-h-screen">
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4 sm:px-6">
-          <Logo href="/" />
+          <Logo href="/" priority />
           <form action={logoutAction}>
             <button type="submit" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
               Log out

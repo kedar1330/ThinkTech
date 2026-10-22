@@ -23,7 +23,7 @@ export function PriceSummary({ summary }: { summary?: UserPriceSummary }) {
       {summary.status === 'no_budget' ? (
         <p className="text-sm">
           No budget per look set.{' '}
-          <Link href="/profile#style-profile" className="font-medium text-plum underline">
+          <Link href="/profile#basics" className="font-medium text-plum underline">
             Add one in your profile
           </Link>
         </p>

@@ -1,7 +1,7 @@
-// Licensed style imagery (Unsplash License — see public/images/CREDITS.md). These are mood images for
-// StyleMe's own pages, never presented as products (FR-DATA-06, D-65). Each slot uses a different
-// photograph; alt text describes the outfit. `position` is the CSS object-position that keeps the
-// outfit in frame when the image is cropped to a smaller aspect ratio.
+// Style imagery for StyleMe's own pages (see public/images/CREDITS.md): Unsplash photographs (Unsplash
+// License) and outfit photos supplied by the StyleMe team. These are mood images, never presented as
+// products (FR-DATA-06, D-65). Each slot uses a different photograph; alt text describes the outfit.
+// `position` is the CSS object-position that keeps the outfit in frame when the image is cropped.
 
 export interface BrandImage {
   src: string;
@@ -9,9 +9,12 @@ export interface BrandImage {
   width: number;
   height: number;
   credit: string;
-  page: string;
+  /** The photo's source page, when it has one. */
+  page: string | null;
   position: string;
 }
+
+const SUPPLIED = 'Supplied by the StyleMe team';
 
 export const BRAND_IMAGES = {
   /** Sign-up, login and verification split screen. */
@@ -46,42 +49,118 @@ export const BRAND_IMAGES = {
   },
   /** Personalized Styling section. */
   styling: {
-    src: '/images/styling-bandhgala-red.jpg',
-    alt: 'A man in a red bandhgala jacket with ivory churidar',
-    credit: 'Parvez AzarQaderi / Unsplash',
-    page: 'https://unsplash.com/photos/mens-red-long-sleeved-dress-k-ehfxCMamI',
-    width: 1600,
-    height: 2400,
-    position: '50% 20%',
+    src: '/images/styling-navy-sweater-chinos.jpg',
+    alt: 'A man in a navy V-neck sweater over a white shirt with cream pleated trousers, beside the same pieces laid flat',
+    credit: SUPPLIED,
+    page: null,
+    width: 736,
+    height: 1104,
+    position: '50% 50%',
   },
   /** Fashion category: Indian. */
   categoryIndian: {
-    src: '/images/category-indian-bridal.jpg',
-    alt: 'A woman in a red and gold bridal lehenga with an embroidered dupatta',
-    credit: 'Harsh Gupta / Unsplash',
-    page: 'https://unsplash.com/photos/a-woman-in-a-red-and-gold-bridal-outfit-2DZmm6QKFQE',
-    width: 1600,
-    height: 2400,
-    position: '50% 20%',
+    src: '/images/category-indian-maroon-lehenga.jpg',
+    alt: 'A woman in a maroon brocade lehenga with a sheer embroidered dupatta',
+    credit: SUPPLIED,
+    page: null,
+    width: 735,
+    height: 1306,
+    position: '50% 35%',
   },
   /** Fashion category: fusion. */
   categoryFusion: {
-    src: '/images/category-fusion-coord.jpg',
-    alt: 'A woman in a printed ikat-style co-ord set with a mandarin collar',
-    credit: 'IMANA / Unsplash',
-    page: 'https://unsplash.com/photos/woman-in-patterned-clothing-sitting-near-plants-50WK7vLzNAY',
-    width: 1600,
-    height: 2400,
-    position: '50% 30%',
+    src: '/images/category-fusion-nehru-jacket.jpg',
+    alt: 'A man in a sage-green kurta under an embroidered ivory Nehru jacket with ivory trousers',
+    credit: SUPPLIED,
+    page: null,
+    width: 736,
+    height: 1104,
+    position: '50% 40%',
   },
   /** Fashion category: Western. */
   categoryWestern: {
-    src: '/images/category-western-blazer.jpg',
-    alt: 'A man in a checked blazer and burgundy tie seated on a red velvet sofa',
-    credit: 'Khaled Ghareeb / Unsplash',
-    page: 'https://unsplash.com/photos/a-man-in-a-suit-sitting-on-a-red-couch-4gr4BKNkUIc',
-    width: 1600,
-    height: 2322,
-    position: '50% 45%',
+    src: '/images/category-western-waistcoat.jpg',
+    alt: 'A woman in a brown waistcoat and wide-leg trousers over a blue striped shirt',
+    credit: SUPPLIED,
+    page: null,
+    width: 719,
+    height: 1097,
+    position: '50% 40%',
   },
 } satisfies Record<string, BrandImage>;
+
+/** Landing-page lookbook: outfit inspiration only, never products. */
+export const LOOKBOOK_IMAGES: readonly BrandImage[] = [
+  {
+    src: '/images/lookbook-red-sharara.jpg',
+    alt: 'A woman in a red and gold brocade kurta and sharara with a matching dupatta',
+    credit: SUPPLIED,
+    page: null,
+    width: 736,
+    height: 1308,
+    position: '50% 35%',
+  },
+  {
+    src: '/images/lookbook-navy-slate.jpg',
+    alt: 'A man in a navy shirt with slate-grey trousers and white sneakers, beside navy and slate-grey swatches',
+    credit: SUPPLIED,
+    page: null,
+    width: 736,
+    height: 1308,
+    position: '40% 45%',
+  },
+  {
+    src: '/images/lookbook-floral-kurta-palazzo.jpg',
+    alt: 'A woman in a sleeveless floral-print kurta with matching palazzo trousers',
+    credit: SUPPLIED,
+    page: null,
+    width: 706,
+    height: 1184,
+    position: '50% 35%',
+  },
+  {
+    src: '/images/lookbook-navy-lehenga.jpg',
+    alt: 'A woman in a navy lehenga with gold embroidery and a sheer navy dupatta',
+    credit: SUPPLIED,
+    page: null,
+    width: 736,
+    height: 1104,
+    position: '50% 45%',
+  },
+  {
+    src: '/images/lookbook-rose-shirt-wide-jeans.jpg',
+    alt: 'A woman in a rose overshirt over a black tank top with charcoal wide-leg jeans, beside the three pieces',
+    credit: SUPPLIED,
+    page: null,
+    width: 735,
+    height: 1046,
+    position: '35% 50%',
+  },
+  {
+    src: '/images/lookbook-champagne-anarkali.jpg',
+    alt: 'A woman in a flowing champagne anarkali with a scalloped dupatta',
+    credit: SUPPLIED,
+    page: null,
+    width: 900,
+    height: 1600,
+    position: '50% 40%',
+  },
+  {
+    src: '/images/lookbook-navy-peplum-sharara.jpg',
+    alt: 'An embroidered navy peplum kurta over flared sage-blue sharara trousers',
+    credit: SUPPLIED,
+    page: null,
+    width: 900,
+    height: 1600,
+    position: '50% 30%',
+  },
+  {
+    src: '/images/lookbook-floral-lehenga.jpg',
+    alt: 'A woman in an ivory lehenga with a painted floral hem and sheer puff sleeves',
+    credit: SUPPLIED,
+    page: null,
+    width: 900,
+    height: 1600,
+    position: '50% 35%',
+  },
+];

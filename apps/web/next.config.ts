@@ -26,6 +26,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // @styleme/contracts is shared TypeScript source.
   transpilePackages: ['@styleme/contracts'],
+  // Photo uploads for analysis (D-129) go through a server action. The browser shrinks photos first;
+  // the API refuses anything over 8 MB, plus room for multipart overhead.
+  experimental: { serverActions: { bodySizeLimit: '9mb' } },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },

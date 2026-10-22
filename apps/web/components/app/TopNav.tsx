@@ -263,7 +263,7 @@ export function TopNav({
   return (
     <header className="on-dark sticky top-0 z-40 bg-primary pt-[env(safe-area-inset-top)] text-primary-foreground shadow-[0_1px_0_rgb(200_164_92/0.35)]">
       <div className="mx-auto flex h-16 max-w-[100rem] items-center gap-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] sm:gap-4 sm:px-6 lg:px-8">
-        <Logo href="/home" light className="shrink-0" />
+        <Logo href="/home" light className="shrink-0" priority />
 
         {/* Inline navigation (640px and up) */}
         <nav aria-label="Main" className="relative hidden h-16 min-w-0 flex-1 items-center sm:flex">
@@ -417,7 +417,7 @@ export function TopNav({
                   {profileIncomplete && (
                     <li>
                       <Link
-                        href="/profile#style-profile"
+                        href="/profile#basics"
                         className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-plum transition-colors hover:bg-surface-muted"
                       >
                         <ListChecks aria-hidden className="size-[18px]" /> Complete your profile
@@ -506,7 +506,7 @@ export function TopNav({
               <p className="truncate px-3 pb-1 text-xs text-primary-foreground/70">Signed in as {userName}</p>
               {profileIncomplete && (
                 <Link
-                  href="/profile#style-profile"
+                  href="/profile#basics"
                   className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-accent hover:bg-primary-foreground/8"
                 >
                   <ListChecks aria-hidden className="size-[18px]" /> Complete your profile

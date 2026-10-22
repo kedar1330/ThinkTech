@@ -14,7 +14,7 @@ import {
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BRAND_IMAGES } from '@/lib/brand/images';
+import { BRAND_IMAGES, LOOKBOOK_IMAGES } from '@/lib/brand/images';
 
 // Public landing page. It describes only what exists today; everything else is labelled "Coming soon"
 // (no fabricated functionality).
@@ -182,7 +182,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       {/* Personalized styling */}
       <section id="features" className="scroll-mt-20 py-20">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 md:grid-cols-[1fr_1.2fr]">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] shadow-xl">
+          <div className="relative mx-auto aspect-[2/3] w-full max-w-md overflow-hidden rounded-[2rem] shadow-xl">
             <Image
               src={styling.src}
               alt={styling.alt}
@@ -226,7 +226,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               { img: categoryWestern, title: 'Western', body: 'Tailoring, shirts, denim and everyday essentials.' },
             ].map((c) => (
               <figure key={c.title} className="group overflow-hidden rounded-2xl bg-primary-hover">
-                <div className="relative aspect-[3/4] overflow-hidden">
+                <div className="relative aspect-[2/3] overflow-hidden">
                   <Image
                     src={c.img.src}
                     alt={c.img.alt}
@@ -243,6 +243,37 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               </figure>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Lookbook: inspiration only, never products (FR-DATA-06) */}
+      <section id="lookbook" className="scroll-mt-20 bg-surface-muted py-20">
+        <div className="mx-auto max-w-6xl space-y-12 px-4 sm:px-6">
+          <SectionHeading
+            eyebrow="Lookbook"
+            title="Looks that start with you"
+            body="Everyday, office and festive outfits that inspire how StyleMe thinks about colour, fit and proportion."
+          />
+          <ul className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
+            {LOOKBOOK_IMAGES.map((img, i) => (
+              <li
+                key={img.src}
+                className={`group relative aspect-[2/3] overflow-hidden rounded-2xl shadow-md ${i % 2 === 1 ? 'md:translate-y-8' : ''}`}
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  fill
+                  sizes="(min-width: 768px) 25vw, 50vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  style={{ objectPosition: img.position }}
+                />
+              </li>
+            ))}
+          </ul>
+          <p className="pt-4 text-center text-xs text-muted-foreground md:pt-8">
+            Inspiration only — StyleMe is a styling guide and doesn&rsquo;t sell these outfits.
+          </p>
         </div>
       </section>
 

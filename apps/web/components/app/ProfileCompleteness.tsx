@@ -6,13 +6,11 @@ import { cn } from '@/lib/utils';
 
 /** Where each missing item is added: the city lives in account details, the rest in the style profile. */
 export const COMPLETENESS_HREF: Record<ProfileCompletenessItemId, string> = {
-  department: '/profile#style-profile',
+  department: '/profile#basics',
+  height: '/profile#basics',
   city: '/settings#details',
-  sizes: '/profile#style-profile',
-  likedColors: '/profile#style-profile',
-  occasions: '/profile#style-profile',
-  styles: '/profile#style-profile',
-  budget: '/profile#style-profile',
+  skinTone: '/profile#skin-tone',
+  bodyType: '/profile#body-type',
 };
 
 /**
@@ -49,7 +47,7 @@ export function ProfileCompletenessCard({
         </div>
         {!compact && (
           <Button asChild>
-            <Link href="/profile#style-profile">
+            <Link href="/profile#basics">
               Complete my profile <ArrowRight aria-hidden />
             </Link>
           </Button>

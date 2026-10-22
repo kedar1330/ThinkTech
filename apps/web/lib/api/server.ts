@@ -18,6 +18,8 @@ export class ApiError extends Error {
 interface ApiRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
+  /** A raw (non-JSON) body, e.g. a photo upload (D-129); replaces `body`. */
+  rawBody?: { bytes: Uint8Array; contentType: string };
   token?: string;
   clientIp?: string;
 }
@@ -27,7 +29,10 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   const bffSecret = process.env.BFF_SHARED_SECRET;
   if (!baseUrl || !bffSecret) throw new Error('API_BASE_URL and BFF_SHARED_SECRET must be set');
 
-  const headers: Record<string, string> = { 'content-type': 'application/json', [BFF_KEY_HEADER]: bffSecret };
+  const headers: Record<string, string> = {
+    'content-type': options.rawBody?.contentType ?? 'application/json',
+    [BFF_KEY_HEADER]: bffSecret,
+  };
   if (options.token) headers.authorization = `Bearer ${options.token}`;
   if (options.clientIp) headers[CLIENT_IP_HEADER] = options.clientIp;
 
@@ -36,7 +41,11 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     res = await fetch(`${baseUrl}${path}`, {
       method: options.method ?? 'GET',
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.rawBody
+        ? new Blob([options.rawBody.bytes as Uint8Array<ArrayBuffer>])
+        : options.body === undefined
+          ? undefined
+          : JSON.stringify(options.body),
       cache: 'no-store',
     });
   } catch {
@@ -51,6 +60,23 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
   if (!json.success) throw new ApiError(res.status, json.error.code, json.error.message, json.error.retryAfterSeconds);
   return json.data;
+}
+
+/** Fetches a raw image from the API (e.g. the user's own photo); null when it is missing or not theirs. */
+export async function apiImage(
+  path: string,
+  token: string,
+): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
+  const baseUrl = process.env.API_BASE_URL;
+  const bffSecret = process.env.BFF_SHARED_SECRET;
+  if (!baseUrl || !bffSecret) throw new Error('API_BASE_URL and BFF_SHARED_SECRET must be set');
+  const res = await fetch(`${baseUrl}${path}`, {
+    headers: { [BFF_KEY_HEADER]: bffSecret, authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  }).catch(() => null);
+  const contentType = res?.headers.get('content-type') ?? '';
+  if (!res?.ok || !contentType.startsWith('image/')) return null;
+  return { bytes: await res.arrayBuffer(), contentType };
 }
 
 /**

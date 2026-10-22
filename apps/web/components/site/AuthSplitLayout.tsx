@@ -29,8 +29,9 @@ export function AuthSplitLayout({
           style={{ objectPosition: image.position }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/40 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-primary/85 to-transparent" />
         <div className="absolute inset-x-0 top-0 p-10">
-          <Logo light />
+          <Logo size="lg" light priority />
         </div>
         <div className="absolute inset-x-0 bottom-0 space-y-3 p-10 text-primary-foreground">
           <p className="text-xs uppercase tracking-[0.3em] text-accent">StyleMe</p>
@@ -46,7 +47,8 @@ export function AuthSplitLayout({
         <div className="relative h-52 overflow-hidden bg-primary sm:h-64 lg:hidden">
           <Image src={image.src} alt={image.alt} fill priority sizes="100vw" className="object-cover object-[50%_3%]" />
           <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/45 to-primary/10" />
-          <div className="absolute inset-x-0 top-0 px-4 py-4">
+          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/85 to-transparent" />
+          <div className="absolute inset-x-0 top-0 px-4 py-3">
             <Logo light />
           </div>
           <p className="absolute inset-x-0 bottom-0 px-4 pb-4 font-display text-2xl leading-tight text-primary-foreground">

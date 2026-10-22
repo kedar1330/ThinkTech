@@ -2,21 +2,24 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import {
-  COLORS,
-  DEPARTMENTS,
+  CLOTHING_PREFERENCES,
+  DEFAULT_MANUAL_STEPS,
+  MONK_TONES,
+  bodyTypeLabel,
   cityLabel,
   departmentScope,
   profileCompleteness,
+  type AppearanceResponse,
+  type ManualStepsResponse,
   type ProfileResponse,
 } from '@styleme/contracts';
 import { ProfileCompletenessCard } from '@/components/app/ProfileCompleteness';
+import { HowItWorksManual } from '@/components/home/HowItWorksManual';
 import { Alert } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
-import { FEATURES, featureHref } from '@/lib/features';
 
 export const metadata: Metadata = { title: 'Home' };
 
@@ -28,14 +31,19 @@ export default async function HomePage({
 }) {
   const { user, accessToken } = await requireOnboarded();
   const { welcome, skipped } = await searchParams;
-  const profile = await apiRequest<ProfileResponse>('/v1/profile', { token: accessToken });
+  const [profile, appearance, manualData] = await Promise.all([
+    apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }),
+    apiRequest<AppearanceResponse>('/v1/appearance', { token: accessToken }).catch(() => null),
+    apiRequest<ManualStepsResponse>('/v1/manual', { token: accessToken }).catch(() => null),
+  ]);
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
-  const department = DEPARTMENTS.find((d) => d.id === profile.department)?.label;
+  const department = CLOTHING_PREFERENCES.find((d) => d.id === profile.department)?.label;
   // Without a department, features give general results across all departments (FR-ONB-05).
   const scope = departmentScope(profile);
-  const completeness = profileCompleteness(profile, user);
-  const liked = COLORS.filter((c) => profile.likedColors.includes(c.id));
-  const upcoming = FEATURES.filter((f) => !f.href);
+  const completeness = profileCompleteness(profile, user, appearance);
+  const monkTone = appearance?.skinTone ? Number(appearance.skinTone.value.monkRange.split('-')[0]) : null;
+  const undertone = appearance?.undertone?.value;
+  const manualSteps = manualData?.steps?.length ? manualData.steps : DEFAULT_MANUAL_STEPS;
 
   return (
     <div className="space-y-10">
@@ -64,12 +72,12 @@ export default async function HomePage({
           </div>
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-muted-foreground">Department</dt>
+              <dt className="text-muted-foreground">Clothing preference</dt>
               <dd className="font-medium">
                 {department ?? 'Not set'}
                 {!scope.filterApplied && (
                   <span className="block text-xs font-normal text-muted-foreground">
-                    Showing all departments — no department filter applied
+                    Not chosen yet — showing everything
                   </span>
                 )}
               </dd>
@@ -85,78 +93,55 @@ export default async function HomePage({
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Occasions</dt>
-              <dd className="font-medium">{profile.preferredOccasions.length || 'None chosen yet'}</dd>
-            </div>
-          </dl>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Colours you love</p>
-            {liked.length ? (
-              <ul className="flex flex-wrap gap-2">
-                {liked.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs"
-                  >
+              <dt className="text-muted-foreground">Skin tone &amp; undertone</dt>
+              <dd className="flex items-center gap-2 font-medium">
+                {monkTone ? (
+                  <>
                     <span
                       aria-hidden
-                      className="size-3 rounded-full border border-border"
-                      style={{ backgroundColor: c.hex }}
+                      className="size-4 rounded-full border border-border"
+                      style={{ backgroundColor: MONK_TONES[monkTone - 1]?.hex }}
                     />
-                    {c.label}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm">
-                None yet —{' '}
-                <Link href="/profile#style-profile" className="font-medium text-plum underline">
-                  add some
-                </Link>
-                .
-              </p>
-            )}
-          </div>
+                    Tone {monkTone}
+                    {undertone && undertone !== 'not_sure' ? `, ${undertone}` : ''}
+                  </>
+                ) : (
+                  <Link href="/profile#skin-tone" className="text-plum underline">
+                    Add from a photo or choose
+                  </Link>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Body type</dt>
+              <dd className="font-medium">
+                {appearance?.bodyType ? (
+                  bodyTypeLabel(appearance.bodyType.value)
+                ) : (
+                  <Link href="/profile#body-type" className="text-plum underline">
+                    Add measurements or a photo
+                  </Link>
+                )}
+              </dd>
+            </div>
+          </dl>
         </Card>
         <Card className="flex flex-col justify-between gap-4 bg-primary text-primary-foreground">
           <div className="space-y-2">
             <h2 className="font-display text-2xl">Discover My Style</h2>
             <p className="text-sm text-primary-foreground/80">
-              Refine your sizes, fit, colours and comfort, and manage optional appearance signals.
+              Get looks for an occasion, matched to your skin tone, undertone and body type.
             </p>
           </div>
           <Button asChild variant="accent">
-            <Link href="/profile">
+            <Link href="/discover/looks">
               Open <ArrowRight aria-hidden />
             </Link>
           </Button>
         </Card>
       </section>
 
-      <section className="space-y-5">
-        <div className="space-y-1">
-          <h2 className="font-display text-2xl text-primary">Coming soon</h2>
-          <p className="text-sm text-muted-foreground">
-            These features are being built. Your style profile will power them when they launch.
-          </p>
-        </div>
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {upcoming.map((f) => (
-            <li key={f.slug}>
-              <Link
-                href={featureHref(f)}
-                className="block h-full space-y-2 rounded-xl border border-border bg-surface p-5 transition-colors hover:border-plum/50"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-medium">{f.label}</h3>
-                  <Badge>Coming soon</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">{f.summary}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <HowItWorksManual steps={manualSteps} />
     </div>
   );
 }

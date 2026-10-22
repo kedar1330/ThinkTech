@@ -1,19 +1,34 @@
 import type { Metadata } from 'next';
-import type { CatalogueCategoryItem, ClothingStylesResponse, ProfileResponse } from '@styleme/contracts';
+import type {
+  CatalogueCategoryItem,
+  ClothingStylesResponse,
+  DesignTaxonomyResponse,
+  ProfileResponse,
+} from '@styleme/contracts';
 import { apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
 import { CategoryExplorer } from '@/components/categories/CategoryExplorer';
+import { OutfitCategoryPicker } from '@/components/design/OutfitCategoryPicker';
 
 export const metadata: Metadata = {
   title: 'Outfit Categories',
   description: 'Browse styles by category, body shape, and styling goals with personalized suitability advice.',
 };
 
-export default async function OutfitCategoriesPage() {
+export default async function OutfitCategoriesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ outfit?: string; department?: string }>;
+} = {}) {
+  const params = searchParams ? await searchParams : {};
   const { accessToken } = await requireOnboarded();
+  const department = params.department === 'women' || params.department === 'men' ? params.department : null;
 
   // Fetch published categories and styles in parallel
-  const [categories, stylesResult, profile] = await Promise.all([
+  const [taxonomy, categories, stylesResult, profile] = await Promise.all([
+    apiRequest<DesignTaxonomyResponse>(`/v1/design/taxonomy${department ? `?department=${department}` : ''}`, {
+      token: accessToken,
+    }).catch(() => null),
     apiRequest<CatalogueCategoryItem[]>('/v1/catalogue/categories', { token: accessToken }).catch(
       () => [] as CatalogueCategoryItem[],
     ),
@@ -36,6 +51,9 @@ export default async function OutfitCategoriesPage() {
         </p>
       </header>
 
+      {taxonomy && <OutfitCategoryPicker taxonomy={taxonomy} outfit={params.outfit ?? ''} />}
+
+      <h2 className="font-display text-2xl text-primary">Style library</h2>
       <CategoryExplorer
         initialCategories={categories}
         initialStyles={stylesResult.items}
