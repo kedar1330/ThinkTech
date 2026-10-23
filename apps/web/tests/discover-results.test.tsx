@@ -106,12 +106,11 @@ describe('result flags (FR-LOOK-09 … 11)', () => {
     const texts = resultNotices(
       response(FULL.looks, { defaultsApplied: ['department', 'colors', 'signals', 'sizes', 'style', 'unknown'] }),
     ).map((n) => n.text);
+    // Missing sizes and style are not announced.
     expect(texts).toEqual([
       'No department filter applied: looks can come from every department.',
       "You haven't picked colours you like, so each look uses its palette's colours.",
       'Appearance signals are not used (none saved, or switched off).',
-      'No sizes saved yet, so each item asks you to add one.',
-      'No style chosen, so looks can be in any style.',
     ]);
   });
 
