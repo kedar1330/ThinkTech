@@ -9,6 +9,7 @@ import {
   photoKindSchema,
   type AppearanceAnalysisSummary,
   type PhotoAnalysisResponse,
+  type UserPhoto,
 } from '@styleme/contracts';
 import { ApiError, apiRequest } from '@/lib/api/server';
 import { BLOCKED, sameOrigin } from '@/lib/actions';
@@ -41,6 +42,7 @@ export async function uploadPhotoAction(formData: FormData): Promise<PhotoAction
 
   const token = await getAccessToken();
   if (!token) redirect('/login');
+
   let result: PhotoAnalysisResponse;
   try {
     result = await apiRequest<PhotoAnalysisResponse>(
@@ -81,4 +83,34 @@ export async function deletePhotoAction(photoId: string): Promise<{ error?: stri
   }
   revalidatePath('/profile');
   return { success: 'Photo deleted.' };
+}
+
+export async function uploadTryOnPhotoAction(formData: FormData): Promise<{ error?: string; photo?: UserPhoto }> {
+  if (!(await sameOrigin())) return { error: BLOCKED!.error };
+  const photo = formData.get('photo');
+  if (
+    !(photo instanceof File) ||
+    photo.size === 0 ||
+    photo.size > PHOTO_MAX_BYTES ||
+    !(PHOTO_CONTENT_TYPES as readonly string[]).includes(photo.type)
+  ) {
+    return { error: 'Choose a JPEG, PNG or WebP photo under 8 MB.' };
+  }
+
+  const token = await getAccessToken();
+  if (!token) redirect('/login');
+
+  let result: UserPhoto;
+  try {
+    result = await apiRequest<UserPhoto>('/v1/photos/try-on', {
+      method: 'POST',
+      token,
+      rawBody: { bytes: new Uint8Array(await photo.arrayBuffer()), contentType: photo.type },
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) redirect('/login?expired=1');
+    return { error: 'Something went wrong. Please try again.' };
+  }
+  revalidatePath('/profile');
+  return { photo: result };
 }

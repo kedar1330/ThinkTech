@@ -2,9 +2,11 @@ import { createApp } from './app';
 import { loadConfig, type Config } from './config/env';
 import { connectDatabase, type Database } from './db';
 import { createLogger } from './logger';
+import { geminiDesignProvider } from './integrations/ai/design-client';
 import { pollinationsImageProvider } from './integrations/ai/image-client';
 import { serperShoppingProvider } from './integrations/shopping/serper-client';
 import { geminiVisionProvider } from './integrations/ai/vision-client';
+import { cloudflareGenerator, pollinationsGenerator, type ImageGenerator } from './integrations/image/image-client';
 import { geminiWordingProvider } from './integrations/ai/wording-client';
 import { googleVerifier } from './services/google';
 import { createEmailSender, createSmsSender } from './services/messaging';
@@ -46,6 +48,19 @@ export async function startServer(deps: StartServerDeps = {}) {
   // showing store prices (D-77); elsewhere the key is ignored and the tabs say prices are unavailable.
   const shoppingProvider =
     config.SERPER_API_KEY && config.APP_ENV === 'local' ? serperShoppingProvider(config.SERPER_API_KEY) : null;
+  // Design Studio (D-134): live whenever a Gemini key is set, unless DESIGN_STUDIO_ENABLED=false. Each image service
+  // joins the failover chain when its key is set (Pollinations first, then Cloudflare).
+  const designAnalysisProvider =
+    config.DESIGN_STUDIO_ENABLED && config.GEMINI_API_KEY
+      ? geminiDesignProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
+      : null;
+  const imageGenerators: ImageGenerator[] = [];
+  if (config.POLLINATIONS_API_KEY)
+    imageGenerators.push(pollinationsGenerator(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
+  if (config.CLOUDFLARE_ACCOUNT_ID && config.CLOUDFLARE_API_TOKEN)
+    imageGenerators.push(
+      cloudflareGenerator(config.CLOUDFLARE_ACCOUNT_ID, config.CLOUDFLARE_API_TOKEN, config.CLOUDFLARE_IMAGE_MODEL),
+    );
 
   // Validate, lint and index the style knowledge base before anything else; an invalid library
   // stops the API (FR-STY-03). The look generator receives this library.
@@ -75,6 +90,8 @@ export async function startServer(deps: StartServerDeps = {}) {
     photoAnalysisProvider,
     outfitImageProvider,
     shoppingProvider,
+    designAnalysisProvider,
+    imageGenerators,
   });
 
   if (deps.listen === false) {
@@ -93,6 +110,8 @@ export async function startServer(deps: StartServerDeps = {}) {
       photoAnalysis: Boolean(photoAnalysisProvider),
       outfitImages: Boolean(outfitImageProvider),
       priceRanges: Boolean(shoppingProvider),
+      designStudio: Boolean(designAnalysisProvider),
+      designImages: imageGenerators.map((g) => g.name),
     });
   });
 

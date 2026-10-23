@@ -2,7 +2,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ProfileResponse } from '@styleme/contracts';
+import type { AppearanceResponse, ColourPreferencesResponse, ProfileResponse } from '@styleme/contracts';
 
 const actions = vi.hoisted(() => ({ requestLooksAction: vi.fn(), regenerateAction: vi.fn() }));
 vi.mock('@/app/actions/discover', () => actions);
@@ -127,29 +127,55 @@ describe('Discover My Style request (built from Outfit Categories)', () => {
 
 describe('profile summary on the request page', () => {
   it('says no department filter is applied when the profile has no department, with an edit link', () => {
-    render(<ProfileSummary profile={EMPTY} />);
+    render(<ProfileSummary profile={EMPTY} appearance={null} colours={null} />);
     expect(screen.getByRole('status')).toHaveTextContent('No department filter applied');
     expect(screen.getByRole('link', { name: 'Edit profile' })).toHaveAttribute('href', '/profile#basics');
+    const colourLinks = screen.getAllByRole('link', { name: 'Not set — add it' });
+    expect(colourLinks.at(-1)).toHaveAttribute('href', '/palette/colours');
   });
 
-  it('shows the department, sizes, colours and coverage that will be applied', () => {
+  it('shows what My Profile and the colour library hold (D-129, D-133)', () => {
+    const attr = <T,>(value: T) => ({ value, source: 'manual' as const, userConfirmed: true, confirmedAt: null });
+    const colour = (colourId: string, name: string, preference: 'liked' | 'avoided') => ({
+      colourId,
+      name,
+      hex: '#123456',
+      family: 'blue',
+      temperature: 'cool',
+      depth: 'deep',
+      intensity: 'muted',
+      oklch: { l: 0.3, c: 0.1, h: 250 },
+      source: 'xkcd',
+      preference,
+    });
     render(
       <ProfileSummary
-        profile={{
-          ...EMPTY,
-          department: 'women',
-          sizes: { ...EMPTY.sizes, tops: { letter: 'M' }, shoes: { uk: 5 } },
-          likedColors: ['ivory'],
-          dislikedColors: ['beige'],
-          coveragePreferences: { minSleeveLength: 'short', minNecklineCoverage: null, minGarmentLength: null },
-        }}
+        profile={{ ...EMPTY, department: 'women', heightCm: 162, budgetPreference: 3000 }}
+        appearance={
+          {
+            skinTone: attr({ monkRange: '6-6' }),
+            undertone: attr('warm' as const),
+            bodyProportions: null,
+            bodyType: attr('hourglass' as const),
+            useInRecommendations: true,
+          } as unknown as AppearanceResponse
+        }
+        colours={
+          {
+            liked: [colour('CLR-0001', 'Navy', 'liked')],
+            avoided: [colour('CLR-0002', 'Mustard', 'avoided')],
+            updatedAt: null,
+          } as unknown as ColourPreferencesResponse
+        }
       />,
     );
     expect(screen.queryByText(/No department filter applied/)).not.toBeInTheDocument();
-    expect(screen.getByText('Women')).toBeInTheDocument();
-    expect(screen.getByText('Tops M · Shoes UK 5')).toBeInTheDocument();
-    expect(screen.getByText('Ivory')).toBeInTheDocument();
-    expect(screen.getByText('Beige')).toBeInTheDocument();
-    expect(screen.getByText('Sleeves at least short sleeve')).toBeInTheDocument();
+    expect(screen.getByText('Women’s Wear')).toBeInTheDocument();
+    expect(screen.getByText('162 cm')).toBeInTheDocument();
+    expect(screen.getByText('₹3,000')).toBeInTheDocument();
+    expect(screen.getByText('Tone 6, Warm')).toBeInTheDocument();
+    expect(screen.getByText('Hourglass')).toBeInTheDocument();
+    expect(screen.getByText('Navy')).toBeInTheDocument();
+    expect(screen.getByText('Mustard')).toBeInTheDocument();
   });
 });

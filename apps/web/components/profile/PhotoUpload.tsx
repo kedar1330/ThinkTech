@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { ImageUp, Loader2 } from 'lucide-react';
-import type { PhotoKind } from '@styleme/contracts';
+import type { ClothingPreference, PhotoKind } from '@styleme/contracts';
 import { uploadPhotoAction } from '@/app/actions/photos';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -37,10 +37,19 @@ const COPY: Record<PhotoKind, { title: string; analyses: string; sent: string; t
 };
 
 /**
- * Photo upload for analysis by Gemini (D-129): choose or drop a photo, agree to the notice, and the result
- * appears straight away (the page refreshes with it). The photo is shrunk in the browser first.
+ * Photo upload for analysis by Gemini Vision AI (D-129): face photo -> skin tone & undertone,
+ * full-body photo -> body type proportions.
+ * Analysis only triggers when the user clicks the Analyze button.
  */
-export function PhotoUpload({ kind, onAnalysed }: { kind: PhotoKind; onAnalysed?: () => void }) {
+export function PhotoUpload({
+  kind,
+  department: _department = 'women',
+  onAnalysed,
+}: {
+  kind: PhotoKind;
+  department?: ClothingPreference;
+  onAnalysed?: () => void;
+}) {
   const copy = COPY[kind];
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -61,11 +70,13 @@ export function PhotoUpload({ kind, onAnalysed }: { kind: PhotoKind; onAnalysed?
       return;
     }
     setFile(next);
-    setPreview(URL.createObjectURL(next));
+    const objectUrl = URL.createObjectURL(next);
+    setPreview(objectUrl);
   }
 
   function analyse() {
     if (!file) return;
+    setError(null);
     startTransition(async () => {
       let upload: File;
       try {
@@ -78,11 +89,13 @@ export function PhotoUpload({ kind, onAnalysed }: { kind: PhotoKind; onAnalysed?
       form.set('kind', kind);
       form.set('notice', agreed ? 'on' : '');
       form.set('photo', upload);
+
       const result = await uploadPhotoAction(form);
       if (result.error) {
         setError(result.error);
         return;
       }
+
       setFile(null);
       setPreview(null);
       onAnalysed?.();
@@ -153,7 +166,7 @@ export function PhotoUpload({ kind, onAnalysed }: { kind: PhotoKind; onAnalysed?
           <Button type="button" size="full" disabled={!agreed || pending} onClick={analyse}>
             {pending ? (
               <>
-                <Loader2 aria-hidden className="animate-spin" /> Analysing your photo…
+                <Loader2 aria-hidden className="animate-spin mr-2 size-4" /> Analysing your photo…
               </>
             ) : (
               `Analyse my ${copy.analyses}`

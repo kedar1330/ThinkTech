@@ -156,7 +156,7 @@ The onboarding "Appearance" step (D-94) collects these self-reported signals onl
 | Feature | AI design | Conditions before starting |
 |---|---|---|
 | Fashion chatbot | Gemini (Groq fallback) with minimised context; product facts only from stored verified data | No photos, measurements or appearance signals in prompts; AI failure → clear error |
-| Sketch-to-design | AI vision interprets a sketch into a Zod-validated garment specification; the user confirms before generation | A sketch is not a personal photo; provider for design generation still to be chosen (D-32) |
+| Sketch-to-design | **Built and approved (D-134, 2026-10-23).** Gemini reads a sketch, garment picture, description or look + change and returns a Zod-validated tailor spec and a garment-only image prompt; Pollinations (FLUX), with Cloudflare Workers AI (FLUX) as fallback, draws from the text prompt only | A sketch is not a personal photo; photos showing a face are refused; the image services never receive the sketch or anything about the user |
 | Retailer text in prompts | Product titles, descriptions and review excerpts are untrusted data, passed as delimited data and never as instructions | Applies to any feature that sends retailer text to AI |
 
 ---

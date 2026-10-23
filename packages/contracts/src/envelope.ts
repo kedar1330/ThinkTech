@@ -30,6 +30,8 @@ export const ERROR_CODES = [
   'PROVIDER_NOT_CONFIGURED',
   // Photo analysis (D-129): the photo can't be analysed (too dark, blurry, no face …); retake or choose manually.
   'PHOTO_UNUSABLE',
+  // Design Studio (D-134): the sketch or description can't be designed from; try a clearer one.
+  'DESIGN_UNUSABLE',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 

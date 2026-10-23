@@ -17,3 +17,4 @@ export * from './colour-library';
 export * from './saved-items';
 export * from './admin';
 export * from './manual';
+export * from './design';

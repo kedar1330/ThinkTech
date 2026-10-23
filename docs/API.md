@@ -413,6 +413,19 @@ Authenticated, password set. Categories are styling content: production serves o
 | GET | `/v1/colours/preferences` | `liked[]`, `avoided[]` (colour items, newest first), `updatedAt` |
 | PUT | `/v1/colours/preferences` | `{colourIds: CLR-0001 …, 1 – 200, preference: liked \| avoided \| none}`. Only colours from the user's own category, or colours already saved (so they can be moved or cleared after a profile change). A colour is liked or avoided, never both (the latest wins); `none` clears. 400 for an unknown or out-of-category colour, or more than 600 saved in all.\| avoided \| none}`. A colour is liked or avoided, never both (the latest wins); `none` clears. 400 for an unknown colour or more than 600 saved in all. Returns the preferences |
 
+### 3.14 Design Studio (D-134; live when `GEMINI_API_KEY` is set, unless `DESIGN_STUDIO_ENABLED=false`)
+
+Authenticated, password set. Contract: `packages/contracts/src/design.ts`. `POST …/designs` and `…/render` share a limit of 5 per minute and 30 per hour per user.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/v1/design-studio` | `{available, imagesAvailable, designs[] {id, title, source, imageStatus, hasSourceImage, createdAt}, limit}` (newest first). `available` is false when the studio is off or Gemini isn't configured |
+| POST | `/v1/design-studio/designs` | Content type **`application/vnd.styleme.design+json`** (own body limit, about 5.4 MB; the global JSON limit is 16 kB). `{source: sketch \| upload \| description \| look, description (≤ 1200), image? {contentType, base64} (sketch and upload only, ≤ 4 MB, signature checked), lookId? (look only, the user's own look), slotId? (one piece of the look), notice: DESIGN_NOTICE_VERSION}`. Gemini → tailor spec + image prompt; Pollinations then Cloudflare draw it. 201 with the `Design` `{…summary, description, summary, lookId, tailorSpec, imageProvider, updatedAt}`; `imageStatus: failed` when no image service could draw it (the spec is kept). `DESIGN_UNUSABLE` (422) when Gemini can't design from the input or it is a photo of a person (nothing stored); `AI_UNAVAILABLE` (503) for a Gemini failure or invalid reply; `RATE_LIMITED`; `CONFLICT` at 50 designs; `PROVIDER_NOT_CONFIGURED` when off |
+| GET | `/v1/design-studio/designs/:id` | One design (owner only, else 404) |
+| GET | `/v1/design-studio/designs/:id/image?which=design\|source` | The generated picture (default) or the user's sketch; raw image, `cache-control: private, no-store`. The web app serves it through `/api/design-studio/:id/image` |
+| POST | `/v1/design-studio/designs/:id/render` | Draws the picture again from the stored prompt (no Gemini call). `AI_UNAVAILABLE` when every image service fails |
+| DELETE | `/v1/design-studio/designs/:id` | Deletes the design with its sketch and picture |
+
 ### 3.10 Health
 
 **`GET /health`** — returns `{ status: "ok", version, time }` without authentication (D-69). Used by the hosting platform's health check. In maintenance mode (`MAINTENANCE_MODE=true`, used during a restore, D-85) it returns `{ status: "maintenance", version, time }`, and every `/v1` endpoint returns `SERVICE_UNAVAILABLE`.
@@ -443,7 +456,8 @@ Authenticated, password set. Categories are styling content: production serves o
 | `PASSWORD_SETUP_REQUIRED` | 403 | A Google sign-up hasn't created a StyleMe password yet |
 | `GOOGLE_ACCOUNT_EXISTS` | 409 | Google sign-up for an email that already has an account |
 | `GOOGLE_NO_ACCOUNT` | 404 | Google login for an email without an account |
-| `PROVIDER_NOT_CONFIGURED` | 503 | Google, SMS or photo analysis (no Gemini key, or `PHOTO_ANALYSIS_ENABLED=false`) isn't configured in this environment |
+| `PROVIDER_NOT_CONFIGURED` | 503 | Google, SMS, photo analysis (no Gemini key, or `PHOTO_ANALYSIS_ENABLED=false`) or the Design Studio (`DESIGN_STUDIO_ENABLED=false`, no Gemini key, or no image service for a redraw) isn't configured in this environment |
+| `DESIGN_UNUSABLE` | 422 | Design Studio (D-134): no garment to design from, too unclear, or a photo of a person. The message says what to try instead |
 | `PHOTO_UNUSABLE` | 422 | A profile photo can't be analysed (too dark, too bright, blurry, no face, body not fully visible, several people); the message says why (D-129) |
 | `NOT_FOUND` | 404 | Resource doesn't exist or isn't owned by the user |
 | `CONFLICT` | 409 | Conflicting state (e.g. a shortlist slot already has an item, the item limit is reached) |

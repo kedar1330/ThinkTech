@@ -7,7 +7,15 @@ import { loadStyleLibrary } from '../../src/style-rules';
 import { FakeImageProvider } from '../fixtures/outfit-images';
 import { buildEngineFixtureLibrary } from '../fixtures/style-library';
 import { SYNTHETIC_JPEG } from '../fixtures/vision';
-import { bearer, login, logTextForPrivacyChecks, registerUser, startTestEnv, type TestEnv } from '../helpers';
+import {
+  bearer,
+  login,
+  logTextForPrivacyChecks,
+  registerUser,
+  startTestEnv,
+  withoutDotenvFiles,
+  type TestEnv,
+} from '../helpers';
 
 // AI outfit images on looks (GET /v1/outfits/:id/image) and looks built around a designed garment (D-132).
 // Images come from a fake provider; nothing reaches Pollinations.
@@ -173,23 +181,24 @@ describe('AI outfit images (GET /v1/outfits/:id/image)', () => {
     expect(limited.status).toBe(429);
   });
 
-  it('can be switched on only locally, and only with a key', () => {
-    const base = {
-      APP_ENV: 'local',
-      MONGODB_URI: 'mongodb://x',
-      TOMBSTONE_STORE_URI: 'mongodb://y',
-      TOMBSTONE_HMAC_KEY: 'k'.repeat(32),
-      AUTH_ACCESS_TOKEN_SECRET: 'a'.repeat(32),
-      BFF_SHARED_SECRET: 'b'.repeat(32),
-      WEB_ORIGIN: 'http://localhost:3000',
-      OUTFIT_IMAGES_ENABLED: 'true',
-    };
-    expect(() => loadConfig(base)).toThrow(/POLLINATIONS_API_KEY/);
-    expect(() => loadConfig({ ...base, APP_ENV: 'staging', POLLINATIONS_API_KEY: 'sk_test' })).toThrow(
-      /OUTFIT_IMAGES_ENABLED/,
-    );
-    expect(loadConfig({ ...base, POLLINATIONS_API_KEY: 'sk_test' }).OUTFIT_IMAGES_ENABLED).toBe(true);
-  });
+  it('can be switched on only locally, and only with a key', () =>
+    withoutDotenvFiles(() => {
+      const base = {
+        APP_ENV: 'local',
+        MONGODB_URI: 'mongodb://x',
+        TOMBSTONE_STORE_URI: 'mongodb://y',
+        TOMBSTONE_HMAC_KEY: 'k'.repeat(32),
+        AUTH_ACCESS_TOKEN_SECRET: 'a'.repeat(32),
+        BFF_SHARED_SECRET: 'b'.repeat(32),
+        WEB_ORIGIN: 'http://localhost:3000',
+        OUTFIT_IMAGES_ENABLED: 'true',
+      };
+      expect(() => loadConfig(base)).toThrow(/POLLINATIONS_API_KEY/);
+      expect(() => loadConfig({ ...base, APP_ENV: 'staging', POLLINATIONS_API_KEY: 'sk_test' })).toThrow(
+        /OUTFIT_IMAGES_ENABLED/,
+      );
+      expect(loadConfig({ ...base, POLLINATIONS_API_KEY: 'sk_test' }).OUTFIT_IMAGES_ENABLED).toBe(true);
+    }));
 });
 
 describe('looks built around a designed garment (D-132)', () => {

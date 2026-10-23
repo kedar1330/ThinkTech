@@ -32,7 +32,7 @@ export function buildFacePrompt(): string {
   return [
     'You analyse one face photo for a fashion styling app that suggests clothing colours.',
     QUALITY,
-    'Use "multiple_people" if more than one face is visible and "face_not_found" if no face is clearly visible.',
+    'Use "multiple_people" if more than one face is visible and "face_not_found" if no face is clearly visible or if key facial features (forehead, eyes, cheeks) are cropped out.',
     '',
     'Skin tone: judge the overall lightness or darkness of the facial skin, measured across several facial skin regions (forehead, both cheeks, jawline) and averaged. Choose the closest tone on the Monk Skin Tone scale:',
     MONK_TONES.map((t) => `- ${t.tone}: ${t.hex}`).join('\n'),

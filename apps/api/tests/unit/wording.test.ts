@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BASE_CONFIG } from '../helpers';
+import { BASE_CONFIG, withoutDotenvFiles } from '../helpers';
 import { loadConfig } from '../../src/config/env';
 import { buildWordingPrompt, WORDING_PROMPT_VERSION } from '../../src/integrations/ai/prompts/v1';
 import { geminiWordingProvider, WordingProviderError } from '../../src/integrations/ai/wording-client';
@@ -46,24 +46,25 @@ function memoryCache(failing = false) {
 }
 
 describe('T-25 AI wording off (the default)', () => {
-  it('T-25 off by default in config, and the key and model are needed only when it is on', () => {
-    const env = {
-      APP_ENV: 'local',
-      MONGODB_URI: 'mongodb://x',
-      TOMBSTONE_STORE_URI: 'mongodb://y',
-      TOMBSTONE_HMAC_KEY: BASE_CONFIG.TOMBSTONE_HMAC_KEY,
-      AUTH_ACCESS_TOKEN_SECRET: BASE_CONFIG.AUTH_ACCESS_TOKEN_SECRET,
-      BFF_SHARED_SECRET: BASE_CONFIG.BFF_SHARED_SECRET,
-      WEB_ORIGIN: 'http://localhost:3000',
-    };
-    expect(loadConfig(env)).toMatchObject({ AI_WORDING_ENABLED: false, AI_WORDING_TIMEOUT_MS: 4000 });
-    expect(() => loadConfig({ ...env, AI_WORDING_ENABLED: 'true' })).toThrow(/GEMINI_API_KEY, GEMINI_MODEL/);
-    expect(() => loadConfig({ ...env, AI_WORDING_ENABLED: 'true', GEMINI_API_KEY: 'secret-value' })).not.toThrow(
-      /secret-value/,
-    );
-    const on = loadConfig({ ...env, AI_WORDING_ENABLED: 'true', GEMINI_API_KEY: 'k', GEMINI_MODEL: 'm' });
-    expect(on.AI_WORDING_ENABLED).toBe(true);
-  });
+  it('T-25 off by default in config, and the key and model are needed only when it is on', () =>
+    withoutDotenvFiles(() => {
+      const env = {
+        APP_ENV: 'local',
+        MONGODB_URI: 'mongodb://x',
+        TOMBSTONE_STORE_URI: 'mongodb://y',
+        TOMBSTONE_HMAC_KEY: BASE_CONFIG.TOMBSTONE_HMAC_KEY,
+        AUTH_ACCESS_TOKEN_SECRET: BASE_CONFIG.AUTH_ACCESS_TOKEN_SECRET,
+        BFF_SHARED_SECRET: BASE_CONFIG.BFF_SHARED_SECRET,
+        WEB_ORIGIN: 'http://localhost:3000',
+      };
+      expect(loadConfig(env)).toMatchObject({ AI_WORDING_ENABLED: false, AI_WORDING_TIMEOUT_MS: 4000 });
+      expect(() => loadConfig({ ...env, AI_WORDING_ENABLED: 'true' })).toThrow(/GEMINI_API_KEY, GEMINI_MODEL/);
+      expect(() => loadConfig({ ...env, AI_WORDING_ENABLED: 'true', GEMINI_API_KEY: 'secret-value' })).not.toThrow(
+        /secret-value/,
+      );
+      const on = loadConfig({ ...env, AI_WORDING_ENABLED: 'true', GEMINI_API_KEY: 'k', GEMINI_MODEL: 'm' });
+      expect(on.AI_WORDING_ENABLED).toBe(true);
+    }));
 
   it('T-25 with wording off, the provider is never called and the template text is kept', async () => {
     const { provider, service } = setup({ kind: 'ok' }, false);

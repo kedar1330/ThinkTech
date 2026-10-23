@@ -22,6 +22,7 @@ interface ApiRequestOptions {
   rawBody?: { bytes: Uint8Array; contentType: string };
   token?: string;
   clientIp?: string;
+  headers?: Record<string, string>;
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
@@ -32,6 +33,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   const headers: Record<string, string> = {
     'content-type': options.rawBody?.contentType ?? 'application/json',
     [BFF_KEY_HEADER]: bffSecret,
+    ...(options.headers ?? {}),
   };
   if (options.token) headers.authorization = `Bearer ${options.token}`;
   if (options.clientIp) headers[CLIENT_IP_HEADER] = options.clientIp;

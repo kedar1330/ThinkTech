@@ -13,6 +13,7 @@ import { FieldPrivacyNote } from '@/components/profile/FieldPrivacyNote';
 import { MyPhotos } from '@/components/profile/MyPhotos';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { SkinToneSection } from '@/components/profile/SkinToneSection';
+import { VirtualTryOnSection } from '@/components/profile/VirtualTryOnSection';
 import { Card } from '@/components/ui/card';
 import { apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
@@ -23,6 +24,7 @@ const SECTIONS = [
   { id: 'basics', label: 'Clothing preference' },
   { id: 'skin-tone', label: 'Skin tone & undertone' },
   { id: 'body-type', label: 'Body type & measurements' },
+  { id: 'try-on', label: '3D Virtual Try-On' },
 ] as const;
 
 // My Profile (D-129): Clothing Preference and basics, then skin tone and undertone (face photo or manual),
@@ -76,7 +78,7 @@ export default async function ProfilePage() {
         <div className="space-y-1">
           <h2 className="font-display text-2xl text-primary">Body type</h2>
           <p className="text-sm text-muted-foreground">
-            Enter a few measurements and we’ll identify your body type, or upload a full-body photo instead.
+            Enter a few measurements and we’ll identify your body type, or choose your body type directly.
           </p>
         </div>
         <BodyTypeSection
@@ -86,6 +88,17 @@ export default async function ProfilePage() {
           measurements={measurements}
           analysisAvailable={photos.analysisAvailable}
         />
+      </Card>
+
+      <Card id="try-on" className="scroll-mt-20 space-y-4">
+        <div className="space-y-1">
+          <h2 className="font-display text-2xl text-primary">3D Virtual Try-On</h2>
+          <p className="text-sm text-muted-foreground">
+            Choose whether to upload your photo to create a personalized 3D model, or try on clothes using our standard
+            dummy model.
+          </p>
+        </div>
+        <VirtualTryOnSection profile={profile} photos={photos.photos} />
       </Card>
 
       <Card className="space-y-4">

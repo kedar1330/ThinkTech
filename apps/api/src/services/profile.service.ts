@@ -60,6 +60,7 @@ function toResponse(doc: (ProfileDoc & { updatedAt?: Date }) | null): ProfileRes
     preferredStyles: (doc?.preferredStyles ?? []) as ProfileResponse['preferredStyles'],
     preferredOccasions: (doc?.preferredOccasions ?? []) as ProfileResponse['preferredOccasions'],
     budgetPreference: doc?.budgetPreference ?? null,
+    tryOnModel: (doc?.tryOnModel as ProfileResponse['tryOnModel']) ?? 'dummy_model',
     updatedAt: doc?.updatedAt ? doc.updatedAt.toISOString() : null,
   };
 }
@@ -85,6 +86,7 @@ export class ProfileService {
     if (input.budgetPreference !== undefined) set.budgetPreference = input.budgetPreference;
     if (input.ageGroup !== undefined) set.ageGroup = input.ageGroup;
     if (input.heightCm !== undefined) set.heightCm = input.heightCm;
+    if (input.tryOnModel !== undefined) set.tryOnModel = input.tryOnModel;
 
     const doc = await this.models.Profile.findOneAndUpdate(
       { userId },

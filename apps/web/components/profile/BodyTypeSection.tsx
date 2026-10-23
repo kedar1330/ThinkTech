@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { PencilLine, Ruler } from 'lucide-react';
 import {
   BODY_TYPE_DESCRIPTIONS,
   MEASUREMENT_ORDER,
@@ -14,15 +15,12 @@ import {
 import { confirmAppearanceAction, saveBodyTypeAction } from '@/app/actions/appearance';
 import type { FormState } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
-import { ModeChoice, SourceLine, Status, type EntryMode } from '@/components/profile/AppearanceShared';
+import { SourceLine, Status } from '@/components/profile/AppearanceShared';
 import { MeasurementStepper } from '@/components/profile/MeasurementStepper';
-import { PhotoUpload } from '@/components/profile/PhotoUpload';
 import { cn } from '@/lib/utils';
 
-// Body type (D-129). The user enters the body-type measurements for their Clothing Preference, or — if they
-// don't have them, or want to try clothes on a 2D/3D model later — uploads a full-body photo that Gemini
-// analyses. Either way the result appears at once and can be confirmed or corrected. Fit measurements are a
-// separate, optional, hidden-by-default part.
+// Body type: Manual selection only (by measurements or direct shape selection).
+// Face analysis continues to use Gemini Vision AI.
 
 function BodyTypePicker({
   department,
@@ -72,21 +70,15 @@ export function BodyTypeSection({
   department,
   appearance,
   measurements,
-  analysisAvailable,
+  analysisAvailable: _analysisAvailable,
 }: {
   department: ClothingPreference | null;
   appearance: AppearanceResponse;
   measurements: MeasurementsResponse;
-  analysisAvailable: boolean;
+  analysisAvailable?: boolean;
 }) {
   const bodyType = appearance.bodyType;
-  const [mode, setMode] = useState<EntryMode | null>(
-    bodyType?.source === 'photo_estimate'
-      ? 'photo'
-      : bodyType || Object.keys(measurements.valuesCm).length
-        ? 'manual'
-        : null,
-  );
+  const [mode, setMode] = useState<'measurements' | 'picker'>('measurements');
   const [correcting, setCorrecting] = useState(false);
   const [state, setState] = useState<FormState>(undefined);
   const [pending, startTransition] = useTransition();
@@ -138,18 +130,48 @@ export function BodyTypeSection({
         </div>
       ) : null}
 
-      <ModeChoice
-        mode={mode}
-        onChange={(m) => {
-          setMode(m);
-          setState(undefined);
-        }}
-        photoLabel="Upload a full-body photo"
-        manualLabel="Enter my measurements"
-        photoAvailable={analysisAvailable}
-      />
+      <div role="radiogroup" aria-label="Body type selection method" className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          role="radio"
+          aria-checked={mode === 'measurements'}
+          onClick={() => {
+            setMode('measurements');
+            setState(undefined);
+          }}
+          className={cn(
+            'flex min-h-16 items-center gap-3 rounded-xl border border-input bg-surface px-4 py-3 text-left text-sm font-medium transition-colors hover:border-plum/50',
+            mode === 'measurements' && 'border-plum bg-accent-soft/50',
+          )}
+        >
+          <Ruler aria-hidden className="size-5 shrink-0 text-plum" />
+          <span>
+            Enter my measurements
+            <span className="block text-xs font-normal text-muted-foreground">Guided measurement calculator</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={mode === 'picker'}
+          onClick={() => {
+            setMode('picker');
+            setState(undefined);
+          }}
+          className={cn(
+            'flex min-h-16 items-center gap-3 rounded-xl border border-input bg-surface px-4 py-3 text-left text-sm font-medium transition-colors hover:border-plum/50',
+            mode === 'picker' && 'border-plum bg-accent-soft/50',
+          )}
+        >
+          <PencilLine aria-hidden className="size-5 shrink-0 text-plum" />
+          <span>
+            Choose body type directly
+            <span className="block text-xs font-normal text-muted-foreground">Select your shape from the list</span>
+          </span>
+        </button>
+      </div>
 
-      {mode === 'manual' ? (
+      {mode === 'measurements' ? (
         <div className="space-y-3">
           <MeasurementStepper
             key={`${department}-body`}
@@ -170,17 +192,11 @@ export function BodyTypeSection({
             </details>
           ) : null}
         </div>
-      ) : null}
-
-      {mode === 'photo' ? (
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">
-            No measurements to hand? A full-body photo works too. It is also kept for trying clothes on your 2D or 3D
-            model later.
-          </p>
-          <PhotoUpload kind="body" />
+      ) : (
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <BodyTypePicker department={department} current={bodyType?.value ?? null} onSaved={setState} />
         </div>
-      ) : null}
+      )}
 
       <Status state={state} />
 
