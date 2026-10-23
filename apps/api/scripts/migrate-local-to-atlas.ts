@@ -1,12 +1,12 @@
 import { MongoClient } from 'mongodb';
 
 const LOCAL_BASE_URI = process.env.LOCAL_MONGODB_URI ?? 'mongodb://127.0.0.1:27017';
-const ATLAS_BASE_URI = process.env.MONGODB_URI ?? process.argv[2];
-
-if (!ATLAS_BASE_URI) {
+const rawAtlasUri = process.env.MONGODB_URI ?? process.argv[2];
+if (!rawAtlasUri) {
   console.error('Usage: tsx scripts/migrate-local-to-atlas.ts <ATLAS_MONGODB_URI> or set MONGODB_URI in environment.');
   process.exit(1);
 }
+const ATLAS_BASE_URI: string = rawAtlasUri;
 
 async function migrateAll() {
   console.log('========================================================');

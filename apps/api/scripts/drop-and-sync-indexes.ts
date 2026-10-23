@@ -19,7 +19,7 @@ async function main() {
       const col = db.collection(c.name);
       const indexes = await col.indexes();
       for (const idx of indexes) {
-        if (idx.name === '_id_') continue;
+        if (idx.name === '_id_' || !idx.name) continue;
         console.log(`  Dropping ${idx.name} on ${c.name}...`);
         await col.dropIndex(idx.name);
       }
@@ -28,7 +28,6 @@ async function main() {
   }
 
   console.log('\n2. Rebuilding all indexes cleanly via Mongoose schemas...');
-  const config = loadConfig();
   const db = await connectDatabase(config.MONGODB_URI, config.TOMBSTONE_STORE_URI);
   console.log('Successfully connected to database and initialized all Mongoose models with pristine indexes!');
   await db.close();

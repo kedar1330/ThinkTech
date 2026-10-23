@@ -50,9 +50,9 @@ export default async function DiscoverLooksPage({
       outfitLabel: 'Indian Wear',
       features: ['V-neck', 'Three-quarter sleeve'],
       layers: [
-        { assetId: 'base', url: '/illustrations/design/women-base.svg', width: 640, height: 960 },
-        { assetId: 'v', url: '/illustrations/design/women-layer-neckline-v_neck.svg', width: 640, height: 960 },
-        { assetId: 's', url: '/illustrations/design/women-layer-sleeve-three_quarter.svg', width: 640, height: 960 },
+        { assetId: 'base', url: '/illustrations/design/women-base.svg', alt: 'Women base figure' },
+        { assetId: 'v', url: '/illustrations/design/women-layer-neckline-v_neck.svg', alt: 'V-neckline' },
+        { assetId: 's', url: '/illustrations/design/women-layer-sleeve-three_quarter.svg', alt: 'Three-quarter sleeve' },
       ],
       occasionFeature: 'occasion_casual',
     },
