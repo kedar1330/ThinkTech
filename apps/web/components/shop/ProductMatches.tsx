@@ -163,7 +163,7 @@ export function ProductMatches({
         )}
         {picked.length > 0 && (
           <p>
-            Your picks ({picked.length} of {matches.slots.length}):{' '}
+            Your saved items ({picked.length} of {matches.slots.length}):{' '}
             <span className="font-medium">{formatInr(pickedTotal)}</span>
             {budget !== null &&
               (pickedTotal <= budget
@@ -172,7 +172,7 @@ export function ProductMatches({
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Search-result prices; they can change and aren’t a checkout price. Your picks are saved with this look.
+          Search-result prices; they can change and aren’t a checkout price. Saved items stay with this look.
         </p>
         {pickError && <Alert tone="error">{pickError}</Alert>}
       </Card>
@@ -243,6 +243,12 @@ export function ProductMatches({
                         ) : (
                           <span aria-hidden className="block aspect-square w-full rounded-lg bg-surface-muted" />
                         )}
+                        {isPicked && (
+                          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+                            <Heart aria-hidden className="size-3 fill-current" />
+                            Saved
+                          </span>
+                        )}
                         <span className="line-clamp-2 text-foreground">{l.title}</span>
                         <span>
                           <span className="text-sm font-medium text-foreground">{formatInr(l.price)}</span>{' '}
@@ -258,13 +264,12 @@ export function ProductMatches({
                         >
                           <button
                             type="button"
-                            aria-pressed={Boolean(isPicked)}
                             disabled={saving}
                             onClick={() => togglePick(slot.slotId, l, Boolean(isPicked))}
                             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
                           >
                             <Heart aria-hidden className="size-3.5" />
-                            {isPicked ? 'Saved to this look' : 'Save to this look'}
+                            {isPicked ? 'Remove from this look' : 'Save to this look'}
                           </button>
                           {/* Coming soon until Virtual Try-On is built; then it opens with this garment (#124). */}
                           <TryOnButton outfitId={look.id} lookName={l.title} slotId={slot.slotId} />
