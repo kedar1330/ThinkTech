@@ -5,6 +5,7 @@ import {
   PRICE_RANGE_LABEL,
   PRODUCTS_PER_STORE,
   PRODUCT_MATCHES_LABEL,
+  lookPicksResponseSchema,
   lookPriceRangeSchema,
   lookProductMatchesSchema,
   lookSchema,
@@ -295,5 +296,88 @@ describe('GET /v1/outfits/:id/products (#120)', () => {
     const offLook = await firstLook(off.app, off.token);
     const res = await request(off.app).get(`/v1/outfits/${offLook.id}/products`).set(bearer(off.token));
     expect(res.body.error.code).toBe('PROVIDER_NOT_CONFIGURED');
+  });
+});
+
+describe('picks (PUT/GET/DELETE /v1/outfits/:id/picks, #120)', () => {
+  async function withProducts(email: string) {
+    const shopping = new FakeShoppingProvider();
+    const { app, token } = await signedIn(email, shopping);
+    const look = await firstLook(app, token);
+    const matches = lookProductMatchesSchema.parse(
+      (await request(app).get(`/v1/outfits/${look.id}/products`).set(bearer(token))).body.data,
+    );
+    return { app, token, look, matches };
+  }
+
+  it('saves one pick per garment on the look, replaces it, and removes it', async () => {
+    const { app, token, look, matches } = await withProducts('picks@example.com');
+    const [first, second] = matches.slots[0]!.listings;
+    const slotId = matches.slots[0]!.slotId;
+
+    const put = await request(app)
+      .put(`/v1/outfits/${look.id}/picks`)
+      .set(bearer(token))
+      .send({ slotId, listing: first });
+    expect(put.status).toBe(200);
+    expect(lookPicksResponseSchema.parse(put.body.data).picks).toEqual([
+      { ...first, slotId, pickedAt: expect.any(String) },
+    ]);
+    const stored = await env.db.models.Outfit.findById(look.id).lean();
+    expect(stored!.shopPicks).toHaveLength(1);
+
+    await request(app)
+      .put(`/v1/outfits/${look.id}/picks`)
+      .set(bearer(token))
+      .send({ slotId, listing: second })
+      .expect(200);
+    const list = lookPicksResponseSchema.parse(
+      (await request(app).get(`/v1/outfits/${look.id}/picks`).set(bearer(token))).body.data,
+    );
+    expect(list.picks.map((p) => [p.slotId, p.title])).toEqual([[slotId, second!.title]]);
+
+    const del = await request(app).delete(`/v1/outfits/${look.id}/picks/${slotId}`).set(bearer(token));
+    expect(lookPicksResponseSchema.parse(del.body.data).picks).toEqual([]);
+  });
+
+  it('never saves a made-up product: the listing must be one the search returned for that garment', async () => {
+    const { app, token, look, matches } = await withProducts('fake-pick@example.com');
+    const slot = matches.slots[0]!;
+    const made = { ...slot.listings[0]!, price: 1 };
+    const res = await request(app)
+      .put(`/v1/outfits/${look.id}/picks`)
+      .set(bearer(token))
+      .send({ slotId: slot.slotId, listing: made });
+    expect(res.status).toBe(404);
+    const wrongSlot = await request(app)
+      .put(`/v1/outfits/${look.id}/picks`)
+      .set(bearer(token))
+      .send({ slotId: 'shoes', listing: slot.listings[0] });
+    expect(wrongSlot.body.error.code).toBe('INVALID_REQUEST');
+    const bad = await request(app)
+      .put(`/v1/outfits/${look.id}/picks`)
+      .set(bearer(token))
+      .send({ slotId: slot.slotId, listing: { title: 'x' } });
+    expect(bad.body.error.code).toBe('INVALID_REQUEST');
+    expect((await env.db.models.Outfit.findById(look.id).lean())!.shopPicks).toEqual([]);
+  });
+
+  it('T-04 another user can neither read nor change the picks', async () => {
+    const { app, look, matches } = await withProducts('pick-owner@example.com');
+    const other = await signedIn('pick-other@example.com', new FakeShoppingProvider());
+    const slot = matches.slots[0]!;
+    expect((await request(other.app).get(`/v1/outfits/${look.id}/picks`).set(bearer(other.token))).status).toBe(404);
+    expect(
+      (
+        await request(other.app)
+          .put(`/v1/outfits/${look.id}/picks`)
+          .set(bearer(other.token))
+          .send({ slotId: slot.slotId, listing: slot.listings[0] })
+      ).status,
+    ).toBe(404);
+    expect(
+      (await request(other.app).delete(`/v1/outfits/${look.id}/picks/${slot.slotId}`).set(bearer(other.token))).status,
+    ).toBe(404);
+    expect((await request(app).get(`/v1/outfits/${look.id}/picks`)).status).toBe(401);
   });
 });

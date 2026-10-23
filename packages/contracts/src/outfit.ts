@@ -449,3 +449,17 @@ export const lookProductMatchesSchema = z
   })
   .strict();
 export type LookProductMatches = z.infer<typeof lookProductMatchesSchema>;
+
+/** A product the user picked for one garment of the look (#120), stored on the look. */
+export const lookPickSchema = productListingSchema
+  .extend({ slotId: slotIdSchema, pickedAt: z.iso.datetime() })
+  .strict();
+export type LookPick = z.infer<typeof lookPickSchema>;
+
+/** `PUT /v1/outfits/:id/picks`: pick one of the listings returned for that garment (replaces an earlier pick). */
+export const pickProductRequestSchema = z.object({ slotId: slotIdSchema, listing: productListingSchema }).strict();
+export type PickProductRequest = z.infer<typeof pickProductRequestSchema>;
+
+/** `GET`, `PUT` and `DELETE /v1/outfits/:id/picks…` data: the look's picks, one per garment at most. */
+export const lookPicksResponseSchema = z.object({ picks: z.array(lookPickSchema) }).strict();
+export type LookPicksResponse = z.infer<typeof lookPicksResponseSchema>;

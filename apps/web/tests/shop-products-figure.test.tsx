@@ -9,6 +9,14 @@ import {
   type LookSlot,
   type ProductListing,
 } from '@styleme/contracts';
+const shopActions = vi.hoisted(() => ({
+  pickProductAction: vi.fn(),
+  unpickProductAction: vi.fn(),
+  attachItemAction: vi.fn(),
+  detachItemAction: vi.fn(),
+}));
+vi.mock('@/app/actions/shop', () => shopActions);
+
 import { BodyTypeFigure, FIGURE_LABEL } from '@/components/shop/BodyTypeFigure';
 import { ProductMatches } from '@/components/shop/ProductMatches';
 
@@ -80,7 +88,11 @@ const replyWith = (res: Response) =>
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  shopActions.pickProductAction.mockReset();
+  shopActions.unpickProductAction.mockReset();
 });
+
+const asPick = (slotId: string, l: ProductListing) => ({ ...l, slotId, pickedAt: '2026-10-23T05:30:00.000Z' });
 
 describe('similar products to compare', () => {
   it('lists each garment’s items with the store’s title, price, thumbnail and Google Shopping link, with the label', async () => {
@@ -113,13 +125,41 @@ describe('similar products to compare', () => {
     expect(screen.getByRole('region', { name: /^Trousers/ })).toHaveTextContent('No similar items found on Amazon.');
     await userEvent.click(screen.getByRole('button', { name: 'All stores' }));
 
+    const kurta = item('amazon', 'Synthetic kurta A', 699);
+    const trousers = item('flipkart', 'Synthetic trousers F', 499);
+    shopActions.pickProductAction
+      .mockResolvedValueOnce({ picks: [asPick('top', kurta)] })
+      .mockResolvedValueOnce({ picks: [asPick('top', kurta), asPick('bottom', trousers)] });
+    shopActions.unpickProductAction.mockResolvedValueOnce({ picks: [asPick('bottom', trousers)] });
     await userEvent.click(screen.getByRole('button', { name: 'Pick Synthetic kurta A for Kurta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Pick Synthetic trousers F for Trousers' }));
+    expect(shopActions.pickProductAction).toHaveBeenLastCalledWith(ID, 'bottom', trousers);
     const totals = screen.getByRole('group', { name: 'Compare totals' });
     expect(totals).toHaveTextContent('Your picks (2 of 2): ₹1,198 — over your ₹1,000 budget per look by ₹198.');
 
     await userEvent.click(screen.getByRole('button', { name: 'Unpick Synthetic kurta A for Kurta' }));
     expect(totals).toHaveTextContent('Your picks (1 of 2): ₹499 — within your ₹1,000 budget per look, ₹501 left.');
+  });
+
+  it('starts from the picks saved on the look, and puts them back with the reason when saving fails', async () => {
+    replyWith(Response.json(matches));
+    const saved = asPick('top', item('meesho', 'Synthetic kurta M', 299));
+    render(
+      <ProductMatches look={look} budget={null} fallback={<p>Product data unavailable</p>} initialPicks={[saved]} />,
+    );
+    await screen.findByRole('heading', { name: 'Similar items to compare' });
+    expect(screen.getByRole('button', { name: 'Unpick Synthetic kurta M for Kurta' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('group', { name: 'Compare totals' })).toHaveTextContent('Your picks (1 of 2): ₹299');
+
+    shopActions.pickProductAction.mockResolvedValueOnce({
+      error: 'That item is no longer in the search results. Please pick another.',
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Pick Synthetic kurta A for Kurta' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('no longer in the search results');
+    expect(screen.getByRole('button', { name: 'Unpick Synthetic kurta M for Kurta' })).toBeInTheDocument();
   });
 
   it('never shows made-up items: an error or a malformed reply shows the fallback', async () => {

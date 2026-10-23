@@ -6,6 +6,7 @@ import {
   SHORTLIST_LIMITS,
   objectIdSchema,
   type AppearanceResponse,
+  type LookPicksResponse,
   slotIdSchema,
   type Look,
   type OutfitDetail,
@@ -125,13 +126,16 @@ export default async function ShopPage({
   let items: UserShortlistItem[];
   let profile: ProfileResponse;
   let appearance: AppearanceResponse | null;
+  let picks: LookPicksResponse | null;
   try {
-    [look, items, profile, appearance] = await Promise.all([
+    [look, items, profile, appearance, picks] = await Promise.all([
       apiRequest<OutfitDetail>(`/v1/outfits/${selectedId}`, { token }),
       allItems(token),
       apiRequest<ProfileResponse>('/v1/profile', { token }),
       // Only picks the figure's shape (#120); without it the default figure is shown.
       apiRequest<AppearanceResponse>('/v1/appearance', { token }).catch(() => null),
+      // Saved product picks (#120); without them the comparison simply starts empty.
+      apiRequest<LookPicksResponse>(`/v1/outfits/${selectedId}/picks`, { token }).catch(() => null),
     ]);
   } catch (err) {
     if (err instanceof ApiError && err.code === 'NOT_FOUND') notFound();
@@ -171,6 +175,7 @@ export default async function ShopPage({
         look={look}
         budget={profile.budgetPreference ?? null}
         fallback={<ProductDataUnavailable />}
+        initialPicks={picks?.picks ?? []}
       />
       {look.status === 'saved' ? (
         <LookShopper

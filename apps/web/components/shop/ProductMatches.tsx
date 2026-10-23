@@ -1,15 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import {
   CATEGORIES,
   PRICE_RANGE_STORES,
   lookProductMatchesSchema,
   type Look,
+  type LookPick,
   type LookProductMatches,
   type PriceRangeStore,
   type ProductListing,
 } from '@styleme/contracts';
+import { pickProductAction, unpickProductAction, type PicksResult } from '@/app/actions/shop';
+import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { garmentSlots, slotLabel, vocabLabel } from '@/lib/outfits/look-text';
 import { formatInr } from '@/lib/shop/format';
@@ -24,21 +27,51 @@ const pickKey = (l: ProductListing) => `${l.store}|${l.title}|${l.price}`;
 /**
  * Similar products for each garment of the look (#120), from Amazon, Flipkart and Meesho search results:
  * the store's own title, thumbnail and price, cheapest first, with each store's price spread. The user can
- * pick one per garment to compare totals with the cheapest picks and their budget per look. Picks stay on
- * this page. Only real listings are shown, always with the label; without them, `fallback` is shown.
+ * pick one per garment to compare totals with the cheapest picks and their budget per look; picks are saved on
+ * the look. Only real listings are shown, always with the label; without them, `fallback` is shown.
  */
 export function ProductMatches({
   look,
   budget,
   fallback,
+  initialPicks = [],
 }: {
   look: Pick<Look, 'id' | 'slots'>;
   budget: number | null;
   fallback: React.ReactNode;
+  /** The picks saved on the look. */
+  initialPicks?: readonly LookPick[];
 }) {
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [store, setStore] = useState<StoreFilter>('all');
-  const [picks, setPicks] = useState<Record<string, ProductListing>>({});
+  const [picks, setPicks] = useState<Record<string, ProductListing>>(() =>
+    Object.fromEntries(initialPicks.map((p) => [p.slotId, p])),
+  );
+  const [pickError, setPickError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
+
+  /** Shows the change at once, saves it, and puts the picks back if saving fails. */
+  const togglePick = (slotId: string, listing: ProductListing, picked: boolean) => {
+    const before = picks;
+    setPickError(null);
+    setPicks((p) => {
+      const next = { ...p };
+      if (picked) delete next[slotId];
+      else next[slotId] = listing;
+      return next;
+    });
+    startSaving(async () => {
+      const result: PicksResult = picked
+        ? await unpickProductAction(look.id, slotId)
+        : await pickProductAction(look.id, slotId, listing);
+      if (result.error !== undefined) {
+        setPicks(before);
+        setPickError(result.error);
+      } else {
+        setPicks(Object.fromEntries(result.picks.map((p) => [p.slotId, p])));
+      }
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -121,8 +154,9 @@ export function ProductMatches({
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Search-result prices; they can change and aren’t a checkout price.
+          Search-result prices; they can change and aren’t a checkout price. Your picks are saved with this look.
         </p>
+        {pickError && <Alert tone="error">{pickError}</Alert>}
       </Card>
 
       {matches.slots.map((slot) => {
@@ -189,14 +223,8 @@ export function ProductMatches({
                           type="button"
                           aria-pressed={Boolean(isPicked)}
                           aria-label={`${isPicked ? 'Unpick' : 'Pick'} ${l.title} for ${name}`}
-                          onClick={() =>
-                            setPicks((p) => {
-                              const next = { ...p };
-                              if (isPicked) delete next[slot.slotId];
-                              else next[slot.slotId] = l;
-                              return next;
-                            })
-                          }
+                          disabled={saving}
+                          onClick={() => togglePick(slot.slotId, l, Boolean(isPicked))}
                           className="rounded-full border border-border px-2.5 py-0.5 hover:border-plum/60"
                         >
                           {isPicked ? 'Picked' : 'Pick'}

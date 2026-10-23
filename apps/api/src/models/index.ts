@@ -417,6 +417,8 @@ const outfitSchema = new Schema(
     designMatch: { type: Schema.Types.Mixed, default: null },
     // The feature the look was created in (#115); migration 003 fills it on looks made before it existed.
     source: { type: String, enum: ['discover_my_style'], default: 'discover_my_style' },
+    // Products the user picked on Shop My Look (#120), one per garment: `lookPickSchema`, from search results.
+    shopPicks: { type: [Schema.Types.Mixed], default: [] },
     expiresAt: { type: Date, default: null },
   },
   { timestamps: true, minimize: false },

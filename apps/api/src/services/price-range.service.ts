@@ -7,9 +7,11 @@ import {
   PRODUCTS_PER_STORE,
   PRODUCT_MATCHES_LABEL,
   type LookInputs,
+  type LookPick,
   type LookPriceRange,
   type LookProductMatches,
   type LookSlot,
+  type PickProductRequest,
   type PriceRangeStore,
   type ProductListing,
   type SlotPriceRange,
@@ -222,13 +224,58 @@ export class PriceRangeService {
     };
   }
 
+  /** `GET /v1/outfits/:id/picks` (#120): the products the user picked for the look's garments. */
+  async picks(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<LookPick[]> {
+    const look = await this.models.Outfit.findOne(this.owned(userId, outfitId), { shopPicks: 1 }).lean();
+    if (!look) throw new AppError('NOT_FOUND');
+    return (look.shopPicks ?? []) as LookPick[];
+  }
+
+  /**
+   * `PUT /v1/outfits/:id/picks` (#120): picks a product for one garment, replacing an earlier pick. Only a
+   * listing the search returned for that garment can be picked, so a pick is never a made-up product.
+   */
+  async pick(userId: Types.ObjectId, outfitId: Types.ObjectId, request: PickProductRequest): Promise<LookPick[]> {
+    const { slots } = await this.products(userId, outfitId);
+    const slot = slots.find((s) => s.slotId === request.slotId);
+    if (!slot) throw new AppError('INVALID_REQUEST', 'That part of the look can’t be shopped.');
+    const { listing } = request;
+    const found = slot.listings.find(
+      (l) =>
+        l.store === listing.store && l.title === listing.title && l.price === listing.price && l.link === listing.link,
+    );
+    if (!found) throw new AppError('NOT_FOUND', 'That item is no longer in the search results. Please pick another.');
+    const pick: LookPick = { ...found, slotId: slot.slotId, pickedAt: this.now().toISOString() };
+    // One pick per garment: drop the slot's earlier pick, then add this one.
+    await this.models.Outfit.updateOne(this.owned(userId, outfitId), { $pull: { shopPicks: { slotId: slot.slotId } } });
+    const doc = await this.models.Outfit.findOneAndUpdate(
+      this.owned(userId, outfitId),
+      { $push: { shopPicks: pick } },
+      { returnDocument: 'after', projection: { shopPicks: 1 } },
+    ).lean();
+    if (!doc) throw new AppError('NOT_FOUND');
+    return (doc.shopPicks ?? []) as LookPick[];
+  }
+
+  /** `DELETE /v1/outfits/:id/picks/:slotId` (#120): removes the pick for one garment (harmless if none). */
+  async unpick(userId: Types.ObjectId, outfitId: Types.ObjectId, slotId: string): Promise<LookPick[]> {
+    const doc = await this.models.Outfit.findOneAndUpdate(
+      this.owned(userId, outfitId),
+      { $pull: { shopPicks: { slotId } } },
+      { returnDocument: 'after', projection: { shopPicks: 1 } },
+    ).lean();
+    if (!doc) throw new AppError('NOT_FOUND');
+    return (doc.shopPicks ?? []) as LookPick[];
+  }
+
+  /** The user's own look if it still exists: saved, or a suggestion not past its expiry. */
+  private owned(userId: Types.ObjectId, outfitId: Types.ObjectId) {
+    return { _id: outfitId, userId, $or: [{ expiresAt: null }, { expiresAt: { $gt: this.now() } }] };
+  }
+
   /** The look's garments, each with its Amazon, Flipkart and Meesho listings from the three searches. */
   private async search(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<Searched[]> {
-    const look = await this.models.Outfit.findOne({
-      _id: outfitId,
-      userId,
-      $or: [{ expiresAt: null }, { expiresAt: { $gt: this.now() } }],
-    }).lean<StoredLook>();
+    const look = await this.models.Outfit.findOne(this.owned(userId, outfitId)).lean<StoredLook>();
     if (!look) throw new AppError('NOT_FOUND');
     if (!this.provider) throw new AppError('PROVIDER_NOT_CONFIGURED', 'Price ranges are not available yet.');
 
