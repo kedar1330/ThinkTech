@@ -115,6 +115,17 @@ describe('similar products to compare', () => {
     );
   });
 
+  it('#124 every item has a Virtual Try-On button that opens the Coming soon page until try-on exists', async () => {
+    replyWith(Response.json(matches));
+    render(<ProductMatches look={look} budget={null} fallback={<p>Product data unavailable</p>} />);
+    await screen.findByRole('heading', { name: 'Similar items to compare' });
+    for (const title of ['Synthetic kurta M', 'Synthetic kurta A', 'Synthetic trousers F']) {
+      const tryOn = screen.getByRole('link', { name: `Virtual Try-On: ${title} (coming soon)` });
+      expect(tryOn).toHaveAttribute('href', '/features/virtual-try-on');
+      expect(tryOn).toHaveTextContent('Soon');
+    }
+  });
+
   it('filters by store and compares the picks with the budget per look', async () => {
     replyWith(Response.json(matches));
     render(<ProductMatches look={look} budget={1000} fallback={<p>Product data unavailable</p>} />);
