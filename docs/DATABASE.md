@@ -615,6 +615,16 @@ Monk tone (1 – 10) → undertone (warm, cool, neutral, olive) → 100+ colours
 
 ---
 
+## 4e. Design Studio (D-134)
+
+| Collection | Owner | Purpose | Key fields and indexes |
+|---|---|---|---|
+| `designs` | **user** | One design from a sketch, upload, description or look + change | `userId`; `source` (`sketch`, `upload`, `description`, `look`); `description`; `lookId`, `slotId` (look only); `sourceImage {data, contentType}` (the user's sketch, BSON binary, `select: false`); `image {data, contentType}` (the generated picture, `select: false`); `imageStatus` (`ready`, `failed`); `imageProvider` (`pollinations`, `cloudflare`); `imagePrompt` (Gemini's garment-only prompt, `select: false`, reused for redraws); `title`, `summary`, `tailorSpec` (Mixed, validated by `tailorSpecSchema`); `analysisModel`, `promptVersion`, `noticeVersion`; timestamps. Index `{userId, createdAt: -1}`. At most 50 per user |
+
+`designs` is in `USER_OWNED_COLLECTIONS`; deleting a design or the account deletes its sketch and picture with it. A look's `outfits` document is only read, never changed; deleting the look leaves designs made from it.
+
+---
+
 ## 4b. Admin Collections (D-120, D-125)
 
 ### 4b.1 `adminAccounts`

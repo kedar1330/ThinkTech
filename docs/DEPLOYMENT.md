@@ -66,9 +66,13 @@ These are the planned platforms. **Hosting is postponed by the founder (D-81):**
 | `GEMINI_VISION_MODEL` | 1 (optional) | Gemini model for photo analysis; must accept images. Default `gemini-3.8-flash` (stable on 2026-10-22); change it when Google retires that model |
 | `PHOTO_ANALYSIS_TIMEOUT_MS` | 1 (optional) | Timeout of one photo analysis, 1 000 – 120 000 ms (default 90 000; Gemini often takes 10–80 s) |
 | `OUTFIT_IMAGES_ENABLED` | Local only | Default `false`. `true` makes an AI outfit image for each look on first view (Pollinations). The API refuses to start with it on outside `APP_ENV=local` until the founder approves showing unreviewed AI images (D-62, D-65) |
-| `POLLINATIONS_API_KEY` | Local only | Secret key (`sk_…`) from enter.pollinations.ai; required when `OUTFIT_IMAGES_ENABLED=true`. API host only, never the web app |
-| `POLLINATIONS_IMAGE_MODEL` | Local only (optional) | Default `black-forest-labs/flux.1-schnell` (Apache-2.0 weights). Check the model's licence before changing it |
+| `POLLINATIONS_API_KEY` | 1 (optional) | Secret key (`sk_…`) from enter.pollinations.ai; required when `OUTFIT_IMAGES_ENABLED=true`. Also the first image service for Design Studio pictures (D-134), which receives only Gemini's garment-only prompt. API host only, never the web app |
+| `POLLINATIONS_IMAGE_MODEL` | 1 (optional) | Default `black-forest-labs/flux.1-schnell` (Apache-2.0 weights), for outfit images and Design Studio pictures. Check the model's licence before changing it |
 | `OUTFIT_IMAGE_TIMEOUT_MS` | Local only (optional) | Timeout of one image generation, 1 000 – 120 000 ms (default 60 000) |
+| `DESIGN_STUDIO_ENABLED` | 1 (optional) | Default `true` (D-134): the Design Studio runs whenever `GEMINI_API_KEY` is set; it uses `GEMINI_VISION_MODEL`. `false` switches it off |
+| `DESIGN_ANALYSIS_TIMEOUT_MS` | 1 (optional) | Timeout of one Design Studio Gemini call, 1 000 – 120 000 ms (default 60 000) |
+| `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_IMAGE_MODEL` | 1 (optional) | Fallback image service (Cloudflare Workers AI). API token with Workers AI permission; model default `@cf/black-forest-labs/flux-1-schnell`. Receives only the garment-only prompt. Secret: API host only |
+| `IMAGE_GENERATION_TIMEOUT_MS` | 1 (optional) | Timeout per image service, 1 000 – 120 000 ms (default 45 000); on timeout the next service is tried |
 | `PRODUCT_LAYER_ENABLED` | Product layer | `false` until an authorised source and D-74 allow the Stage 3 release |
 | `FLIPKART_AFFILIATE_ID`, `FLIPKART_AFFILIATE_TOKEN` | Product layer | Only after Flipkart approves access (D-44) |
 | `WEATHER_API_KEY` | 2 | Only if the chosen provider needs one (D-60) |

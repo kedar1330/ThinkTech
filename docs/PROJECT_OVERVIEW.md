@@ -38,7 +38,7 @@ StyleMe is a personal styling web app for users in India. It suggests complete l
 Landing → Sign up (email + 6-digit code, or Google) → Style profile setup  ──or──  Skip for now
         → Home (Personalized home + "Complete your profile")
         → Discover My Style → My Colour Palette → Outfit Categories
-        → a selected look → Save it · Shop for it · (later) Try it on · (later) Customise it in Design Studio
+        → a selected look → Save it · Shop for it · (later) Try it on · Change it in Design Studio (D-134)
 ```
 
 All nine sections are reachable from the top navigation (PR #26): Home, Discover My Style, My Colour Palette, Outfit Categories, Shop My Look, Virtual Try-On, Design Studio, Style Assistant, Saved Outfits. Sections that are not built show an honest "Coming soon" page and never a mock-up ([FRD.md](FRD.md) FR-UI-03, FR-DATA-02).
@@ -226,11 +226,11 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ---
 
-## 11. Design Studio (PDF p20) — ⛔ Deferred (D-76)
+## 11. Design Studio (PDF p20) — ✅ Built and approved (D-134)
 
 **Intended.** Start from a blank design, a predefined template, a saved outfit or inspiration → garment type → silhouette and fit → fabric → colours → patterns → sleeves, neckline and details → combine garments → preview → save with a name and notes to the personal collection → continue editing · shop matching products · try on if available.
 
-**Status.** Only a "Coming soon" page. Building it needs the founder's D-76 decision (issue #56: requirements and approval gate only). **Owner:** Kedar (after approval).
+**Status (2026-10-23, #130).** `/design-studio`: the user **draws** (canvas), **uploads** a sketch or garment picture, or **describes** an idea; or opens a look from Discover My Style with **"Change it in Design Studio"** and says what to change (whole look or one piece, with quick changes such as puff sleeves or V-neck). Gemini writes a **tailor spec** (fabric, yardage estimate, cutting, stitching, finishing) and a garment-only prompt; Pollinations FLUX draws it, Cloudflare FLUX as fallback. `/design-studio/[id]` shows the picture, the sketch and the spec, and prints or saves as PDF. Live whenever the API has a Gemini key (D-134, approved 2026-10-23); `DESIGN_STUDIO_ENABLED=false` switches it off. Not yet: templates, fabric swatch pickers, shop matching products, try-on. **Owner:** Kedar (after approval).
 
 ---
 
