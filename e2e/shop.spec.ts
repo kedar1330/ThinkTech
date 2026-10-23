@@ -99,7 +99,10 @@ test('Shop this look saves a Discover look as a Shop My Look tab; a suggested lo
 
   await test.step('each tab’s Virtual Try-On button opens the honest Coming soon page', async () => {
     const tabs = page.getByRole('navigation', { name: 'Your looks from Discover My Style' });
-    await tabs.getByRole('link', { name: /^Virtual Try-On: .+ \(coming soon\)$/ }).click();
+    const tryOn = tabs.getByRole('link', { name: /^Virtual Try-On: .+ \(coming soon\)$/ });
+    // One per tab: both saved looks have one.
+    await expect(tryOn).toHaveCount(2);
+    await tryOn.first().click();
     await expect(page).toHaveURL(/\/features\/virtual-try-on$/);
   });
 });
