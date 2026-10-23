@@ -7,6 +7,7 @@ import {
   type Look,
   type LookProductMatches,
   type LookSlot,
+  type MatchedListing,
   type ProductListing,
 } from '@styleme/contracts';
 const shopActions = vi.hoisted(() => ({
@@ -58,13 +59,20 @@ const item = (store: ProductListing['store'], title: string, price: number): Pro
   imageUrl: 'https://encrypted-tbn0.gstatic.com/shopping?q=tbn:synthetic',
 });
 
+/** A match whose title mentions these of the look's attributes (#133). */
+const matchOf = (l: ProductListing, matched: MatchedListing['matched'] = ['category']): MatchedListing => ({
+  ...l,
+  matched,
+});
+
 const matches: LookProductMatches = {
   currency: 'INR',
   priceBasis: 'search_results',
   slots: [
     {
       slotId: 'top',
-      listings: [item('meesho', 'Synthetic kurta M', 299), item('amazon', 'Synthetic kurta A', 699)],
+      listings: [matchOf(item('meesho', 'Synthetic kurta M', 299)), matchOf(item('amazon', 'Synthetic kurta A', 699))],
+      alternatives: [],
       stats: [
         { store: 'amazon', listings: 1, min: 699, median: 699, max: 699 },
         { store: 'meesho', listings: 1, min: 299, median: 299, max: 299 },
@@ -72,7 +80,8 @@ const matches: LookProductMatches = {
     },
     {
       slotId: 'bottom',
-      listings: [item('flipkart', 'Synthetic trousers F', 499)],
+      listings: [matchOf(item('flipkart', 'Synthetic trousers F', 499))],
+      alternatives: [],
       stats: [{ store: 'flipkart', listings: 1, min: 499, median: 499, max: 499 }],
     },
   ],
@@ -129,11 +138,69 @@ describe('similar products to compare', () => {
     );
   });
 
+  it('#133 shows matches first with what they match, then other styles of the same garment', async () => {
+    replyWith(
+      Response.json({
+        ...matches,
+        slots: [
+          {
+            ...matches.slots[0]!,
+            listings: [
+              matchOf(item('amazon', 'Synthetic navy cotton kurta', 899), ['category', 'color', 'fabric']),
+              matchOf(item('meesho', 'Synthetic kurta M', 299)),
+            ],
+            alternatives: [item('flipkart', 'Synthetic printed kurta', 349)],
+          },
+          matches.slots[1]!,
+        ],
+      }),
+    );
+    const kurtaLook = {
+      ...look,
+      slots: [
+        { ...look.slots[0]!, lookSpec: { ...look.slots[0]!.lookSpec, fabric: 'cotton' as const } },
+        ...look.slots.slice(1),
+      ],
+    };
+    render(<ProductMatches look={kurtaLook} budget={null} fallback={<p>Product data unavailable</p>} />);
+    await screen.findByRole('heading', { name: 'Similar items to compare' });
+
+    const best = within(screen.getByRole('list', { name: 'Matches your look: Kurta' })).getAllByRole('listitem');
+    expect(best.map((li) => within(li).getByText(/^Synthetic/).textContent)).toEqual([
+      'Synthetic navy cotton kurta',
+      'Synthetic kurta M',
+    ]);
+    expect(best[0]).toHaveTextContent('Matches: navy · cotton');
+    expect(best[1]).not.toHaveTextContent('Matches:');
+
+    const other = within(screen.getByRole('list', { name: 'Other Kurta styles' })).getAllByRole('listitem');
+    expect(other).toHaveLength(1);
+    expect(other[0]).toHaveTextContent('Synthetic printed kurta');
+    expect(other[0]).toHaveTextContent('Different style');
+    // Cheapest uses the cheapest match, not the first one.
+    expect(screen.getByRole('group', { name: 'Compare totals' })).toHaveTextContent(
+      'Cheapest found for this look: ₹798',
+    );
+
+    // Another style can be saved too; only the listing's own fields are sent.
+    shopActions.pickProductAction.mockResolvedValueOnce({ picks: [] });
+    await userEvent.click(
+      within(await openOptions('Synthetic printed kurta')).getByRole('button', { name: 'Save to this look' }),
+    );
+    expect(shopActions.pickProductAction).toHaveBeenCalledWith(
+      ID,
+      'top',
+      item('flipkart', 'Synthetic printed kurta', 349),
+    );
+  });
+
   it('#134 an item without a Google link still links to its store', async () => {
     replyWith(
       Response.json({
         ...matches,
-        slots: [{ ...matches.slots[0]!, listings: [{ ...item('amazon', 'Synthetic kurta A', 699), link: null }] }],
+        slots: [
+          { ...matches.slots[0]!, listings: [matchOf({ ...item('amazon', 'Synthetic kurta A', 699), link: null })] },
+        ],
       }),
     );
     render(<ProductMatches look={look} budget={null} fallback={<p>Product data unavailable</p>} />);
@@ -190,7 +257,7 @@ describe('similar products to compare', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Amazon' }));
     expect(screen.queryByText('Synthetic kurta M')).toBeNull();
-    expect(screen.getByRole('region', { name: /^Trousers/ })).toHaveTextContent('No similar items found on Amazon.');
+    expect(screen.getByRole('region', { name: /^Trousers/ })).toHaveTextContent('No items matching your look found on Amazon.');
     await userEvent.click(screen.getByRole('button', { name: 'All stores' }));
 
     const kurta = item('amazon', 'Synthetic kurta A', 699);

@@ -3,6 +3,7 @@ import type { Types } from 'mongoose';
 import type { Logger } from 'pino';
 import {
   PRICE_RANGE_LABEL,
+  ALTERNATIVES_PER_STORE,
   PRICE_RANGE_STORE_IDS,
   PRODUCTS_PER_STORE,
   PRODUCT_MATCHES_LABEL,
@@ -11,6 +12,7 @@ import {
   type LookPriceRange,
   type LookProductMatches,
   type LookSlot,
+  type MatchedListing,
   type PickProductRequest,
   type PriceRangeStore,
   type ProductListing,
@@ -24,6 +26,7 @@ import {
   type ShoppingSearchProvider,
 } from '../integrations/shopping/serper-client';
 import type { Models } from '../models/index';
+import { categoryQuery, matchedAttributes } from './listing-match';
 import { AppError } from '../utils/errors';
 
 // Price ranges (#118) and similar products (#120) on Shop My Look. For each garment of one of the user's own
@@ -63,6 +66,8 @@ type CachedListing = ProductListing;
 interface Searched {
   slot: LookSlot;
   listings: CachedListing[];
+  /** Other styles of the same garment (#133); only searched for the products view. */
+  alternatives: CachedListing[];
   checkedAt: Date;
 }
 
@@ -191,29 +196,34 @@ export class PriceRangeService {
    * store, cheapest first, and the count, lowest, median and highest price per store found.
    */
   async products(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<LookProductMatches> {
-    const searched = await this.search(userId, outfitId);
-    const slots: SlotProducts[] = searched.map(({ slot, listings }) => {
-      const byStore = PRICE_RANGE_STORE_IDS.map((store) =>
-        listings.filter((l) => l.store === store).sort((a, b) => a.price - b.price),
-      );
-      const stats: StorePriceStats[] = byStore.flatMap((list) => {
-        if (list.length === 0) return [];
-        const prices = list.map((l) => l.price);
-        return [
-          {
-            store: list[0]!.store,
-            listings: list.length,
-            min: prices[0]!,
-            median: median(prices),
-            max: prices[prices.length - 1]!,
-          },
-        ];
+    const searched = await this.search(userId, outfitId, { alternatives: true });
+    const slots: SlotProducts[] = searched.map(({ slot, listings, alternatives }) => {
+      const stats: StorePriceStats[] = PRICE_RANGE_STORE_IDS.flatMap((store) => {
+        const prices = listings
+          .filter((l) => l.store === store)
+          .map((l) => l.price)
+          .sort((a, b) => a - b);
+        if (prices.length === 0) return [];
+        return [{ store, listings: prices.length, min: prices[0]!, median: median(prices), max: prices.at(-1)! }];
       });
-      return {
-        slotId: slot.slotId,
-        listings: byStore.flatMap((list) => list.slice(0, PRODUCTS_PER_STORE)).sort((a, b) => a.price - b.price),
-        stats,
-      };
+      // Matches (#133): best match first (most of the garment's attributes in the title), then cheapest.
+      const byMatch = (a: MatchedListing, b: MatchedListing) =>
+        b.matched.length - a.matched.length || a.price - b.price;
+      const matched = listings.map((l) => ({ ...l, matched: matchedAttributes(l.title, slot.lookSpec) }));
+      const matches = PRICE_RANGE_STORE_IDS.flatMap((store) =>
+        matched
+          .filter((l) => l.store === store)
+          .sort(byMatch)
+          .slice(0, PRODUCTS_PER_STORE),
+      ).sort(byMatch);
+      // Other styles of the same garment (#133): never an item already listed as a match.
+      const seen = new Set(listings.map(listingKey));
+      const others = PRICE_RANGE_STORE_IDS.flatMap((store) =>
+        dedupe(alternatives.filter((l) => l.store === store && !seen.has(listingKey(l))))
+          .sort((a, b) => a.price - b.price)
+          .slice(0, ALTERNATIVES_PER_STORE),
+      ).sort((a, b) => a.price - b.price);
+      return { slotId: slot.slotId, listings: matches, alternatives: others, stats };
     });
     return {
       currency: 'INR',
@@ -240,12 +250,21 @@ export class PriceRangeService {
     const slot = slots.find((s) => s.slotId === request.slotId);
     if (!slot) throw new AppError('INVALID_REQUEST', 'That part of the look can’t be shopped.');
     const { listing } = request;
-    const found = slot.listings.find(
+    // A match or another style (#133), as the search returned it.
+    const found = [...slot.listings, ...slot.alternatives].find(
       (l) =>
         l.store === listing.store && l.title === listing.title && l.price === listing.price && l.link === listing.link,
     );
     if (!found) throw new AppError('NOT_FOUND', 'That item is no longer in the search results. Please pick another.');
-    const pick: LookPick = { ...found, slotId: slot.slotId, pickedAt: this.now().toISOString() };
+    const pick: LookPick = {
+      store: found.store,
+      title: found.title,
+      price: found.price,
+      link: found.link,
+      imageUrl: found.imageUrl,
+      slotId: slot.slotId,
+      pickedAt: this.now().toISOString(),
+    };
     // One pick per garment: drop the slot's earlier pick, then add this one.
     await this.models.Outfit.updateOne(this.owned(userId, outfitId), { $pull: { shopPicks: { slotId: slot.slotId } } });
     const doc = await this.models.Outfit.findOneAndUpdate(
@@ -273,8 +292,15 @@ export class PriceRangeService {
     return { _id: outfitId, userId, $or: [{ expiresAt: null }, { expiresAt: { $gt: this.now() } }] };
   }
 
-  /** The look's garments, each with its Amazon, Flipkart and Meesho listings from the three searches. */
-  private async search(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<Searched[]> {
+  /**
+   * The look's garments, each with its Amazon, Flipkart and Meesho listings from the three searches, and with
+   * `alternatives`, also from three broader searches of the garment's category and the department (#133).
+   */
+  private async search(
+    userId: Types.ObjectId,
+    outfitId: Types.ObjectId,
+    options: { alternatives?: boolean } = {},
+  ): Promise<Searched[]> {
     const look = await this.models.Outfit.findOne(this.owned(userId, outfitId)).lean<StoredLook>();
     if (!look) throw new AppError('NOT_FOUND');
     if (!this.provider) throw new AppError('PROVIDER_NOT_CONFIGURED', 'Price ranges are not available yet.');
@@ -284,13 +310,18 @@ export class PriceRangeService {
     const department = look.inputsUsed?.department ?? null;
     return Promise.all(
       slotsToPrice.map(async (slot) => {
-        const results = await Promise.all(
-          searchesFor(queryFor(slot, department)).map(({ query, store }) => this.listings(query, store)),
-        );
+        const run = (query: string) =>
+          Promise.all(searchesFor(query).map((search) => this.listings(search.query, search.store)));
+        const [results, broad] = await Promise.all([
+          run(queryFor(slot, department)),
+          options.alternatives ? run(categoryQuery(slot.lookSpec, department)) : Promise.resolve([]),
+        ]);
+        const all = [...results, ...broad];
         return {
           slot,
           listings: results.flatMap((r) => r.listings),
-          checkedAt: new Date(Math.min(...results.map((r) => r.checkedAt.getTime()))),
+          alternatives: broad.flatMap((r) => r.listings),
+          checkedAt: new Date(Math.min(...all.map((r) => r.checkedAt.getTime()))),
         };
       }),
     );
@@ -335,6 +366,18 @@ export class PriceRangeService {
     );
     return { listings, checkedAt };
   }
+}
+
+/**
+ * One listing's identity across searches: its store and title. Not the Google link, which carries the
+ * search query, so the same item has a different link in each search.
+ */
+const listingKey = (l: CachedListing) => `${l.store}|${l.title.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+
+/** The first of each listing that appears more than once. */
+function dedupe(list: CachedListing[]): CachedListing[] {
+  const seen = new Set<string>();
+  return list.filter((l) => !seen.has(listingKey(l)) && seen.add(listingKey(l)));
 }
 
 const oldest = (searched: readonly Searched[]) => new Date(Math.min(...searched.map((s) => s.checkedAt.getTime())));

@@ -429,10 +429,40 @@ export const storePriceStatsSchema = z
 export type StorePriceStats = z.infer<typeof storePriceStatsSchema>;
 
 /** One garment: its cheapest listings per store, cheapest first, and price stats per store found. */
+/** The parts of a garment's `lookSpec` that a listing's title can be matched on (#133). */
+export const LOOK_SPEC_ATTRIBUTES = [
+  'category',
+  'color',
+  'fabric',
+  'fit',
+  'silhouette',
+  'neckline',
+  'sleeve',
+  'length',
+  'pattern',
+] as const;
+export const lookSpecAttributeSchema = z.enum(LOOK_SPEC_ATTRIBUTES);
+export type LookSpecAttribute = z.infer<typeof lookSpecAttributeSchema>;
+
+/** A listing that matches the look: which of the garment's attributes its store title mentions (#133). */
+export const matchedListingSchema = productListingSchema
+  .extend({ matched: z.array(lookSpecAttributeSchema) })
+  .strict();
+export type MatchedListing = z.infer<typeof matchedListingSchema>;
+
+/** At most this many other styles of the same garment per store (#133). */
+export const ALTERNATIVES_PER_STORE = 4;
+
+/**
+ * One garment. `listings`: items that match the look, best match first (the most of its attributes found in
+ * the title), then cheapest. `alternatives`: other styles of the same garment type, cheapest first, never
+ * repeating a match. `stats`: price spread per store over the matching search.
+ */
 export const slotProductsSchema = z
   .object({
     slotId: slotIdSchema,
-    listings: z.array(productListingSchema).max(PRODUCTS_PER_STORE * PRICE_RANGE_STORE_IDS.length),
+    listings: z.array(matchedListingSchema).max(PRODUCTS_PER_STORE * PRICE_RANGE_STORE_IDS.length),
+    alternatives: z.array(productListingSchema).max(ALTERNATIVES_PER_STORE * PRICE_RANGE_STORE_IDS.length),
     stats: z.array(storePriceStatsSchema),
   })
   .strict();
