@@ -23,3 +23,6 @@ test-results/
 blob-report/
 e2e/.outbox/
 e2e/.logs/
+
+# Local development database (#140)
+apps/api/.mongo-data/
