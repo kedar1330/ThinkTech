@@ -145,7 +145,14 @@ export default async function ShopPage({
         <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">Shop My Look</p>
         <h1 className="font-display text-3xl text-primary sm:text-4xl">{lookTitle(look)}</h1>
       </header>
-      {looks.length > 0 && <LookTabs looks={looks} selectedId={look.id} />}
+      {looks.length > 0 && (
+        <LookTabs
+          looks={looks}
+          selectedId={look.id}
+          department={figureDepartment(profile.department)}
+          bodyType={appearance?.bodyType?.value ?? null}
+        />
+      )}
       <section aria-labelledby="your-outfit" className="space-y-3">
         <h2 id="your-outfit" className="font-display text-2xl text-primary">
           Your outfit

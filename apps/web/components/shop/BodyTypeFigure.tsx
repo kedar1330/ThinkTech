@@ -85,18 +85,21 @@ const arm = (side: -1 | 1, { s }: Shape, end: number) => {
 
 const BODY_TYPE_TEXT = (bodyType: BodyType) => bodyType.replace(/_/g, ' ');
 
-export function BodyTypeFigure({
-  look,
-  department,
-  bodyType,
-}: {
+interface FigureProps {
   look: Pick<Look, 'slots'>;
   department: Department | null;
   bodyType: BodyType | null;
-}) {
+}
+
+/** Whether the figure has a shape drawn for this body type (otherwise the default figure is used). */
+const drawnFor = (department: Department | null, bodyType: BodyType | null) =>
+  Boolean(bodyType && SHAPES[department ?? 'women'][bodyType]);
+
+/** The look on the figure, as one SVG with its own accessible name (also used on the Shop My Look tabs). */
+export function FigureSvg({ look, department, bodyType, className }: FigureProps & { className?: string }) {
   const dept: Department = department ?? 'women';
-  const shape = shapeOf(dept, bodyType && SHAPES[dept][bodyType] ? bodyType : null);
-  const known = Boolean(bodyType && SHAPES[dept][bodyType]);
+  const known = drawnFor(department, bodyType);
+  const shape = shapeOf(dept, known ? bodyType : null);
   const garments = garmentSlots(look);
   const colour = (kind: string) => garments.find((g) => g.slot === kind)?.swatches[0]?.hex;
   const onePiece = garments.find((g) => g.slot === 'one_piece');
@@ -110,54 +113,55 @@ export function BodyTypeFigure({
   } wearing ${wearing.join(' and ') || 'the look'}`;
 
   return (
+    <svg viewBox="0 0 200 420" role="img" aria-label={label} className={className ?? 'h-full w-full'}>
+      {/* Figure */}
+      <circle cx={CX} cy={48} r={21} fill={SKIN} stroke={LINE} strokeWidth={1.5} />
+      <rect x={CX - 7} y={66} width={14} height={Y.shoulder - 64} fill={SKIN} />
+      <path d={arm(-1, shape, 250)} fill={SKIN} stroke={LINE} strokeWidth={1.2} />
+      <path d={arm(1, shape, 250)} fill={SKIN} stroke={LINE} strokeWidth={1.2} />
+      <path d={legs(shape, Y.waist)} fill={SKIN} stroke={LINE} strokeWidth={1.2} />
+      <path d={torso(shape, Y.hip, shape.h)} fill={SKIN} stroke={LINE} strokeWidth={1.2} />
+
+      {/* Garments, in a fixed layer order: bottom, then top or one-piece */}
+      {bottom && (
+        <path d={legs(shape, Y.waist)} fill={colour('bottom')} stroke={LINE} strokeWidth={1.2} data-garment="bottom" />
+      )}
+      {onePiece && (
+        <path
+          d={torso(
+            shape,
+            ['saree', 'lehenga'].includes(onePiece.lookSpec.category) ? Y.ankle : Y.knee + 30,
+            shape.h + 22,
+          )}
+          fill={colour('one_piece')}
+          stroke={LINE}
+          strokeWidth={1.2}
+          data-garment="one_piece"
+        />
+      )}
+      {top && !onePiece && (
+        <>
+          <path
+            d={torso(shape, topEnd, topEnd > Y.hip + 20 ? shape.h + 10 : shape.h + 2)}
+            fill={top.swatches[0]?.hex}
+            stroke={LINE}
+            strokeWidth={1.2}
+            data-garment={top.slot}
+          />
+          <path d={arm(-1, shape, 170)} fill={top.swatches[0]?.hex} stroke={LINE} strokeWidth={1.2} />
+          <path d={arm(1, shape, 170)} fill={top.swatches[0]?.hex} stroke={LINE} strokeWidth={1.2} />
+        </>
+      )}
+    </svg>
+  );
+}
+
+export function BodyTypeFigure({ look, department, bodyType }: FigureProps) {
+  const known = drawnFor(department, bodyType);
+  return (
     <figure className="space-y-1.5" data-testid="body-type-figure">
       <div className="mx-auto aspect-[1/2] w-full max-w-[11rem] rounded-xl border border-border bg-surface-muted p-2">
-        <svg viewBox="0 0 200 420" role="img" aria-label={label} className="h-full w-full">
-          {/* Figure */}
-          <circle cx={CX} cy={48} r={21} fill={SKIN} stroke={LINE} strokeWidth={1.5} />
-          <rect x={CX - 7} y={66} width={14} height={Y.shoulder - 64} fill={SKIN} />
-          <path d={arm(-1, shape, 250)} fill={SKIN} stroke={LINE} strokeWidth={1.2} />
-          <path d={arm(1, shape, 250)} fill={SKIN} stroke={LINE} strokeWidth={1.2} />
-          <path d={legs(shape, Y.waist)} fill={SKIN} stroke={LINE} strokeWidth={1.2} />
-          <path d={torso(shape, Y.hip, shape.h)} fill={SKIN} stroke={LINE} strokeWidth={1.2} />
-
-          {/* Garments, in a fixed layer order: bottom, then top or one-piece */}
-          {bottom && (
-            <path
-              d={legs(shape, Y.waist)}
-              fill={colour('bottom')}
-              stroke={LINE}
-              strokeWidth={1.2}
-              data-garment="bottom"
-            />
-          )}
-          {onePiece && (
-            <path
-              d={torso(
-                shape,
-                ['saree', 'lehenga'].includes(onePiece.lookSpec.category) ? Y.ankle : Y.knee + 30,
-                shape.h + 22,
-              )}
-              fill={colour('one_piece')}
-              stroke={LINE}
-              strokeWidth={1.2}
-              data-garment="one_piece"
-            />
-          )}
-          {top && !onePiece && (
-            <>
-              <path
-                d={torso(shape, topEnd, topEnd > Y.hip + 20 ? shape.h + 10 : shape.h + 2)}
-                fill={top.swatches[0]?.hex}
-                stroke={LINE}
-                strokeWidth={1.2}
-                data-garment={top.slot}
-              />
-              <path d={arm(-1, shape, 170)} fill={top.swatches[0]?.hex} stroke={LINE} strokeWidth={1.2} />
-              <path d={arm(1, shape, 170)} fill={top.swatches[0]?.hex} stroke={LINE} strokeWidth={1.2} />
-            </>
-          )}
-        </svg>
+        <FigureSvg look={look} department={department} bodyType={bodyType} />
       </div>
       <figcaption className="space-y-0.5 text-center text-xs text-muted-foreground">
         <span className="block">{FIGURE_LABEL}</span>

@@ -1,30 +1,35 @@
 'use client';
 
 import { useState } from 'react';
-import type { Look } from '@styleme/contracts';
-import { garmentSlots } from '@/lib/outfits/look-text';
+import type { BodyType, Look } from '@styleme/contracts';
+import { FigureSvg } from './BodyTypeFigure';
 
 /**
  * The outfit's photo on its Shop My Look tab (#118): the look's stored AI outfit image (#110) through our
- * own route handler, loaded lazily. When outfit images are off or the image fails, the tab shows the look's
- * garment colours instead, never a stock or made-up photo.
+ * own route handler, loaded lazily. When outfit images are off or the image fails, the tab shows the look on
+ * the illustrated figure (D-119, #120) shaped by the user's body type, in the look's colours: never a stock or
+ * made-up photo.
  */
-export function TabPhoto({ look, title }: { look: Look; title: string }) {
+export function TabPhoto({
+  look,
+  title,
+  department = null,
+  bodyType = null,
+}: {
+  look: Look;
+  title: string;
+  department?: 'women' | 'men' | null;
+  bodyType?: BodyType | null;
+}) {
   const [failed, setFailed] = useState(false);
-  const garments = garmentSlots(look);
-  const swatches = (garments.length ? garments : look.slots).flatMap((s) => s.swatches.slice(0, 1));
 
   if (!look.image || failed) {
     return (
       <div
-        role="img"
-        aria-label={`Colours of this outfit: ${swatches.map((s) => s.name).join(', ')}`}
-        className="flex aspect-[4/5] w-full overflow-hidden rounded-xl border border-border"
+        className="flex aspect-[4/5] w-full justify-center overflow-hidden rounded-xl border border-border bg-surface-muted p-1.5"
         data-testid="tab-photo-fallback"
       >
-        {swatches.map((s, i) => (
-          <span key={`${s.colorId}-${i}`} className="h-full flex-1" style={{ backgroundColor: s.hex }} />
-        ))}
+        <FigureSvg look={look} department={department} bodyType={bodyType} className="h-full w-auto" />
       </div>
     );
   }
