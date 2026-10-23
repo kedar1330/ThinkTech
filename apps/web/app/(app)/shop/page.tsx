@@ -171,7 +171,8 @@ export default async function ShopPage({
         </div>
       </section>
       <ProductMatches
-        key={look.id}
+        // Starts afresh for each tab; the key differs from LookShopper's, as sibling keys must be unique.
+        key={`products-${look.id}`}
         look={look}
         budget={profile.budgetPreference ?? null}
         fallback={<ProductDataUnavailable />}
