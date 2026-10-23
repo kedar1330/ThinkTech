@@ -133,8 +133,59 @@ describe('AI outfit images (GET /v1/outfits/:id/image)', () => {
       expect(prompt).toContain(`deep teal${rest}`);
     }
     expect(await env.db.models.OutfitImage.findOne({ outfitId: look!.id }).lean()).toMatchObject({
-      promptVersion: 'outfit-image-v2',
+      promptVersion: 'outfit-image-v3',
     });
+  });
+
+  it('uses the colours picked in Discover My Style first, and only colours of the user’s own', async () => {
+    const images = new FakeImageProvider();
+    const { app, token } = await signedIn('chosen-image@example.com', { images });
+    const user = await env.db.models.User.findOne({ email: 'chosen-image@example.com' }).lean();
+    const base = {
+      oklch: { l: 0.4, c: 0.06, h: 220 },
+      family: 'blue',
+      temperature: 'cool',
+      depth: 'deep',
+      intensity: 'medium',
+      source: 'css',
+      isFixture: true,
+    } as const;
+    await env.db.models.ColourSwatch.create({
+      ...base,
+      colourId: 'CLR-9101',
+      name: 'Deep Teal',
+      hex: '#0F4C5C',
+      rgb: [15, 76, 92],
+    });
+    await env.db.models.ColourSwatch.create({
+      ...base,
+      colourId: 'CLR-9102',
+      name: 'Rust Red',
+      hex: '#8B3A2B',
+      rgb: [139, 58, 43],
+    });
+    await env.db.models.UserColourPreference.create({
+      userId: user!._id,
+      colours: [
+        { colourId: 'CLR-9101', preference: 'liked', savedAt: new Date() },
+        { colourId: 'CLR-9102', preference: 'avoided', savedAt: new Date() },
+      ],
+    });
+    // CLR-9999 is not one of the user's colours, so it is ignored.
+    const [look] = await looks(app, token, { occasion: 'everyday', chosenColours: ['CLR-9102', 'CLR-9999'] });
+    const detail = await request(app).get(`/v1/outfits/${look!.id}`).set(bearer(token));
+    expect(detail.body.data.request.chosenColours).toEqual(['CLR-9102', 'CLR-9999']);
+    await request(app).get(`/v1/outfits/${look!.id}/image`).set(bearer(token)).expect(200);
+
+    const { prompt } = images.calls[0]!;
+    expect(prompt).toContain('rust red');
+    expect(prompt).not.toContain('deep teal');
+
+    const invalid = await request(app)
+      .post('/v1/recommendations')
+      .set(bearer(token))
+      .send({ occasion: 'everyday', chosenColours: ['not-a-colour'] });
+    expect(invalid.status).toBe(400);
   });
 
   it('keeps another user’s look and image private', async () => {
@@ -234,6 +285,37 @@ describe('looks built around a designed garment (D-132)', () => {
     const detail = await request(app).get(`/v1/outfits/${result[0]!.id}`).set(bearer(token));
     expect(detail.body.data.designMatch).toEqual(result[0]!.designMatch);
     expect(detail.body.data.request.design).toEqual({ garmentType: 'kurti', outfitCategory: 'indian' });
+  });
+
+  it('draws the designed garment with the chosen features, in the design’s wear type', async () => {
+    const images = new FakeImageProvider();
+    const { app, token } = await signedIn('design-image@example.com', { images });
+    await saveDesign('design-image@example.com', {
+      neckline: 'neckline_v_neck',
+      sleeve: 'sleeve_bishop',
+      hemline: 'hemline_curved',
+      fabric: 'fabric_rayon',
+      stretch: 'stretch_slight_stretch',
+      occasion: 'occasion_casual',
+    });
+    const result = await looks(app, token, {
+      occasion: 'everyday',
+      design: { garmentType: 'kurti', outfitCategory: 'indian' },
+    });
+    const look = result.find((l) => l.designMatch?.level !== 'none');
+    expect(look).toBeDefined();
+    await request(app).get(`/v1/outfits/${look!.id}/image`).set(bearer(token)).expect(200);
+
+    const { prompt } = images.calls[0]!;
+    const kurti = look!.slots.find((s) => s.lookSpec.category === 'kurti')!;
+    expect(prompt).toContain('wearing an everyday indian outfit');
+    expect(prompt).toContain(
+      `${kurti.swatches[0]!.name.toLowerCase()} kurti with v-neck, bishop sleeve, curved hemline and rayon fabric`,
+    );
+    expect(prompt).not.toContain(kurti.searchPhrase);
+    // Features that can't be seen, or that the prompt already says, are left out.
+    expect(prompt).not.toMatch(/stretch|casual/i);
+    expect(prompt).not.toMatch(/skin|undertone|body type|height|weight|design-image@example\.com/i);
   });
 
   it('ignores a design the user has not saved, and leaves requests without a design unchanged', async () => {

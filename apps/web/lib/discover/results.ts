@@ -1,7 +1,8 @@
 import { COLORS, FABRICS, MAX_LOOKS, type Look, type RecommendationResponse } from '@styleme/contracts';
 
 // Turns the flags of a POST /v1/recommendations response into short messages for the results
-// (FR-LOOK-09 … 11). Unknown names are skipped rather than shown raw.
+// (FR-LOOK-09 … 11). Unknown names are skipped rather than shown raw. Missing sizes and style aren't
+// announced: each item already asks for its size, and an unset style needs no message.
 
 export interface ResultNotice {
   id: string;
@@ -12,8 +13,6 @@ const DEFAULT_TEXT: Record<string, string> = {
   department: 'No department filter applied: looks can come from every department.',
   colors: "You haven't picked colours you like, so each look uses its palette's colours.",
   signals: 'Appearance signals are not used (none saved, or switched off).',
-  sizes: 'No sizes saved yet, so each item asks you to add one.',
-  style: 'No style chosen, so looks can be in any style.',
 };
 
 const CONFLICT_LISTS: Record<string, readonly { id: string; label: string }[]> = { colors: COLORS, fabrics: FABRICS };
