@@ -17,6 +17,10 @@ export class ColourLibraryController {
     sendData(res, await this.colours.mine(this.user(req)));
   };
 
+  combinations: RequestHandler = async (req, res) => {
+    sendData(res, await this.colours.combinations(this.user(req)));
+  };
+
   getPreferences: RequestHandler = async (req, res) => {
     sendData(res, await this.colours.getPreferences(this.user(req)));
   };

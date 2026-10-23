@@ -8,6 +8,8 @@ export function colourLibraryRoutes(controller: ColourLibraryController, auth: R
   const router = Router();
   // Only the user's own skin tone × undertone category; there is no endpoint that lists the others.
   router.get('/colours/mine', ...auth, controller.mine);
+  // Coordinating colours and curated combinations from the user's own category (#105).
+  router.get('/colours/combinations', ...auth, controller.combinations);
   router.get('/colours/preferences', ...auth, controller.getPreferences);
   router.put(
     '/colours/preferences',

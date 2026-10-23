@@ -1,89 +1,81 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { PaletteListResponse } from '@styleme/contracts';
-import { PaletteCard } from '@/components/palette/PaletteCard';
-import { ViewToggle } from '@/components/palette/ViewToggle';
-import { WhyThesePalettes } from '@/components/palette/WhyThesePalettes';
+import type { MyColoursResponse } from '@styleme/contracts';
+import { WhyMyColours } from '@/components/colours/WhyMyColours';
 import { apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
 
 export const metadata: Metadata = { title: 'My Colour Palette' };
 
+const SECTIONS = [
+  {
+    href: '/palette/colours',
+    title: 'My colours',
+    body: '100+ colours chosen for your own skin tone and undertone. Select the ones you like or want to avoid.',
+    cta: 'See my colours →',
+  },
+  {
+    href: '/palette/colours?view=coordinating',
+    title: 'Coordinating colours',
+    body: 'Pick any of your colours to see the ones from your palette that go well with it.',
+    cta: 'Find matches →',
+  },
+  {
+    href: '/palette/colours?view=combinations',
+    title: 'Curated combinations',
+    body: 'Ready-made two- and three-colour outfits built only from your colours, each with a reason it works.',
+    cta: 'See combinations →',
+  },
+] as const;
+
 /**
- * My Colour Palette (FR-PAL-01 … 03, #40).
- * Browse approved colour palettes with personalised ranking (Recommended for You) or catalog view (Explore All Palettes).
+ * My Colour Palette (#105): only the user's own colours (D-133). The generic curated palette cards are gone;
+ * everything here comes from the skin tone and undertone in My Profile and the colours the user likes or avoids.
  */
-export default async function PalettePage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ view?: string }>;
-} = {}) {
-  const params = searchParams ? await searchParams : {};
-  const view = params?.view === 'all' ? 'all' : 'suggested';
+export default async function PalettePage() {
   const { accessToken } = await requireOnboarded();
-  const { palettes } = await apiRequest<PaletteListResponse>(`/v1/style/palettes?view=${view}`, {
+  const { category, missing, saved } = await apiRequest<MyColoursResponse>('/v1/colours/mine', {
     token: accessToken,
   });
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <header className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">My Colour Palette</p>
-          <h1 className="font-display text-4xl text-primary">Curated colour palettes</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Browse curated palettes to see which colours work together naturally. Each palette pairs foundation neutrals
-            with coordinating accents and tested contrast combinations.
-          </p>
-        </div>
-
-        {palettes.length > 0 && <ViewToggle currentView={view} />}
+      <header className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">My Colour Palette</p>
+        <h1 className="font-display text-4xl text-primary">Your colours</h1>
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Colours chosen for your own skin tone and undertone, the colours that go with each of them, and ready-made
+          combinations to wear.
+        </p>
       </header>
 
-      <Link
-        href="/palette/colours"
-        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-5 shadow-xs transition-shadow hover:shadow-md"
-      >
-        <span className="space-y-1">
-          <span className="block font-display text-2xl text-primary">My colours</span>
-          <span className="block text-sm text-muted-foreground">
-            100+ colours chosen for your own skin tone and undertone. Select the ones you like or want to avoid.
-          </span>
-        </span>
-        <span className="text-sm font-medium text-plum">See my colours →</span>
-      </Link>
+      <ul className="grid gap-4 md:grid-cols-3">
+        {SECTIONS.map((s, i) => (
+          <li key={s.href} className="min-w-0">
+            <Link
+              href={s.href}
+              className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-xs transition-shadow hover:shadow-md"
+            >
+              <span className="block font-display text-2xl text-primary">{s.title}</span>
+              {i === 0 && category && category.preview.length > 0 && (
+                <span aria-hidden className="flex gap-1.5">
+                  {category.preview.map((p) => (
+                    <span
+                      key={p.hex}
+                      className="size-7 rounded-full border border-black/10"
+                      style={{ backgroundColor: p.hex }}
+                    />
+                  ))}
+                </span>
+              )}
+              <span className="block flex-1 text-sm text-muted-foreground">{s.body}</span>
+              <span className="text-sm font-medium text-plum">{s.cta}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
 
-      {palettes.length === 0 ? (
-        <section aria-labelledby="empty-palette-heading">
-          <h2 id="empty-palette-heading" className="sr-only">
-            No palettes available
-          </h2>
-          <div className="rounded-xl border border-dashed border-border px-4 py-12 text-center space-y-2">
-            <p className="font-display text-xl text-primary">No approved palettes yet</p>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              No colour palettes have been approved by our styling team yet. Curated palettes will appear here as soon
-              as they are published.
-            </p>
-          </div>
-        </section>
-      ) : (
-        <>
-          <WhyThesePalettes palettes={palettes} view={view} />
-
-          <section aria-labelledby="palette-grid-heading" className="space-y-4">
-            <h2 id="palette-grid-heading" className="sr-only">
-              Curated palettes
-            </h2>
-            <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {palettes.map((palette) => (
-                <li key={palette.id} className="min-w-0">
-                  <PaletteCard palette={palette} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
-      )}
+      <WhyMyColours categoryLabel={category?.label ?? null} missing={missing} saved={saved} />
     </div>
   );
 }
