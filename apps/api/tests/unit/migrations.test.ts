@@ -39,7 +39,11 @@ describe('migration 001-auth-onboarding', () => {
       .insertOne({ userId: withProfile, department: 'women', updatedAt: createdAt });
     await env.db.main.collection('passwordResetTokens').insertOne({ userId: bare, tokenHash: 'x' });
 
-    expect(await runMigrations(env.db.main)).toEqual(['001-auth-onboarding', '002-user-photos-in-mongodb']);
+    expect(await runMigrations(env.db.main)).toEqual([
+      '001-auth-onboarding',
+      '002-user-photos-in-mongodb',
+      '003-outfit-source',
+    ]);
     const a = await users.findOne({ _id: withProfile });
     const b = await users.findOne({ _id: bare });
     expect(a?.emailVerifiedAt).toEqual(createdAt);
@@ -65,6 +69,23 @@ describe('migration 002-user-photos-in-mongodb (D-129)', () => {
     expect(names).not.toContain('storageKey_1');
     expect(names).toContain('storageKey_when_set');
     await photos.insertMany([{ kind: 'face' }, { kind: 'face' }]);
+    expect(await runMigrations(env.db.main)).toEqual([]);
+  });
+});
+
+describe('migration 003-outfit-source (#115)', () => {
+  it('marks looks made before the source existed as Discover My Style; runs once', async () => {
+    const outfits = env.db.main.collection('outfits');
+    const { insertedId: legacy } = await outfits.insertOne({ status: 'saved', templateId: 'OUT-001' });
+    const { insertedId: current } = await outfits.insertOne({ status: 'saved', source: 'discover_my_style' });
+    // 001 – 003 already ran above; run 003 again against the legacy look.
+    await env.db.main.collection('migrations').deleteOne({ _id: '003-outfit-source' as never });
+    expect(await runMigrations(env.db.main)).toEqual(['003-outfit-source']);
+    expect((await outfits.findOne({ _id: legacy }))?.source).toBe('discover_my_style');
+    expect((await outfits.findOne({ _id: current }))?.source).toBe('discover_my_style');
+    expect((await env.db.main.collection('migrations').findOne({ _id: '003-outfit-source' as never }))?.result).toEqual(
+      { looksMarkedDiscoverMyStyle: 1 },
+    );
     expect(await runMigrations(env.db.main)).toEqual([]);
   });
 });

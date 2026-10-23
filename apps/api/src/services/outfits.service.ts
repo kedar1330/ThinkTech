@@ -10,6 +10,7 @@ import {
   type OutfitDetail,
   type OutfitListQuery,
   type OutfitListResponse,
+  type OutfitSource,
   type OutfitStatus,
   type RecommendationRequest,
 } from '@styleme/contracts';
@@ -49,6 +50,7 @@ function toLook(doc: StoredOutfit): Look {
     combinationSignature: doc.combinationSignature,
     aiModel: doc.aiModel ?? null,
     ...(doc.designMatch ? { designMatch: doc.designMatch as DesignMatch } : {}),
+    ...(doc.source ? { source: doc.source as OutfitSource } : {}),
     ...(doc.feedback
       ? {
           feedback: {
@@ -101,9 +103,12 @@ export class OutfitsService {
     return id ? { _id: id, userId, ...live } : { userId, ...live };
   }
 
-  /** `GET /v1/outfits`: newest first (by when the look was generated), one page at a time. */
+  /**
+   * `GET /v1/outfits`: newest first (by when the look was generated), one page at a time; with `source`,
+   * only looks created in that feature (#115).
+   */
   async list(userId: Types.ObjectId, query: OutfitListQuery): Promise<OutfitListResponse> {
-    const filter = { ...this.owned(userId), status: query.status };
+    const filter = { ...this.owned(userId), status: query.status, ...(query.source ? { source: query.source } : {}) };
     const [docs, total] = await Promise.all([
       this.models.Outfit.find(filter)
         .sort({ createdAt: -1, _id: -1 })

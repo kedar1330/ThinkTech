@@ -361,6 +361,7 @@ One document per look. `POST /v1/recommendations` creates up to 5 looks sharing 
 | `aiPromptVersion` | Prompt version of the AI wording (e.g. `wording-v1`); `null` unless optional AI wording was used (#55) |
 | `feedback` | `{ value: "love_it" \| "not_for_me", reason? (fixed list), at }` or null |
 | `designMatch` | `{ level: "full" \| "partial" \| "none", differs[] }` when the look was requested around a designed garment (D-132); null otherwise. `request.design` holds `{ garmentType, outfitCategory }` |
+| `source` | The feature the look was created in (#115): `"discover_my_style"` for every look `POST /v1/recommendations` makes. Migration `003-outfit-source` fills it on older looks. Index `{ userId, status, source, createdAt: -1 }` serves the Shop My Look tabs |
 | `priceSummary` | **not stored for user-entered prices**: computed on read from the user's shortlist items (FR-BUD-07). Product layer: stored with the snapshot as `{ itemsTotal, priceBasis: "verified", budget?, budgetRemaining?, label }` |
 | `weatherContext` | Stage 2: `{ source, observedAt, summary, bands }` or manual; never location |
 | `createdAt`, `updatedAt` | timestamps |

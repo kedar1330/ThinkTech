@@ -35,6 +35,27 @@ export async function saveOutfitAction(_prev: FormState, formData: FormData): Pr
   return { success: 'Saved to Saved Outfits.' };
 }
 
+/**
+ * "Shop this look" on a Discover My Style result (#115): saves the look (harmless if it is already saved),
+ * so it becomes a Shop My Look tab, then opens it there.
+ */
+export async function shopLookAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  if (!(await sameOrigin())) return BLOCKED;
+  const token = await tokenOrLogin();
+  const id = objectIdSchema.safeParse(str(formData, 'outfitId'));
+  if (!id.success) return { error: GONE };
+
+  try {
+    await apiRequest<Look>(`/v1/outfits/${id.data}/save`, { method: 'POST', token });
+  } catch (err) {
+    redirectIfSignedOut(err);
+    return errorState(err, { NOT_FOUND: GONE });
+  }
+  revalidatePath('/saved');
+  revalidatePath('/shop');
+  redirect(`/shop?outfitId=${id.data}`);
+}
+
 /** Removes a look. From its details page (`from=detail`) the user goes back to the list. */
 export async function removeOutfitAction(_prev: FormState, formData: FormData): Promise<FormState> {
   if (!(await sameOrigin())) return BLOCKED;

@@ -12,7 +12,7 @@ test('shop a saved look: add your own item to a part and see the labelled total'
   await test.step('save the look and open it in Shop My Look', async () => {
     await first.getByRole('button', { name: 'Save to Saved Outfits' }).click();
     await expect(first.getByRole('status')).toHaveText(/Saved to Saved Outfits\./);
-    await first.getByRole('link', { name: 'Shop this look' }).click();
+    await first.getByRole('button', { name: 'Shop this look' }).click();
     await expect(page).toHaveURL(/\/shop\?outfitId=[a-f0-9]{24}$/);
     await expect(page.getByText('Product data unavailable')).toBeVisible();
     await expect(page.getByText(/Add items from your shortlist to the parts below/)).toBeVisible();
@@ -62,23 +62,47 @@ test('shop a saved look: add your own item to a part and see the labelled total'
   });
 });
 
-test('Shop My Look lists saved looks, and asks to save a suggested look first', async ({ page }) => {
+test('Shop this look saves a Discover look as a Shop My Look tab; a suggested look opened directly asks to be saved', async ({
+  page,
+}) => {
   await signUpAndSkipOnboarding(page);
   const results = await looksForDesign(page);
 
-  await test.step('an unsaved look must be saved before items can be added', async () => {
-    await results.getByRole('article', { name: 'Look 2' }).getByRole('link', { name: 'Shop this look' }).click();
-    await expect(page.getByText(/Save this look first/)).toBeVisible();
-    await page.getByRole('button', { name: 'Save to Saved Outfits' }).click();
-    // Once saved, the page shows the look's parts to shop.
+  const unsavedId = await results
+    .getByRole('article', { name: 'Look 1' })
+    .locator('input[name="outfitId"]')
+    .first()
+    .inputValue();
+
+  await test.step('Shop this look saves the look and opens it as a tab (#115)', async () => {
+    await results.getByRole('article', { name: 'Look 2' }).getByRole('button', { name: 'Shop this look' }).click();
+    await expect(page).toHaveURL(/\/shop\?outfitId=[a-f0-9]{24}$/);
     await expect(page.getByRole('list', { name: 'Parts of this look' })).toBeVisible();
     await expect(page.getByText(/Save this look first/)).toHaveCount(0);
   });
 
-  await test.step('the navigation entry opens the list of saved looks', async () => {
+  await test.step('a suggested look opened by its link must be saved before items can be added', async () => {
+    await page.goto(`/shop?outfitId=${unsavedId}`);
+    await expect(page.getByText(/Save this look first/)).toBeVisible();
+    await page.getByRole('button', { name: 'Save to Saved Outfits' }).click();
+    await expect(page.getByRole('list', { name: 'Parts of this look' })).toBeVisible();
+  });
+
+  await test.step('the navigation entry opens the newest look, with one tab per saved Discover look (#115)', async () => {
     await page.goto('/shop');
-    await expect(page.getByRole('heading', { name: 'Shop your saved looks' })).toBeVisible();
+    const tabs = page.getByRole('navigation', { name: 'Your looks from Discover My Style' });
+    await expect(tabs.getByRole('listitem')).toHaveCount(2);
+    await expect(tabs.locator('a[aria-current="page"]')).toHaveCount(1);
     await expect(page.getByText('Product data unavailable')).toBeVisible();
-    await expect(page.getByRole('link', { name: /^Shop this look: / })).toHaveCount(1);
+    await expect(page.getByRole('list', { name: 'Parts of this look' })).toBeVisible();
+  });
+
+  await test.step('each tab’s Virtual Try-On button opens the honest Coming soon page', async () => {
+    const tabs = page.getByRole('navigation', { name: 'Your looks from Discover My Style' });
+    const tryOn = tabs.getByRole('link', { name: /^Virtual Try-On: .+ \(coming soon\)$/ });
+    // One per tab: both saved looks have one.
+    await expect(tryOn).toHaveCount(2);
+    await tryOn.first().click();
+    await expect(page).toHaveURL(/\/features\/virtual-try-on$/);
   });
 });

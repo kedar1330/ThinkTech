@@ -6,6 +6,7 @@ import {
   SHORTLIST_LIMITS,
   objectIdSchema,
   slotIdSchema,
+  type Look,
   type OutfitDetail,
   type OutfitListResponse,
   type ProfileResponse,
@@ -14,6 +15,7 @@ import {
 } from '@styleme/contracts';
 import { SaveLookButton } from '@/components/outfits/SaveLookButton';
 import { LookShopper } from '@/components/shop/LookShopper';
+import { LookTabs } from '@/components/shop/LookTabs';
 import { Card } from '@/components/ui/card';
 import { ApiError, apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
@@ -32,6 +34,19 @@ async function allItems(token: string): Promise<UserShortlistItem[]> {
     if (items.length >= res.total) break;
   }
   return items;
+}
+
+/** Every saved look from Discover My Style (#115), newest first: all of them, in pages of 50. */
+async function discoverLooks(token: string): Promise<Look[]> {
+  const looks: Look[] = [];
+  for (let page = 1; ; page++) {
+    const res = await apiRequest<OutfitListResponse>(
+      `/v1/outfits?status=saved&source=discover_my_style&page=${page}&limit=${PAGE}`,
+      { token },
+    );
+    looks.push(...res.looks);
+    if (res.looks.length < PAGE || looks.length >= res.total) return looks;
+  }
 }
 
 /** Workflow PDF p17: StyleMe has no retailer products yet, so the page works over the user's own shortlist. */
@@ -55,8 +70,10 @@ function ProductDataUnavailable() {
 
 /**
  * Shop My Look, Stage 1 (#43, D-77 = B): the user's own shortlist items on the parts of their saved looks.
- * `/shop?outfitId=<id>` (optionally `&slotId=<id>`) opens one look: the "Shop this look" entry point from
- * the Discover results and saved looks. No real product, retailer or verified price appears here.
+ * Each saved look from Discover My Style is a small tab with a Virtual Try-On button (#115); the selected
+ * tab is `/shop?outfitId=<id>` (optionally `&slotId=<id>`), the "Shop this look" entry point from the
+ * Discover results and saved looks. Without one, the newest look is open. No real product, retailer or
+ * verified price appears here.
  */
 export default async function ShopPage({
   searchParams,
@@ -65,64 +82,24 @@ export default async function ShopPage({
 }) {
   const { accessToken: token } = await requireOnboarded();
   const params = await searchParams;
-
+  let selectedId: string | undefined;
   if (params.outfitId !== undefined) {
     const id = objectIdSchema.safeParse(params.outfitId);
     if (!id.success) notFound();
-    let look: OutfitDetail;
-    let items: UserShortlistItem[];
-    let profile: ProfileResponse;
-    try {
-      [look, items, profile] = await Promise.all([
-        apiRequest<OutfitDetail>(`/v1/outfits/${id.data}`, { token }),
-        allItems(token),
-        apiRequest<ProfileResponse>('/v1/profile', { token }),
-      ]);
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'NOT_FOUND') notFound();
-      throw err;
-    }
-    const slot = slotIdSchema.safeParse(params.slotId);
-
-    return (
-      <div className="mx-auto max-w-4xl space-y-6">
-        <Link href="/shop" className="text-sm font-medium text-plum underline-offset-4 hover:underline">
-          ← All saved looks
-        </Link>
-        <header className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">Shop My Look</p>
-          <h1 className="font-display text-3xl text-primary sm:text-4xl">{lookTitle(look)}</h1>
-        </header>
-        <ProductDataUnavailable />
-        {look.status === 'saved' ? (
-          <LookShopper
-            look={look}
-            items={items}
-            sizes={profile.sizes}
-            focusSlotId={slot.success ? slot.data : undefined}
-          />
-        ) : (
-          <Card className="space-y-3 p-4 sm:p-6">
-            <p className="text-sm">
-              Save this look first. Items from your shortlist can be added to saved looks only, and suggested looks are
-              removed after 7 days.
-            </p>
-            <SaveLookButton outfitId={look.id} />
-          </Card>
-        )}
-      </div>
-    );
+    selectedId = id.data;
   }
 
-  const { looks, total } = await apiRequest<OutfitListResponse>(`/v1/outfits?status=saved&limit=${PAGE}`, { token });
-  return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <header className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">Shop My Look</p>
-        <h1 className="font-display text-4xl text-primary">Shop your saved looks</h1>
-      </header>
-      <ProductDataUnavailable />
-      {looks.length === 0 ? (
+  const looks = await discoverLooks(token);
+  selectedId ??= looks[0]?.id;
+
+  if (selectedId === undefined) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <header className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">Shop My Look</p>
+          <h1 className="font-display text-4xl text-primary">Shop your saved looks</h1>
+        </header>
+        <ProductDataUnavailable />
         <Card className="space-y-2 p-4 sm:p-6">
           <h2 className="font-display text-2xl text-primary">No saved looks yet</h2>
           <p className="text-sm text-muted-foreground">
@@ -133,37 +110,49 @@ export default async function ShopPage({
             to add items to it here.
           </p>
         </Card>
+      </div>
+    );
+  }
+
+  let look: OutfitDetail;
+  let items: UserShortlistItem[];
+  let profile: ProfileResponse;
+  try {
+    [look, items, profile] = await Promise.all([
+      apiRequest<OutfitDetail>(`/v1/outfits/${selectedId}`, { token }),
+      allItems(token),
+      apiRequest<ProfileResponse>('/v1/profile', { token }),
+    ]);
+  } catch (err) {
+    if (err instanceof ApiError && err.code === 'NOT_FOUND') notFound();
+    throw err;
+  }
+  const slot = slotIdSchema.safeParse(params.slotId);
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-6">
+      <header className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">Shop My Look</p>
+        <h1 className="font-display text-3xl text-primary sm:text-4xl">{lookTitle(look)}</h1>
+      </header>
+      {looks.length > 0 && <LookTabs looks={looks} selectedId={look.id} />}
+      <ProductDataUnavailable />
+      {look.status === 'saved' ? (
+        <LookShopper
+          key={look.id}
+          look={look}
+          items={items}
+          sizes={profile.sizes}
+          focusSlotId={slot.success ? slot.data : undefined}
+        />
       ) : (
-        <section aria-labelledby="shop-looks" className="space-y-3">
-          <h2 id="shop-looks" className="font-display text-2xl text-primary">
-            Your saved looks <span className="text-base text-muted-foreground">({total})</span>
-          </h2>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {looks.map((look) => (
-              <li key={look.id}>
-                <Card className="flex h-full flex-col justify-between gap-3 p-4">
-                  <p className="font-medium">{lookTitle(look)}</p>
-                  <Link
-                    href={`/shop?outfitId=${look.id}`}
-                    className="text-sm font-medium text-plum underline"
-                    aria-label={`Shop this look: ${lookTitle(look)}`}
-                  >
-                    Shop this look
-                  </Link>
-                </Card>
-              </li>
-            ))}
-          </ul>
-          {total > looks.length && (
-            <p className="text-sm text-muted-foreground">
-              Showing your {looks.length} most recent saved looks. All of them are in{' '}
-              <Link href="/saved" className="font-medium text-plum underline">
-                Saved Outfits
-              </Link>
-              .
-            </p>
-          )}
-        </section>
+        <Card className="space-y-3 p-4 sm:p-6">
+          <p className="text-sm">
+            Save this look first. Items from your shortlist can be added to saved looks only, and suggested looks are
+            removed after 7 days.
+          </p>
+          <SaveLookButton outfitId={look.id} />
+        </Card>
       )}
     </div>
   );

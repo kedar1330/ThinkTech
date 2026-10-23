@@ -81,6 +81,18 @@ export const MIGRATIONS: Migration[] = [
       return { oldStorageKeyIndexDropped: old ? 1 : 0 };
     },
   },
+  {
+    id: '003-outfit-source',
+    description:
+      'Looks record the feature they were created in (#115). Every look made so far came from ' +
+      'POST /v1/recommendations, the Discover My Style engine, so looks without a source get discover_my_style.',
+    async up(db) {
+      const backfilled = await db
+        .collection('outfits')
+        .updateMany({ source: { $exists: false } }, { $set: { source: 'discover_my_style' } });
+      return { looksMarkedDiscoverMyStyle: backfilled.modifiedCount };
+    },
+  },
 ];
 
 /** Applies pending migrations in order. Returns the IDs applied in this run. */
