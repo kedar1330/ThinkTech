@@ -8,6 +8,7 @@ import type { Config } from './config/env';
 import { AppearanceController } from './controllers/appearance.controller';
 import { AuthController } from './controllers/auth.controller';
 import { DesignController } from './controllers/design.controller';
+import { DesignStudioController } from './controllers/design-studio.controller';
 import { ColourLibraryController } from './controllers/colour-library.controller';
 import { MeasurementsController } from './controllers/measurements.controller';
 import { ManualController } from './controllers/manual.controller';
@@ -18,9 +19,11 @@ import { ProfileController } from './controllers/profile.controller';
 import { RecommendationsController } from './controllers/recommendations.controller';
 import { ShortlistController } from './controllers/shortlist.controller';
 import type { Database } from './db';
+import type { DesignAnalysisProvider } from './integrations/ai/design-client';
 import type { OutfitImageProvider } from './integrations/ai/image-client';
 import type { ShoppingSearchProvider } from './integrations/shopping/serper-client';
 import type { PhotoAnalysisProvider } from './integrations/ai/vision-client';
+import type { ImageGenerator } from './integrations/image/image-client';
 import type { WordingProvider } from './integrations/ai/wording-client';
 import { authenticate, requirePasswordSet } from './middleware/authenticate';
 import { clientIp } from './middleware/client-ip';
@@ -31,6 +34,7 @@ import { appearanceRoutes } from './routes/appearance.routes';
 import { authRoutes } from './routes/auth.routes';
 import { colourLibraryRoutes } from './routes/colour-library.routes';
 import { designRoutes } from './routes/design.routes';
+import { designStudioRoutes } from './routes/design-studio.routes';
 import { measurementsRoutes } from './routes/measurements.routes';
 import { manualRoutes } from './routes/manual.routes';
 import { outfitsRoutes } from './routes/outfits.routes';
@@ -44,6 +48,7 @@ import { AccountService } from './services/account.service';
 import { AuthService } from './services/auth.service';
 import { ColourLibraryService } from './services/colour-library.service';
 import { DesignService } from './services/design.service';
+import { DesignStudioService } from './services/design-studio.service';
 import type { GoogleVerifier } from './services/google';
 import type { EmailSender, SmsSender } from './services/messaging';
 import type { StyleLibrary } from './services/engine';
@@ -83,6 +88,10 @@ export interface AppDeps {
   outfitImageProvider?: OutfitImageProvider | null;
   /** Store search for Shop My Look price ranges (#118). Null when SERPER_API_KEY is unset; tests pass a fake. */
   shoppingProvider?: ShoppingSearchProvider | null;
+  /** Design Studio (D-134): Gemini reads sketches and writes tailor specs. Used only while DESIGN_STUDIO_ENABLED is true. */
+  designAnalysisProvider?: DesignAnalysisProvider | null;
+  /** Design Studio image generators, tried in order (Pollinations, then Cloudflare); tests pass fakes. */
+  imageGenerators?: ImageGenerator[];
   /** Rate limits across auth, recommendations, feedback and shortlist. Defaults to D-38 in-memory stores. */
   rateLimits?: AppRateLimits;
 }
@@ -105,6 +114,8 @@ export function createApp({
   photoAnalysisProvider = null,
   outfitImageProvider = null,
   shoppingProvider = null,
+  designAnalysisProvider = null,
+  imageGenerators = [],
   rateLimits = createRateLimits(),
 }: AppDeps): App {
   const app = express();
@@ -232,6 +243,14 @@ export function createApp({
     shortlistRoutes(new ShortlistController(new ShortlistService(db.models)), withPassword, rateLimits.shortlistWrite),
   );
   app.use('/v1', designRoutes(new DesignController(new DesignService(db.models)), withPassword));
+  const designStudio = new DesignStudioService(
+    db.models,
+    config.DESIGN_STUDIO_ENABLED ? designAnalysisProvider : null,
+    config.DESIGN_STUDIO_ENABLED ? imageGenerators : [],
+    { analysisMs: config.DESIGN_ANALYSIS_TIMEOUT_MS, imageMs: config.IMAGE_GENERATION_TIMEOUT_MS },
+    logger,
+  );
+  app.use('/v1', designStudioRoutes(new DesignStudioController(designStudio), withPassword, rateLimits.designStudio));
   app.use('/v1', colourLibraryRoutes(new ColourLibraryController(colourLibrary), withPassword));
   const manualService = new ManualService(db.models);
   app.use('/v1', manualRoutes(new ManualController(manualService), withPassword));

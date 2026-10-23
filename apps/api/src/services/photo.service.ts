@@ -9,9 +9,13 @@ import {
   faceAnalysisResultSchema,
   photoQualityIssueSchema,
   type AppearanceAnalysisSummary,
+  type BodyAnalysisResult,
   type ClothingPreference,
+  type ConfidenceLabel,
+  type FaceAnalysisResult,
   type PhotoAnalysisResponse,
   type PhotoContentType,
+  type PhotoQualityIssue,
   type PhotosResponse,
   type UploadPhotoQuery,
   type UserPhoto,
@@ -33,7 +37,10 @@ import type { AppearanceService } from './appearance.service';
 const UNAVAILABLE = 'Photo analysis is not available right now. You can choose manually instead.';
 const FAILED = 'We couldn’t analyse your photo just now. Please try again, or choose manually.';
 
-const unusableReplySchema = z.object({ usable: z.literal(false), qualityIssues: z.array(z.string()).max(10) });
+const unusableReplySchema = z.object({
+  usable: z.literal(false),
+  qualityIssues: z.array(z.string()).max(10).optional().default([]),
+});
 const usableBase = z.object({ usable: z.literal(true), confidence: confidenceLabelSchema });
 
 /** Checks the file signature, so a renamed file of another type is refused. */
@@ -99,6 +106,36 @@ export class PhotoService {
     if (result.deletedCount === 0) throw new AppError('NOT_FOUND');
   }
 
+  /** Stores a full-body photo for 3D Virtual Try-On without running AI analysis on it. */
+  async uploadTryOnPhoto(userId: Types.ObjectId, bytes: Buffer): Promise<UserPhoto> {
+    if (bytes.length === 0 || bytes.length > PHOTO_MAX_BYTES) {
+      throw new AppError('INVALID_REQUEST', 'Choose a JPEG, PNG or WebP photo under 8 MB.');
+    }
+    const contentType = detectImageType(bytes);
+    if (!contentType) throw new AppError('INVALID_REQUEST', 'Choose a JPEG, PNG or WebP photo under 8 MB.');
+
+    const now = new Date();
+    const photo = await this.models.UserPhoto.create({
+      userId,
+      kind: 'body',
+      angle: 'front',
+      storage: 'mongodb',
+      data: bytes,
+      contentType,
+      bytes: bytes.length,
+      retention: 'keep',
+      uploadedAt: now,
+      analyzedAt: null,
+    });
+    // Keep only the newest body photo
+    await this.models.UserPhoto.deleteMany({ userId, kind: 'body', _id: { $ne: photo._id } });
+
+    // Mark 3D Virtual Try-On preference as custom_photo in the user's profile
+    await this.models.Profile.updateOne({ userId }, { $set: { tryOnModel: 'custom_photo' } }, { upsert: true });
+
+    return toPhoto(photo.toObject() as UserPhotoDoc & { _id: Types.ObjectId });
+  }
+
   /** Stores the photo, analyses it and applies the result; everything comes back in one response. */
   async upload(userId: Types.ObjectId, query: UploadPhotoQuery, bytes: Buffer): Promise<PhotoAnalysisResponse> {
     if (!this.provider) throw new AppError('PROVIDER_NOT_CONFIGURED', UNAVAILABLE);
@@ -118,7 +155,9 @@ export class PhotoService {
     }
 
     const reply = await this.callProvider(query.kind, { bytes, contentType }, department, heightCm);
-    const { result, confidence } = this.parseReply(query.kind, reply, department);
+    const parsed = this.parseReply(query.kind, reply, department);
+    const result: FaceAnalysisResult | BodyAnalysisResult = parsed.result;
+    const confidence: ConfidenceLabel = parsed.confidence;
 
     const now = new Date();
     const photo = await this.models.UserPhoto.create({
@@ -201,7 +240,15 @@ export class PhotoService {
         : await provider.analyzeBody(photo, department!, heightCm, controller.signal);
     } catch (err) {
       const cause = err instanceof VisionProviderError ? err.cause : 'provider_error';
-      this.logger.warn({ event: 'photo_analysis_failed', kind, cause, provider: provider.name, model: provider.model });
+      const details = err instanceof VisionProviderError ? err.details : undefined;
+      this.logger.warn({
+        event: 'photo_analysis_failed',
+        kind,
+        cause,
+        details,
+        provider: provider.name,
+        model: provider.model,
+      });
       throw new AppError(cause === 'rate_limited' ? 'RATE_LIMITED' : 'AI_UNAVAILABLE', FAILED);
     } finally {
       clearTimeout(timer);
@@ -210,25 +257,81 @@ export class PhotoService {
 
   /** Validates the reply against the contracts: only listed values, and only this Clothing Preference's body types. */
   private parseReply(kind: UploadPhotoQuery['kind'], reply: unknown, department: ClothingPreference | null) {
+    const raw = (reply ?? {}) as Record<string, unknown>;
+
+    const qualitySynonyms: Record<string, PhotoQualityIssue> = {
+      underexposed: 'too_dark',
+      dark: 'too_dark',
+      poor_lighting: 'too_dark',
+      overexposed: 'too_bright',
+      bright: 'too_bright',
+      washed_out: 'too_bright',
+      unclear: 'blurry',
+      blurred: 'blurry',
+      low_resolution: 'blurry',
+      no_face: 'face_not_found',
+      not_found: 'face_not_found',
+      no_person: 'body_not_fully_visible',
+      partial_body: 'body_not_fully_visible',
+      multiple_faces: 'multiple_people',
+      group: 'multiple_people',
+    };
+
     const unusable = unusableReplySchema.safeParse(reply);
     if (unusable.success) {
-      const issues = unusable.data.qualityIssues
-        .map((q) => photoQualityIssueSchema.safeParse(q))
-        .flatMap((r) => (r.success ? [r.data] : []));
+      const issues = (unusable.data.qualityIssues ?? [])
+        .map((q) => {
+          const direct = photoQualityIssueSchema.safeParse(q);
+          if (direct.success) return direct.data;
+          const mapped = typeof q === 'string' ? qualitySynonyms[q.toLowerCase().trim()] : undefined;
+          return mapped;
+        })
+        .filter((r): r is PhotoQualityIssue => Boolean(r));
+
       const message = issues.length
         ? issues.map((q) => PHOTO_QUALITY_MESSAGES[q]).join(' ')
-        : 'This photo can’t be analysed. Please try another one, or choose manually.';
+        : kind === 'face'
+          ? 'We could not see your full face clearly. Please use a well-lit photo showing your full face (forehead, both cheeks, and jawline).'
+          : 'This photo can’t be analysed. Please try another one with your full body visible, or choose manually.';
       throw new AppError('PHOTO_UNUSABLE', message);
     }
-    const base = usableBase.safeParse(reply);
-    const { usable: _u, confidence: _c, ...rest } = (reply ?? {}) as Record<string, unknown>;
+
+    let rawConfidence = raw.confidence;
+    if (typeof rawConfidence === 'string') {
+      rawConfidence = rawConfidence.toLowerCase().trim();
+    }
+    const base = usableBase.safeParse({ usable: raw.usable, confidence: rawConfidence });
+
+    const normalizedRest: Record<string, unknown> = { ...raw };
+    delete normalizedRest.usable;
+    delete normalizedRest.confidence;
+
+    if (kind === 'face') {
+      if (typeof normalizedRest.monkTone === 'string') {
+        normalizedRest.monkTone = parseInt(normalizedRest.monkTone, 10);
+      }
+      if (typeof normalizedRest.undertone === 'string') {
+        normalizedRest.undertone = normalizedRest.undertone.toLowerCase().trim();
+      }
+    } else {
+      if (typeof normalizedRest.bodyType === 'string') {
+        normalizedRest.bodyType = normalizedRest.bodyType
+          .toLowerCase()
+          .trim()
+          .replace(/[\s-]+/g, '_');
+      }
+    }
+
     const parsed =
-      kind === 'face' ? faceAnalysisResultSchema.safeParse(rest) : bodyAnalysisResultSchema.safeParse(rest);
+      kind === 'face'
+        ? faceAnalysisResultSchema.safeParse(normalizedRest)
+        : bodyAnalysisResultSchema.safeParse(normalizedRest);
     const allowed =
       parsed.success &&
       (kind === 'face' ||
         (bodyTypesFor(department!) as readonly string[]).includes((parsed.data as { bodyType: string }).bodyType));
     if (!base.success || !parsed.success || !allowed) {
+      // Never the reply itself: it holds the user's skin tone, undertone or body type (CONTRIBUTING §5).
       this.logger.warn({ event: 'photo_analysis_failed', kind, cause: 'invalid_output' });
       throw new AppError('AI_UNAVAILABLE', FAILED);
     }
