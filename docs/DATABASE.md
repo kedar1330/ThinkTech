@@ -368,7 +368,7 @@ One document per look. `POST /v1/recommendations` creates up to 5 looks sharing 
 | `weatherContext` | Stage 2: `{ source, observedAt, summary, bands }` or manual; never location |
 | `createdAt`, `updatedAt` | timestamps |
 
-**`outfitImages`** (local preview, 2026-10-22; user-owned, in `USER_OWNED_COLLECTIONS`): one AI outfit image per look, model `OutfitImage`. Fields `userId`, `outfitId` (unique index), `data` (the image bytes, never selected by default or logged), `contentType`, `bytes`, `provider`, `model`, `promptVersion` (`outfit-image-v2`), `expiresAt` (copied from the suggested look, TTL index; set to null when the look is saved, so a saved look keeps its image), `createdAt`. Deleted with the look and with the account.
+**`outfitImages`** (local preview, 2026-10-22; user-owned, in `USER_OWNED_COLLECTIONS`): one AI outfit image per look, model `OutfitImage`. Fields `userId`, `outfitId` (unique index), `data` (the image bytes, never selected by default or logged), `contentType`, `bytes`, `provider`, `model`, `promptVersion` (`outfit-image-v3`: adds the wear type and the designed garment's chosen features; older images keep `outfit-image-v2`), `expiresAt` (copied from the suggested look, TTL index; set to null when the look is saved, so a saved look keeps its image), `createdAt`. Deleted with the look and with the account.
 
 `slots[]` element:
 
