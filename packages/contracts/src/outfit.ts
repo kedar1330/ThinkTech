@@ -336,3 +336,60 @@ export type FeedbackRecordedResponse = z.infer<typeof feedbackRecordedResponseSc
 export interface DeletedResponse {
   deleted: true;
 }
+
+// --- Price range from store search results (#118) ---------------------------------------------------
+
+/** The stores whose search listings make up a look's price range. */
+export const PRICE_RANGE_STORES = [
+  { id: 'amazon', label: 'Amazon' },
+  { id: 'flipkart', label: 'Flipkart' },
+  { id: 'meesho', label: 'Meesho' },
+] as const;
+export const PRICE_RANGE_STORE_IDS = PRICE_RANGE_STORES.map((s) => s.id) as [
+  (typeof PRICE_RANGE_STORES)[number]['id'],
+  ...(typeof PRICE_RANGE_STORES)[number]['id'][],
+];
+export const priceRangeStoreSchema = z.enum(PRICE_RANGE_STORE_IDS);
+export type PriceRangeStore = z.infer<typeof priceRangeStoreSchema>;
+
+/** Shown next to every range: these are third-party search results, not StyleMe prices. */
+export const PRICE_RANGE_LABEL =
+  'Prices from Amazon, Flipkart and Meesho search results. Prices change; not verified by StyleMe; not a checkout price.';
+
+/** One garment of the look: the lowest and highest listing price found, or null when none was found. */
+export const slotPriceRangeSchema = z
+  .object({
+    slotId: slotIdSchema,
+    min: z.number().nonnegative().nullable(),
+    max: z.number().nonnegative().nullable(),
+    listings: z.number().int().min(0),
+    stores: z.array(priceRangeStoreSchema),
+  })
+  .strict()
+  .refine((s) => (s.listings === 0) === (s.min === null && s.max === null), {
+    message: 'A slot has a range exactly when it has listings',
+  })
+  .refine((s) => s.min === null || s.max === null || s.min <= s.max, { message: 'min must not exceed max' });
+export type SlotPriceRange = z.infer<typeof slotPriceRangeSchema>;
+
+/**
+ * `GET /v1/outfits/:id/price-range` data: per garment, the range of real listing prices on Amazon, Flipkart
+ * and Meesho; for the look, the sum of the garment minimums to the sum of the maximums over the garments
+ * with listings. `min`/`max` are null when no garment has any. Never a made-up or default price.
+ */
+export const lookPriceRangeSchema = z
+  .object({
+    currency: z.literal('INR'),
+    priceBasis: z.literal('search_results'),
+    min: z.number().nonnegative().nullable(),
+    max: z.number().nonnegative().nullable(),
+    pricedSlots: z.number().int().min(0),
+    totalSlots: z.number().int().min(1),
+    slots: z.array(slotPriceRangeSchema).min(1),
+    stores: z.array(priceRangeStoreSchema),
+    /** When the oldest of the search results used was fetched (results are cached for a day). */
+    checkedAt: z.iso.datetime(),
+    label: z.literal(PRICE_RANGE_LABEL),
+  })
+  .strict();
+export type LookPriceRange = z.infer<typeof lookPriceRangeSchema>;

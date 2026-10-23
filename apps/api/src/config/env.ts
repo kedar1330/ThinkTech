@@ -68,6 +68,11 @@ const envSchema = z.object({
   POLLINATIONS_API_KEY: optional,
   POLLINATIONS_IMAGE_MODEL: z.string().trim().min(1).default('black-forest-labs/flux.1-schnell'),
   OUTFIT_IMAGE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(60_000),
+  // Price ranges on Shop My Look tabs (#118) from Amazon, Flipkart and Meesho listings, searched with
+  // Serper.dev. Live whenever SERPER_API_KEY is set, local only until the founder approves showing store
+  // prices (D-77). A query is a garment's search phrase and the department, never anything about the user.
+  SERPER_API_KEY: optional,
+  PRICE_SEARCH_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30_000).default(8000),
 });
 
 const configSchema = envSchema.superRefine((env, ctx) => {

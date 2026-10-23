@@ -498,7 +498,25 @@ const aiCacheSchema = new Schema(
 );
 aiCacheSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
+// Store search listings for Shop My Look price ranges (#118), reused for a day. System data: the key is a
+// hash of the query (a garment's search phrase and the department), with no user ID, so it is not
+// user-owned. Only the store and the parsed price of each Amazon, Flipkart or Meesho listing are kept.
+const priceSearchCacheSchema = new Schema(
+  {
+    ...fixtureField,
+    cacheKey: { type: String, required: true, unique: true },
+    provider: { type: String, required: true },
+    // `[{ store: "amazon" | "flipkart" | "meesho", price }]`
+    listings: { type: [Schema.Types.Mixed], default: [] },
+    checkedAt: { type: Date, required: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: false },
+);
+priceSearchCacheSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 export type UserDoc = InferSchemaType<typeof userSchema>;
+export type PriceSearchCacheDoc = InferSchemaType<typeof priceSearchCacheSchema>;
 export type BetaInviteDoc = InferSchemaType<typeof betaInviteSchema>;
 export type PendingRegistrationDoc = InferSchemaType<typeof pendingRegistrationSchema>;
 export type AuthChallengeDoc = InferSchemaType<typeof authChallengeSchema>;
@@ -545,6 +563,7 @@ export interface Models {
   OutfitImage: Model<OutfitImageDoc>;
   ShortlistItem: Model<ShortlistItemDoc>;
   AiCache: Model<AiCacheDoc>;
+  PriceSearchCache: Model<PriceSearchCacheDoc>;
   UserPhoto: Model<UserPhotoDoc>;
   AppearanceAnalysis: Model<AppearanceAnalysisDoc>;
   // Specified 2026-10-18 (D-110 … D-125); declared only — no endpoint uses them yet.
@@ -593,6 +612,7 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     OutfitImage: main.model('OutfitImage', outfitImageSchema, 'outfitImages'),
     ShortlistItem: main.model('ShortlistItem', shortlistItemSchema, 'shortlistItems'),
     AiCache: main.model('AiCache', aiCacheSchema, 'aiCache'),
+    PriceSearchCache: main.model('PriceSearchCache', priceSearchCacheSchema, 'priceSearchCache'),
     UserPhoto: main.model('UserPhoto', userPhotoSchema, 'userPhotos'),
     AppearanceAnalysis: main.model('AppearanceAnalysis', appearanceAnalysisSchema, 'appearanceAnalyses'),
     CatalogueCategory: main.model('CatalogueCategory', catalogueCategorySchema, 'catalogueCategories'),

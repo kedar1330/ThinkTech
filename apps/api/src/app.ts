@@ -19,6 +19,7 @@ import { RecommendationsController } from './controllers/recommendations.control
 import { ShortlistController } from './controllers/shortlist.controller';
 import type { Database } from './db';
 import type { OutfitImageProvider } from './integrations/ai/image-client';
+import type { ShoppingSearchProvider } from './integrations/shopping/serper-client';
 import type { PhotoAnalysisProvider } from './integrations/ai/vision-client';
 import type { WordingProvider } from './integrations/ai/wording-client';
 import { authenticate, requirePasswordSet } from './middleware/authenticate';
@@ -51,6 +52,7 @@ import { MeasurementsService } from './services/measurements.service';
 import { ManualService } from './services/manual.service';
 import { OnboardingService } from './services/onboarding.service';
 import { OutfitImageService } from './services/outfit-image.service';
+import { PriceRangeService } from './services/price-range.service';
 import { OutfitsService } from './services/outfits.service';
 import { PaletteService } from './services/palette.service';
 import { PhotoService } from './services/photo.service';
@@ -79,6 +81,8 @@ export interface AppDeps {
   photoAnalysisProvider?: PhotoAnalysisProvider | null;
   /** AI outfit images. Used only while OUTFIT_IMAGES_ENABLED is true; tests pass a fake. */
   outfitImageProvider?: OutfitImageProvider | null;
+  /** Store search for Shop My Look price ranges (#118). Null when SERPER_API_KEY is unset; tests pass a fake. */
+  shoppingProvider?: ShoppingSearchProvider | null;
   /** Rate limits across auth, recommendations, feedback and shortlist. Defaults to D-38 in-memory stores. */
   rateLimits?: AppRateLimits;
 }
@@ -100,6 +104,7 @@ export function createApp({
   wordingProvider = null,
   photoAnalysisProvider = null,
   outfitImageProvider = null,
+  shoppingProvider = null,
   rateLimits = createRateLimits(),
 }: AppDeps): App {
   const app = express();
@@ -211,9 +216,13 @@ export function createApp({
   app.use(
     '/v1',
     outfitsRoutes(
-      new OutfitsController(new OutfitsService(db.models, styleLibrary, undefined, outfitImages), feedbackService),
+      new OutfitsController(
+        new OutfitsService(db.models, styleLibrary, undefined, outfitImages),
+        feedbackService,
+        new PriceRangeService(db.models, shoppingProvider, config.PRICE_SEARCH_TIMEOUT_MS, logger),
+      ),
       withPassword,
-      { feedback: rateLimits.feedback, image: rateLimits.outfitImage },
+      { feedback: rateLimits.feedback, image: rateLimits.outfitImage, priceRange: rateLimits.priceRange },
     ),
   );
   const palettes = new PaletteService(styleLibrary, profileService, appearanceService);
