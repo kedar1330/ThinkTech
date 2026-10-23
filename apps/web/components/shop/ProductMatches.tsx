@@ -4,11 +4,22 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { ExternalLink, Heart } from 'lucide-react';
 import {
   CATEGORIES,
+  COLORS,
+  FABRICS,
+  FITS,
+  GARMENT_LENGTHS,
+  NECKLINES,
+  PATTERNS,
   PRICE_RANGE_STORES,
+  SILHOUETTES,
+  SLEEVE_LENGTHS,
   lookProductMatchesSchema,
   type Look,
   type LookPick,
   type LookProductMatches,
+  type LookSpec,
+  type LookSpecAttribute,
+  type MatchedListing,
   type PriceRangeStore,
   type ProductListing,
 } from '@styleme/contracts';
@@ -26,6 +37,43 @@ type StoreFilter = 'all' | PriceRangeStore;
 
 const storeName = (id: PriceRangeStore) => PRICE_RANGE_STORES.find((s) => s.id === id)!.label;
 const pickKey = (l: ProductListing) => `${l.store}|${l.title}|${l.price}`;
+
+/** The listing as it is saved: without the `matched` attributes of a match (#133). */
+const asListing = ({ store, title, price, link, imageUrl }: ProductListing): ProductListing => ({
+  store,
+  title,
+  price,
+  link,
+  imageUrl,
+});
+
+const ATTRIBUTE_VALUES: Record<
+  Exclude<LookSpecAttribute, 'category'>,
+  [keyof LookSpec, readonly { id: string; label: string }[]]
+> = {
+  color: ['colorId', COLORS],
+  fabric: ['fabric', FABRICS],
+  fit: ['fit', FITS],
+  silhouette: ['silhouette', SILHOUETTES],
+  neckline: ['neckline', NECKLINES],
+  sleeve: ['sleeve', SLEEVE_LENGTHS],
+  length: ['length', GARMENT_LENGTHS],
+  pattern: ['pattern', PATTERNS],
+};
+
+/**
+ * What a match has in common with the look, in the look's own words ("navy · cotton · three-quarter"); the
+ * garment type itself goes without saying. Null when only the garment type matched.
+ */
+function describeMatch(matched: readonly LookSpecAttribute[], spec: LookSpec): string | null {
+  const words = matched.flatMap((a) => {
+    if (a === 'category') return [];
+    const [key, vocabulary] = ATTRIBUTE_VALUES[a];
+    const value = spec[key];
+    return typeof value === 'string' ? [vocabLabel(vocabulary, value).toLowerCase()] : [];
+  });
+  return words.length > 0 ? words.join(' · ') : null;
+}
 
 /**
  * Similar products for each garment of the look (#120), from Amazon, Flipkart and Meesho search results:
@@ -82,7 +130,7 @@ export function ProductMatches({
     startSaving(async () => {
       const result: PicksResult = picked
         ? await unpickProductAction(look.id, slotId)
-        : await pickProductAction(look.id, slotId, listing);
+        : await pickProductAction(look.id, slotId, asListing(listing));
       if (result.error !== undefined) {
         setPicks(before);
         setPickError(result.error);
@@ -120,11 +168,120 @@ export function ProductMatches({
   }
 
   const { matches } = state;
-  const cheapest = matches.slots.map((s) => s.listings[0]?.price).filter((p): p is number => p !== undefined);
+  // Matches are ranked by how well they match, so the cheapest is not always first (#133).
+  const cheapest = matches.slots.flatMap((s) =>
+    s.listings.length ? [Math.min(...s.listings.map((l) => l.price))] : [],
+  );
   const cheapestTotal = cheapest.reduce((sum, p) => sum + p, 0);
   const picked = Object.values(picks);
   const pickedTotal = picked.reduce((sum, l) => sum + l.price, 0);
   const pricedSlots = matches.slots.filter((s) => s.listings.length > 0).length;
+
+  /**
+   * One item: its picture, title and price open its options (#125). A match (`spec` given, #133) says which
+   * of the look's attributes its title mentions; another style says so.
+   */
+  const itemCard = (slotId: string, l: ProductListing | MatchedListing, i: number, spec: LookSpec | null) => {
+    const isPicked = picks[slotId] && pickKey(picks[slotId]!) === pickKey(l);
+    const group = spec ? 'match' : 'other';
+    const optionsKey = `${slotId}|${group}|${pickKey(l)}`;
+    const open = openKey === optionsKey;
+    const optionsId = `options-${slotId}-${group}-${i}`;
+    const matchedText = spec && 'matched' in l ? describeMatch(l.matched, spec) : null;
+    return (
+      <li
+        key={pickKey(l)}
+        className={cn(
+          'flex flex-col gap-2 rounded-xl border p-2 text-xs',
+          isPicked ? 'border-primary ring-1 ring-primary' : 'border-border',
+        )}
+      >
+        {/* The item itself opens its options (#125). */}
+        <button
+          type="button"
+          id={`${optionsId}-toggle`}
+          aria-expanded={open}
+          aria-controls={optionsId}
+          onClick={() => setOpenKey(open ? null : optionsKey)}
+          className="flex flex-col gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {l.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- the store's Google-hosted thumbnail, as the search returned it
+            <img
+              src={l.imageUrl}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className="aspect-square w-full rounded-lg bg-surface-muted object-contain"
+            />
+          ) : (
+            <span aria-hidden className="block aspect-square w-full rounded-lg bg-surface-muted" />
+          )}
+          {isPicked && (
+            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+              <Heart aria-hidden className="size-3 fill-current" />
+              Saved
+            </span>
+          )}
+          <span className="line-clamp-2 text-foreground">{l.title}</span>
+          <span>
+            <span className="text-sm font-medium text-foreground">{formatInr(l.price)}</span>{' '}
+            <span className="text-muted-foreground">· {storeName(l.store)}</span>
+          </span>
+          {matchedText ? (
+            <span className="text-[11px] text-success">Matches: {matchedText}</span>
+          ) : (
+            !spec && <span className="text-[11px] text-muted-foreground">Different style</span>
+          )}
+        </button>
+        {open ? (
+          <div
+            id={optionsId}
+            role="group"
+            aria-label={`Options for ${l.title}`}
+            className="mt-auto flex flex-col gap-2 rounded-lg bg-surface-muted p-2"
+          >
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => togglePick(slotId, l, Boolean(isPicked))}
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+            >
+              <Heart aria-hidden className="size-3.5" />
+              {isPicked ? 'Remove from this look' : 'Save to this look'}
+            </button>
+            {/* Coming soon until Virtual Try-On is built; then it opens with this garment (#124). */}
+            <TryOnButton outfitId={look.id} lookName={l.title} slotId={slotId} />
+            {/* The store's own search for this title: Serper gives no store URLs (#134). */}
+            <a
+              href={storeSearchUrl(l.store, l.title)}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              aria-label={`Search for ${l.title} on ${storeName(l.store)} (opens in a new tab)`}
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-3 text-xs font-medium text-foreground hover:bg-surface-muted"
+            >
+              View on {storeName(l.store)}
+              <ExternalLink aria-hidden className="size-3.5" />
+            </a>
+            {l.link && (
+              <a
+                href={l.link}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="text-center text-[11px] text-plum underline underline-offset-2"
+              >
+                Google Shopping
+              </a>
+            )}
+          </div>
+        ) : (
+          <div className="mt-auto">
+            <TryOnButton outfitId={look.id} lookName={l.title} slotId={slotId} />
+          </div>
+        )}
+      </li>
+    );
+  };
 
   return (
     <section aria-labelledby="similar-items" className="space-y-4">
@@ -182,6 +339,7 @@ export function ProductMatches({
         const garment = garments.get(slot.slotId);
         const name = garment ? vocabLabel(CATEGORIES, garment.lookSpec.category) : slotLabel(slot.slotId);
         const shown = slot.listings.filter((l) => store === 'all' || l.store === store);
+        const others = slot.alternatives.filter((l) => store === 'all' || l.store === store);
         const headingId = `similar-${slot.slotId}`;
         return (
           <section key={slot.slotId} aria-labelledby={headingId} className="space-y-2">
@@ -206,105 +364,29 @@ export function ProductMatches({
             )}
             {shown.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No similar items found{store === 'all' ? '' : ` on ${storeName(store)}`}.
+                No items matching your look found{store === 'all' ? '' : ` on ${storeName(store)}`}.
               </p>
             ) : (
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {shown.map((l, i) => {
-                  const isPicked = picks[slot.slotId] && pickKey(picks[slot.slotId]!) === pickKey(l);
-                  const optionsKey = `${slot.slotId}|${pickKey(l)}`;
-                  const open = openKey === optionsKey;
-                  const optionsId = `options-${slot.slotId}-${i}`;
-                  return (
-                    <li
-                      key={pickKey(l)}
-                      className={cn(
-                        'flex flex-col gap-2 rounded-xl border p-2 text-xs',
-                        isPicked ? 'border-primary ring-1 ring-primary' : 'border-border',
-                      )}
-                    >
-                      {/* The item itself opens its options (#125). */}
-                      <button
-                        type="button"
-                        id={`${optionsId}-toggle`}
-                        aria-expanded={open}
-                        aria-controls={optionsId}
-                        onClick={() => setOpenKey(open ? null : optionsKey)}
-                        className="flex flex-col gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        {l.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- the store's Google-hosted thumbnail, as the search returned it
-                          <img
-                            src={l.imageUrl}
-                            alt=""
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            className="aspect-square w-full rounded-lg bg-surface-muted object-contain"
-                          />
-                        ) : (
-                          <span aria-hidden className="block aspect-square w-full rounded-lg bg-surface-muted" />
-                        )}
-                        {isPicked && (
-                          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
-                            <Heart aria-hidden className="size-3 fill-current" />
-                            Saved
-                          </span>
-                        )}
-                        <span className="line-clamp-2 text-foreground">{l.title}</span>
-                        <span>
-                          <span className="text-sm font-medium text-foreground">{formatInr(l.price)}</span>{' '}
-                          <span className="text-muted-foreground">· {storeName(l.store)}</span>
-                        </span>
-                      </button>
-                      {open ? (
-                        <div
-                          id={optionsId}
-                          role="group"
-                          aria-label={`Options for ${l.title}`}
-                          className="mt-auto flex flex-col gap-2 rounded-lg bg-surface-muted p-2"
-                        >
-                          <button
-                            type="button"
-                            disabled={saving}
-                            onClick={() => togglePick(slot.slotId, l, Boolean(isPicked))}
-                            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
-                          >
-                            <Heart aria-hidden className="size-3.5" />
-                            {isPicked ? 'Remove from this look' : 'Save to this look'}
-                          </button>
-                          {/* Coming soon until Virtual Try-On is built; then it opens with this garment (#124). */}
-                          <TryOnButton outfitId={look.id} lookName={l.title} slotId={slot.slotId} />
-                          {/* The store's own search for this title: Serper gives no store URLs (#134). */}
-                          <a
-                            href={storeSearchUrl(l.store, l.title)}
-                            target="_blank"
-                            rel="noopener noreferrer nofollow"
-                            aria-label={`Search for ${l.title} on ${storeName(l.store)} (opens in a new tab)`}
-                            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-3 text-xs font-medium text-foreground hover:bg-surface-muted"
-                          >
-                            View on {storeName(l.store)}
-                            <ExternalLink aria-hidden className="size-3.5" />
-                          </a>
-                          {l.link && (
-                            <a
-                              href={l.link}
-                              target="_blank"
-                              rel="noopener noreferrer nofollow"
-                              className="text-center text-[11px] text-plum underline underline-offset-2"
-                            >
-                              Google Shopping
-                            </a>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="mt-auto">
-                          <TryOnButton outfitId={look.id} lookName={l.title} slotId={slot.slotId} />
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-plum">Matches your look</h4>
+                <ul
+                  aria-label={`Matches your look: ${name}`}
+                  className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+                >
+                  {shown.map((l, i) => itemCard(slot.slotId, l, i, garment?.lookSpec ?? null))}
+                </ul>
+              </div>
+            )}
+            {others.length > 0 && (
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-plum">Other {name} styles</h4>
+                <ul
+                  aria-label={`Other ${name} styles`}
+                  className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+                >
+                  {others.map((l, i) => itemCard(slot.slotId, l, i, null))}
+                </ul>
+              </div>
             )}
           </section>
         );

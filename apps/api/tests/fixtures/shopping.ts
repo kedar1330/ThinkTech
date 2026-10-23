@@ -32,9 +32,12 @@ export class FakeShoppingProvider implements ShoppingSearchProvider {
     ],
   };
 
+  /** When set, answers each query with its own listings instead of `reply` (#133). */
+  respond?: (query: string) => ShoppingListing[];
+
   async search(query: string): Promise<ShoppingListing[]> {
     this.queries.push(query);
     if (this.reply.kind === 'fail') throw new ShoppingProviderError(this.reply.cause);
-    return this.reply.listings;
+    return this.respond ? this.respond(query) : this.reply.listings;
   }
 }

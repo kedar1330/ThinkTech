@@ -2,6 +2,7 @@ import request from 'supertest';
 import type { Express } from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
+  CATEGORIES,
   PRICE_RANGE_LABEL,
   PRODUCTS_PER_STORE,
   PRODUCT_MATCHES_LABEL,
@@ -10,10 +11,12 @@ import {
   lookProductMatchesSchema,
   lookSchema,
   type Look,
+  type ProductListing,
 } from '@styleme/contracts';
 import { PRICE_SEARCH_TTL_MS, parseInr, storeOf } from '../../src/services/price-range.service';
 import { loadStyleLibrary } from '../../src/style-rules';
 import { FakeShoppingProvider, listing } from '../fixtures/shopping';
+import { categoryQuery } from '../../src/services/listing-match';
 import { buildEngineFixtureLibrary } from '../fixtures/style-library';
 import { bearer, login, logTextForPrivacyChecks, registerUser, startTestEnv, type TestEnv } from '../helpers';
 
@@ -299,6 +302,15 @@ describe('GET /v1/outfits/:id/products (#120)', () => {
   });
 });
 
+/** The listing as a pick request sends it: without the `matched` attributes (#133). */
+const asListing = ({ store, title, price, link, imageUrl }: ProductListing): ProductListing => ({
+  store,
+  title,
+  price,
+  link,
+  imageUrl,
+});
+
 describe('picks (PUT/GET/DELETE /v1/outfits/:id/picks, #120)', () => {
   async function withProducts(email: string) {
     const shopping = new FakeShoppingProvider();
@@ -318,10 +330,10 @@ describe('picks (PUT/GET/DELETE /v1/outfits/:id/picks, #120)', () => {
     const put = await request(app)
       .put(`/v1/outfits/${look.id}/picks`)
       .set(bearer(token))
-      .send({ slotId, listing: first });
+      .send({ slotId, listing: asListing(first!) });
     expect(put.status).toBe(200);
     expect(lookPicksResponseSchema.parse(put.body.data).picks).toEqual([
-      { ...first, slotId, pickedAt: expect.any(String) },
+      { ...asListing(first!), slotId, pickedAt: expect.any(String) },
     ]);
     const stored = await env.db.models.Outfit.findById(look.id).lean();
     expect(stored!.shopPicks).toHaveLength(1);
@@ -329,7 +341,7 @@ describe('picks (PUT/GET/DELETE /v1/outfits/:id/picks, #120)', () => {
     await request(app)
       .put(`/v1/outfits/${look.id}/picks`)
       .set(bearer(token))
-      .send({ slotId, listing: second })
+      .send({ slotId, listing: asListing(second!) })
       .expect(200);
     const list = lookPicksResponseSchema.parse(
       (await request(app).get(`/v1/outfits/${look.id}/picks`).set(bearer(token))).body.data,
@@ -343,7 +355,7 @@ describe('picks (PUT/GET/DELETE /v1/outfits/:id/picks, #120)', () => {
   it('never saves a made-up product: the listing must be one the search returned for that garment', async () => {
     const { app, token, look, matches } = await withProducts('fake-pick@example.com');
     const slot = matches.slots[0]!;
-    const made = { ...slot.listings[0]!, price: 1 };
+    const made = { ...asListing(slot.listings[0]!), price: 1 };
     const res = await request(app)
       .put(`/v1/outfits/${look.id}/picks`)
       .set(bearer(token))
@@ -352,7 +364,7 @@ describe('picks (PUT/GET/DELETE /v1/outfits/:id/picks, #120)', () => {
     const wrongSlot = await request(app)
       .put(`/v1/outfits/${look.id}/picks`)
       .set(bearer(token))
-      .send({ slotId: 'shoes', listing: slot.listings[0] });
+      .send({ slotId: 'shoes', listing: asListing(slot.listings[0]!) });
     expect(wrongSlot.body.error.code).toBe('INVALID_REQUEST');
     const bad = await request(app)
       .put(`/v1/outfits/${look.id}/picks`)
@@ -372,12 +384,70 @@ describe('picks (PUT/GET/DELETE /v1/outfits/:id/picks, #120)', () => {
         await request(other.app)
           .put(`/v1/outfits/${look.id}/picks`)
           .set(bearer(other.token))
-          .send({ slotId: slot.slotId, listing: slot.listings[0] })
+          .send({ slotId: slot.slotId, listing: asListing(slot.listings[0]!) })
       ).status,
     ).toBe(404);
     expect(
       (await request(other.app).delete(`/v1/outfits/${look.id}/picks/${slot.slotId}`).set(bearer(other.token))).status,
     ).toBe(404);
     expect((await request(app).get(`/v1/outfits/${look.id}/picks`)).status).toBe(401);
+  });
+});
+
+describe('matches first, then other styles (GET /v1/outfits/:id/products, #133)', () => {
+  it('ranks items by how much of the look their title mentions, then lists other styles of the same garment', async () => {
+    const shopping = new FakeShoppingProvider();
+    const { app, token } = await signedIn('matches@example.com', shopping);
+    const look = await firstLook(app, token);
+    const garment = look.slots.find((s) => GARMENTS.has(s.slot))!;
+    const colour = garment.swatches[0]!.name;
+    const category = CATEGORIES.find((c) => c.id === garment.lookSpec.category)!.label;
+    const broad = categoryQuery(garment.lookSpec, 'women');
+    shopping.respond = (query) => {
+      if (query === broad || query.startsWith(`${broad} `)) {
+        return [
+          listing('Amazon.in', '₹350', `Synthetic striped ${category} B`),
+          listing('Amazon.in', '₹500', `Synthetic ${colour} ${category} with everything`), // also a match: left out
+          listing('Amazon.in', '₹350', `Synthetic striped ${category} B`), // repeated in the reply
+        ];
+      }
+      if (query.endsWith(' flipkart') || query.endsWith(' meesho')) return [];
+      return [
+        listing('Amazon.in', '₹300', `Synthetic ${category}`),
+        listing('Amazon.in', '₹900', `Synthetic ${colour} ${category} with everything`),
+      ];
+    };
+
+    const matches = lookProductMatchesSchema.parse(
+      (await request(app).get(`/v1/outfits/${look.id}/products`).set(bearer(token))).body.data,
+    );
+    const slot = matches.slots.find((s) => s.slotId === garment.slotId)!;
+    // The colour match ranks first although it costs more.
+    expect(slot.listings.map((l) => [l.title, l.matched])).toEqual([
+      [`Synthetic ${colour} ${category} with everything`, ['category', 'color']],
+      [`Synthetic ${category}`, ['category']],
+    ]);
+    // Other styles: same garment, never a match again, no repeats.
+    expect(slot.alternatives.map((l) => l.title)).toEqual([`Synthetic striped ${category} B`]);
+    // The broad searches carry the category and department only.
+    expect(shopping.queries).toEqual(expect.arrayContaining([broad, `${broad} flipkart`, `${broad} meesho`]));
+
+    // Another style can be saved like a match.
+    const alt = slot.alternatives[0]!;
+    const saved = await request(app)
+      .put(`/v1/outfits/${look.id}/picks`)
+      .set(bearer(token))
+      .send({ slotId: slot.slotId, listing: alt });
+    expect(saved.status).toBe(200);
+    expect(lookPicksResponseSchema.parse(saved.body.data).picks.map((p) => p.title)).toEqual([alt.title]);
+  });
+
+  it('price ranges keep to the matching searches (no broad searches)', async () => {
+    const shopping = new FakeShoppingProvider();
+    const { app, token } = await signedIn('range-only@example.com', shopping);
+    const look = await firstLook(app, token);
+    await priceRange(app, token, look.id).expect(200);
+    const garments = look.slots.filter((s) => GARMENTS.has(s.slot));
+    expect(shopping.queries).toHaveLength(garments.length * 3);
   });
 });
