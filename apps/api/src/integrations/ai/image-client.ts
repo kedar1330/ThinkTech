@@ -99,7 +99,12 @@ export function cloudflareOutfitImageProvider(
           {
             method: 'POST',
             headers: { authorization: `Bearer ${apiToken}`, 'content-type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt.slice(0, 2048), steps: 8, width: width ?? 768, height: height ?? 1024 }),
+            body: JSON.stringify({
+              prompt: prompt.slice(0, 2048),
+              steps: 8,
+              width: width ?? 768,
+              height: height ?? 1024,
+            }),
             signal,
           },
         );
@@ -152,4 +157,3 @@ export function compositeOutfitImageProvider(
     },
   };
 }
-

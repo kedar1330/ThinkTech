@@ -41,23 +41,7 @@ export default async function DiscoverLooksPage({
       : null,
   ]);
   const opened = designData ? designSummary(designData) : null;
-  const userDesigns = savedDesigns(selections, opened);
-  const starterDesigns: typeof userDesigns = [
-    {
-      garmentType: 'kurta',
-      garmentName: 'Classic Kurta',
-      outfitCategory: 'indian',
-      outfitLabel: 'Indian Wear',
-      features: ['V-neck', 'Three-quarter sleeve'],
-      layers: [
-        { assetId: 'base', url: '/illustrations/design/women-base.svg', alt: 'Women base figure' },
-        { assetId: 'v', url: '/illustrations/design/women-layer-neckline-v_neck.svg', alt: 'V-neckline' },
-        { assetId: 's', url: '/illustrations/design/women-layer-sleeve-three_quarter.svg', alt: 'Three-quarter sleeve' },
-      ],
-      occasionFeature: 'occasion_casual',
-    },
-  ];
-  const designs = userDesigns.length > 0 ? userDesigns : starterDesigns;
+  const designs = savedDesigns(selections, opened);
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">

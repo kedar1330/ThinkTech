@@ -1,4 +1,6 @@
-import { MongoClient } from 'mongodb';
+import mongoose from 'mongoose';
+
+const { MongoClient } = mongoose.mongo;
 
 const LOCAL_BASE_URI = process.env.LOCAL_MONGODB_URI ?? 'mongodb://127.0.0.1:27017';
 const rawAtlasUri = process.env.MONGODB_URI ?? process.argv[2];
@@ -26,8 +28,11 @@ async function migrateAll() {
   const adminDb = localClient.db().admin();
   const dbsInfo = await adminDb.listDatabases();
   const targetDbs = dbsInfo.databases
-    .map((d) => d.name)
-    .filter((name) => !['admin', 'config', 'local'].includes(name) && (name.includes('styleme') || name.startsWith('style')));
+    .map((d: { name: string }) => d.name)
+    .filter(
+      (name: string) =>
+        !['admin', 'config', 'local'].includes(name) && (name.includes('styleme') || name.startsWith('style')),
+    );
 
   console.log(`Found target application databases: ${targetDbs.join(', ')}`);
 
@@ -35,7 +40,13 @@ async function migrateAll() {
   if (!targetDbs.includes('styleme')) targetDbs.push('styleme');
   if (!targetDbs.includes('styleme_tombstones')) targetDbs.push('styleme_tombstones');
 
-  const report: Array<{ dbName: string; collectionName: string; localCount: number; atlasCount: number; status: string }> = [];
+  const report: Array<{
+    dbName: string;
+    collectionName: string;
+    localCount: number;
+    atlasCount: number;
+    status: string;
+  }> = [];
 
   for (const dbName of targetDbs) {
     console.log(`\n========================================================`);
@@ -67,7 +78,7 @@ async function migrateAll() {
       const docs = await localCol.find({}).toArray();
 
       // Bulk upsert into Atlas
-      const ops = docs.map((doc) => ({
+      const ops = docs.map((doc: { _id: unknown; [key: string]: unknown }) => ({
         replaceOne: {
           filter: { _id: doc._id },
           replacement: doc,
@@ -78,7 +89,7 @@ async function migrateAll() {
       const BATCH_SIZE = 500;
       for (let i = 0; i < ops.length; i += BATCH_SIZE) {
         const batch = ops.slice(i, i + BATCH_SIZE);
-        await atlasCol.bulkWrite(batch, { ordered: false });
+        await atlasCol.bulkWrite(batch as unknown as Parameters<typeof atlasCol.bulkWrite>[0], { ordered: false });
       }
 
       // Copy indexes
@@ -86,13 +97,21 @@ async function migrateAll() {
         const indexes = await localCol.indexes();
         for (const idx of indexes) {
           if (idx.name === '_id_') continue;
-          const { key, name, unique, sparse } = idx as any;
-          const options: any = { name };
+          const { key, name, unique, sparse } = idx as {
+            key: Record<string, unknown>;
+            name?: string;
+            unique?: boolean;
+            sparse?: boolean;
+          };
+          const options: Record<string, unknown> = {};
+          if (name) options.name = name;
           if (unique) options.unique = true;
           if (sparse) options.sparse = true;
-          await atlasCol.createIndex(key, options).catch(() => {});
+          await atlasCol
+            .createIndex(key as unknown as Parameters<typeof atlasCol.createIndex>[0], options)
+            .catch(() => {});
         }
-      } catch (e) {
+      } catch {
         // Index copy fallback
       }
 
@@ -118,20 +137,16 @@ async function migrateAll() {
   console.log('\n[4/4] Final Verification Summary:');
   console.log('-------------------------------------------------------------------------------------------------');
   console.log(
-    'Database'.padEnd(20) +
-    'Collection'.padEnd(30) +
-    'Local Count'.padEnd(15) +
-    'Atlas Count'.padEnd(15) +
-    'Status'
+    'Database'.padEnd(20) + 'Collection'.padEnd(30) + 'Local Count'.padEnd(15) + 'Atlas Count'.padEnd(15) + 'Status',
   );
   console.log('-------------------------------------------------------------------------------------------------');
   for (const r of report) {
     console.log(
       r.dbName.padEnd(20) +
-      r.collectionName.padEnd(30) +
-      String(r.localCount).padEnd(15) +
-      String(r.atlasCount).padEnd(15) +
-      r.status
+        r.collectionName.padEnd(30) +
+        String(r.localCount).padEnd(15) +
+        String(r.atlasCount).padEnd(15) +
+        r.status,
     );
   }
   console.log('-------------------------------------------------------------------------------------------------');
@@ -143,15 +158,19 @@ async function migrateAll() {
   console.log(` - Users in Atlas: ${userCount}`);
   console.log(` - Profiles in Atlas: ${profileCount}`);
 
-  const sampleUsers = await atlasClient.db('styleme').collection('users').find({}, { projection: { email: 1, role: 1 } }).toArray();
-  console.log(` - User Accounts:`, sampleUsers.map((u) => u.email).join(', '));
+  const sampleUsers = await atlasClient
+    .db('styleme')
+    .collection('users')
+    .find({}, { projection: { email: 1, role: 1 } })
+    .toArray();
+  console.log(' - User Accounts:', sampleUsers.map((u) => String(u['email'] ?? '')).join(', '));
 
   await localClient.close();
   await atlasClient.close();
   console.log('\nMigration and verification completed successfully!');
 }
 
-migrateAll().catch((err) => {
+migrateAll().catch((err: unknown) => {
   console.error('Migration error:', err);
   process.exit(1);
 });

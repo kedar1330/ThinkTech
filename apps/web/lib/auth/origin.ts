@@ -12,7 +12,9 @@ export function isAllowedOrigin(
     if (authUrl) {
       try {
         if (originUrl.origin === new URL(authUrl).origin) return true;
-      } catch {}
+      } catch {
+        // Fall through to host-based matching
+      }
     }
     if (host) {
       const normalizedHost = host.trim().toLowerCase();

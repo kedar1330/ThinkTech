@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import type { CategoryColourItem } from '@styleme/contracts';
-import { textContrastColor } from '@/lib/palette/palette-utils';
 
 interface StarterPaletteShowcaseProps {
   colours: CategoryColourItem[];
@@ -33,7 +32,6 @@ export function StarterPaletteShowcase({ colours }: StarterPaletteShowcaseProps)
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {colours.map((c) => {
-          const contrast = textContrastColor(c.hex);
           const isCopied = copiedHex === c.hex;
           return (
             <div

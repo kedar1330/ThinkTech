@@ -132,7 +132,10 @@ export default async function MyColoursPage({
             <p className="font-display text-xl text-primary">{missing.title}</p>
             <p className="mx-auto max-w-md text-sm text-muted-foreground">{missing.body}</p>
             {missing.link && (
-              <Link href="/profile" className="inline-block text-sm font-semibold text-plum underline underline-offset-2">
+              <Link
+                href="/profile"
+                className="inline-block text-sm font-semibold text-plum underline underline-offset-2"
+              >
                 Go to My Profile
               </Link>
             )}

@@ -1,6 +1,5 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { FABRIC_IDS } from '@styleme/contracts';

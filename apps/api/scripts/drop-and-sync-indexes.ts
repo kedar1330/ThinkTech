@@ -1,6 +1,8 @@
-import { MongoClient } from 'mongodb';
+import mongoose from 'mongoose';
 import { connectDatabase } from '../src/db';
 import { loadConfig } from '../src/config/env';
+
+const { MongoClient } = mongoose.mongo;
 
 async function main() {
   const config = loadConfig();
@@ -11,7 +13,8 @@ async function main() {
   for (const uri of [ATLAS_MAIN_URI, ATLAS_TOMB_URI]) {
     const client = new MongoClient(uri);
     await client.connect();
-    const dbName = uri.split('/').pop()?.split('?')[0]!;
+    const lastPart = uri.split('/').pop() ?? '';
+    const dbName = lastPart.split('?')[0] || 'styleme';
     const db = client.db(dbName);
     console.log(`Checking ${dbName}...`);
     const collections = await db.listCollections().toArray();
@@ -34,7 +37,7 @@ async function main() {
   console.log('\nDone!');
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error('FAILED:', err);
   process.exit(1);
 });
