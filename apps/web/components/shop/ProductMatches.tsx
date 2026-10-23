@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { Heart } from 'lucide-react';
+import { ExternalLink, Heart } from 'lucide-react';
 import {
   CATEGORIES,
   PRICE_RANGE_STORES,
@@ -18,6 +18,7 @@ import { Card } from '@/components/ui/card';
 import { TryOnButton } from './TryOnButton';
 import { garmentSlots, slotLabel, vocabLabel } from '@/lib/outfits/look-text';
 import { formatInr } from '@/lib/shop/format';
+import { storeSearchUrl } from '@/lib/shop/store-links';
 import { cn } from '@/lib/utils';
 
 type State = { kind: 'loading' } | { kind: 'ready'; matches: LookProductMatches } | { kind: 'unavailable' };
@@ -273,14 +274,25 @@ export function ProductMatches({
                           </button>
                           {/* Coming soon until Virtual Try-On is built; then it opens with this garment (#124). */}
                           <TryOnButton outfitId={look.id} lookName={l.title} slotId={slot.slotId} />
+                          {/* The store's own search for this title: Serper gives no store URLs (#134). */}
+                          <a
+                            href={storeSearchUrl(l.store, l.title)}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            aria-label={`Search for ${l.title} on ${storeName(l.store)} (opens in a new tab)`}
+                            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-3 text-xs font-medium text-foreground hover:bg-surface-muted"
+                          >
+                            View on {storeName(l.store)}
+                            <ExternalLink aria-hidden className="size-3.5" />
+                          </a>
                           {l.link && (
                             <a
                               href={l.link}
                               target="_blank"
                               rel="noopener noreferrer nofollow"
-                              className="text-center text-plum underline underline-offset-2"
+                              className="text-center text-[11px] text-plum underline underline-offset-2"
                             >
-                              View on Google Shopping
+                              Google Shopping
                             </a>
                           )}
                         </div>
