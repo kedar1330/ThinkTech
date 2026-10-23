@@ -53,6 +53,8 @@ export interface AppRateLimits extends AuthRateLimits {
   outfitImage?: Limits;
   /** Price ranges: an uncached garment is a paid Serper.dev search (#118). */
   priceRange?: Limits;
+  /** New designs and picture retries: each one is a Gemini call and an image generation (D-134). */
+  designStudio?: Limits;
 }
 
 export function createAuthRateLimits(): AuthRateLimits {
@@ -78,5 +80,6 @@ export function createRateLimits(): AppRateLimits {
     photoAnalysis: [limiter(MINUTE, 5, byUser), limiter(HOUR, 20, byUser)],
     outfitImage: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
     priceRange: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
+    designStudio: [limiter(MINUTE, 5, byUser), limiter(HOUR, 30, byUser)],
   };
 }

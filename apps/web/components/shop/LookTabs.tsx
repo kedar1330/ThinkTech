@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { Look } from '@styleme/contracts';
+import type { BodyType, Look } from '@styleme/contracts';
 import { lookTitle } from '@/lib/outfits/look-text';
 import { cn } from '@/lib/utils';
 import { TabPhoto } from './TabPhoto';
@@ -11,7 +11,18 @@ import { TryOnButton } from './TryOnButton';
  * the outfit's photo and its price range from store search results (#118), and its Virtual Try-On button. A tab is a link to `/shop?outfitId=<id>`, so the selected look lives in the
  * URL and the "Shop this look" links open the right tab. The strip scrolls sideways on small screens.
  */
-export function LookTabs({ looks, selectedId }: { looks: Look[]; selectedId?: string }) {
+export function LookTabs({
+  looks,
+  selectedId,
+  department = null,
+  bodyType = null,
+}: {
+  looks: Look[];
+  selectedId?: string;
+  /** For the illustrated figure shown when a look has no AI photo (#120). */
+  department?: 'women' | 'men' | null;
+  bodyType?: BodyType | null;
+}) {
   return (
     <nav aria-label="Your looks from Discover My Style" className="min-w-0">
       <ul className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
@@ -26,7 +37,7 @@ export function LookTabs({ looks, selectedId }: { looks: Look[]; selectedId?: st
                 selected ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:border-plum/60',
               )}
             >
-              <TabPhoto look={look} title={title} />
+              <TabPhoto look={look} title={title} department={department} bodyType={bodyType} />
               <Link
                 href={`/shop?outfitId=${look.id}`}
                 aria-current={selected ? 'page' : undefined}

@@ -41,6 +41,7 @@ const FULL = {
   preferredStyles: ['classic', 'fusion'],
   preferredOccasions: ['work', 'festive'],
   budgetPreference: 2500,
+  tryOnModel: 'dummy_model',
 };
 
 describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
@@ -74,6 +75,23 @@ describe('style profile (FR-PROF, FR-SIZE, AC-03)', () => {
     expect(saved).toEqual(FULL);
     const get = await request(app).get('/v1/profile').set(bearer(token));
     expect(get.body.data).toEqual(res.body.data);
+  });
+
+  it('saves and updates 3D virtual try-on model preference', async () => {
+    const { app, token } = await signedIn('tryon@example.com');
+    const res1 = await request(app).put('/v1/profile').set(bearer(token)).send({
+      department: 'women',
+      tryOnModel: 'custom_photo',
+    });
+    expect(res1.status).toBe(200);
+    expect(res1.body.data.tryOnModel).toBe('custom_photo');
+
+    const res2 = await request(app).put('/v1/profile').set(bearer(token)).send({
+      department: 'women',
+      tryOnModel: 'dummy_model',
+    });
+    expect(res2.status).toBe(200);
+    expect(res2.body.data.tryOnModel).toBe('dummy_model');
   });
 
   it('leaves omitted fields unchanged and clears fields sent as null or empty', async () => {

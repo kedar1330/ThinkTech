@@ -393,3 +393,73 @@ export const lookPriceRangeSchema = z
   })
   .strict();
 export type LookPriceRange = z.infer<typeof lookPriceRangeSchema>;
+
+// --- Matching products from store search results (#120) ---------------------------------------------
+
+/** Shown with every product list: similar items from search, never claimed as exact matches. */
+export const PRODUCT_MATCHES_LABEL =
+  'Similar items found by search on Amazon, Flipkart and Meesho — not exact matches. Prices change; not verified by StyleMe; not a checkout price.';
+
+/** At most this many of the cheapest listings per store are returned for each garment. */
+export const PRODUCTS_PER_STORE = 8;
+
+/** One listing as the search returned it: the store's title and price, a Google Shopping link and thumbnail. */
+export const productListingSchema = z
+  .object({
+    store: priceRangeStoreSchema,
+    title: z.string().trim().min(1).max(200),
+    price: z.number().nonnegative(),
+    /** Google Shopping page for the listing (https://www.google.com only); null when none was given. */
+    link: z.url({ protocol: /^https$/, hostname: /^www\.google\.com$/ }).nullable(),
+    /** Google-hosted thumbnail (https://*.gstatic.com only); null when none was given. */
+    imageUrl: z.url({ protocol: /^https$/, hostname: /\.gstatic\.com$/ }).nullable(),
+  })
+  .strict();
+export type ProductListing = z.infer<typeof productListingSchema>;
+
+export const storePriceStatsSchema = z
+  .object({
+    store: priceRangeStoreSchema,
+    listings: z.number().int().min(1),
+    min: z.number().nonnegative(),
+    median: z.number().nonnegative(),
+    max: z.number().nonnegative(),
+  })
+  .strict();
+export type StorePriceStats = z.infer<typeof storePriceStatsSchema>;
+
+/** One garment: its cheapest listings per store, cheapest first, and price stats per store found. */
+export const slotProductsSchema = z
+  .object({
+    slotId: slotIdSchema,
+    listings: z.array(productListingSchema).max(PRODUCTS_PER_STORE * PRICE_RANGE_STORE_IDS.length),
+    stats: z.array(storePriceStatsSchema),
+  })
+  .strict();
+export type SlotProducts = z.infer<typeof slotProductsSchema>;
+
+/** `GET /v1/outfits/:id/products` data: similar products for each garment of the look (#120). */
+export const lookProductMatchesSchema = z
+  .object({
+    currency: z.literal('INR'),
+    priceBasis: z.literal('search_results'),
+    slots: z.array(slotProductsSchema).min(1),
+    checkedAt: z.iso.datetime(),
+    label: z.literal(PRODUCT_MATCHES_LABEL),
+  })
+  .strict();
+export type LookProductMatches = z.infer<typeof lookProductMatchesSchema>;
+
+/** A product the user picked for one garment of the look (#120), stored on the look. */
+export const lookPickSchema = productListingSchema
+  .extend({ slotId: slotIdSchema, pickedAt: z.iso.datetime() })
+  .strict();
+export type LookPick = z.infer<typeof lookPickSchema>;
+
+/** `PUT /v1/outfits/:id/picks`: pick one of the listings returned for that garment (replaces an earlier pick). */
+export const pickProductRequestSchema = z.object({ slotId: slotIdSchema, listing: productListingSchema }).strict();
+export type PickProductRequest = z.infer<typeof pickProductRequestSchema>;
+
+/** `GET`, `PUT` and `DELETE /v1/outfits/:id/picks…` data: the look's picks, one per garment at most. */
+export const lookPicksResponseSchema = z.object({ picks: z.array(lookPickSchema) }).strict();
+export type LookPicksResponse = z.infer<typeof lookPicksResponseSchema>;

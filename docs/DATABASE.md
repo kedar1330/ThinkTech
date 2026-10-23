@@ -400,7 +400,7 @@ The input to the optional AI wording step contains only rule references and attr
 |---|---|
 | `cacheKey` | SHA-256 of provider + normalised query (a garment's search phrase and the department); unique |
 | `provider` | `"serper"` |
-| `listings` | `[{ store: "amazon" \| "flipkart" \| "meesho", price }]`: only the store and the parsed price; no titles, links or images |
+| `listings` | `[{ store: "amazon" \| "flipkart" \| "meesho", title, price, link, imageUrl }]` (#120): the store's title, the parsed price, a Google Shopping link and a Google thumbnail URL (both host-checked, else null). The key includes a cache version, so older price-only entries are not read |
 | `checkedAt`, `expiresAt` | TTL index on `expiresAt` (24 hours after `checkedAt`) |
 
 The query holds no personal data and the entry no user ID, so it is system data, not user-owned. Prices are third-party search results, shown only with `PRICE_RANGE_LABEL`.
@@ -612,6 +612,16 @@ Monk tone (1 – 10) → undertone (warm, cool, neutral, olive) → 100+ colours
 | `userColourCombinations` | **user** | Coordinating colours and curated combinations (#105), built from the user's own category minus avoided colours | `userId` unique; `inputsKey` (hash of rules version, category, content version, review status and liked / avoided colours: rebuilt on read when it changes), `categoryId`, `combinations[] {combinationId, harmony, colours[] {colourId, role: base \| accent \| pop}, score, likedCount}` (at most 40 per harmony), `coordinating[] {colourId, matches[] (≤ 8)}`, `generatedAt` |
 
 `userColourPreferences` and `userColourCombinations` are in `USER_OWNED_COLLECTIONS` (account deletion and tombstone replay). No personal data reaches the shared collections; the user's category is computed per request from `appearanceProfiles`, never stored.
+
+---
+
+## 4e. Design Studio (D-134)
+
+| Collection | Owner | Purpose | Key fields and indexes |
+|---|---|---|---|
+| `designs` | **user** | One design from a sketch, upload, description or look + change | `userId`; `source` (`sketch`, `upload`, `description`, `look`); `description`; `lookId`, `slotId` (look only); `sourceImage {data, contentType}` (the user's sketch, BSON binary, `select: false`); `image {data, contentType}` (the generated picture, `select: false`); `imageStatus` (`ready`, `failed`); `imageProvider` (`pollinations`, `cloudflare`); `imagePrompt` (Gemini's garment-only prompt, `select: false`, reused for redraws); `title`, `summary`, `tailorSpec` (Mixed, validated by `tailorSpecSchema`); `analysisModel`, `promptVersion`, `noticeVersion`; timestamps. Index `{userId, createdAt: -1}`. At most 50 per user |
+
+`designs` is in `USER_OWNED_COLLECTIONS`; deleting a design or the account deletes its sketch and picture with it. A look's `outfits` document is only read, never changed; deleting the look leaves designs made from it.
 
 ---
 

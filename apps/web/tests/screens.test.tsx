@@ -174,9 +174,10 @@ describe('app top navigation', () => {
     expect(more).toHaveAttribute('aria-expanded', 'false');
     await user.click(more);
     const menu = document.getElementById('nav-more')!;
-    for (const name of ['Virtual Try-On', 'Design Studio', 'Style Assistant']) {
+    for (const name of ['Virtual Try-On', 'Style Assistant']) {
       expect(within(menu).getByRole('link', { name: new RegExp(name) })).toHaveTextContent('Coming soon');
     }
+    expect(within(menu).getByRole('link', { name: 'Design Studio' })).toHaveAttribute('href', '/design-studio');
     expect(within(menu).getByRole('link', { name: 'Outfit Categories' })).toHaveAttribute('href', '/categories');
     expect(within(menu).getByRole('link', { name: 'My Colour Palette' })).toHaveAttribute('href', '/palette');
     expect(within(menu).getByRole('link', { name: 'Shop My Look' })).toHaveAttribute('href', '/shop');
@@ -187,7 +188,7 @@ describe('app top navigation', () => {
   });
 
   it('marks More as active when the current page is inside it', () => {
-    nav.pathname = '/features/design-studio';
+    nav.pathname = '/design-studio';
     render(
       <AppShell userName="Asha" userEmail="asha@example.com">
         content

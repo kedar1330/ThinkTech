@@ -12,8 +12,8 @@ import { SlotRow } from './SlotRow';
 import { WhyThisWorks } from './WhyThisWorks';
 
 /**
- * One generated look (FR-LOOK), with Save (FR-OUT-01), Shop this look (#43; it saves the look first, #115) and
- * Feedback (#42). Reused by explanations
+ * One generated look (FR-LOOK), with Save (FR-OUT-01), Shop this look (#43; it saves the look first, #115),
+ * Change it in Design Studio (D-134) and Feedback (#42). Reused by explanations
  * and alternatives (#48) and slot visuals (#50).
  */
 export function LookCard({ look, position, sizes }: { look: Look; position: number; sizes: ProfileSizes }) {
@@ -46,6 +46,12 @@ export function LookCard({ look, position, sizes }: { look: Look; position: numb
           ) : (
             <ShopLookButton outfitId={look.id} />
           )}
+          <Link
+            href={`/design-studio?look=${look.id}`}
+            className="inline-flex min-h-11 items-center text-sm font-medium text-plum underline"
+          >
+            Change it in Design Studio
+          </Link>
         </div>
         <FeedbackButtons outfitId={look.id} initialFeedback={look.feedback} />
       </article>

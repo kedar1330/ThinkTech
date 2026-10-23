@@ -25,7 +25,7 @@ export default async function AppearanceStepPage({ searchParams }: { searchParam
     <OnboardingFrame
       current="appearance"
       title="Skin tone and body type (optional)"
-      intro="Upload photos for an instant analysis, or enter them yourself — or skip this step and add them later."
+      intro="Upload a face photo for skin tone analysis, choose your body type or measurements — or skip this step and add them later."
     >
       {phone === 'sent' && (
         <Alert tone="info">We sent a code to your phone. You can verify it any time in Settings → Phone.</Alert>

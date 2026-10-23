@@ -72,9 +72,13 @@ describe('outfit photo on a tab', () => {
     expect(img).toHaveAttribute('loading', 'lazy');
   });
 
-  it('falls back to the garment colours when images are off or the image fails, never a made-up photo', () => {
-    const { rerender } = render(<TabPhoto look={look()} title="Everyday look" />);
-    expect(screen.getByRole('img', { name: 'Colours of this outfit: Navy, Cream' })).toBeInTheDocument();
+  it('falls back to the look on the illustrated figure (D-119) when images are off or fail, never a made-up photo', () => {
+    const { rerender } = render(<TabPhoto look={look()} title="Everyday look" department="men" bodyType="trapezoid" />);
+    expect(
+      screen.getByRole('img', {
+        name: 'Illustrative man with a trapezoid body type wearing navy top and cream bottom',
+      }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /AI-generated/ })).toBeNull();
 
     rerender(<TabPhoto look={look({ image: 'on_request' })} title="Everyday look" />);

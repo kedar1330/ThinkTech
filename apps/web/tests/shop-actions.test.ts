@@ -13,7 +13,7 @@ const api = vi.hoisted(() => ({ apiRequest: vi.fn() }));
 vi.mock('@/lib/api/server', async (actual) => ({ ...(await actual<object>()), apiRequest: api.apiRequest }));
 
 import { ApiError } from '@/lib/api/server';
-import { attachItemAction, detachItemAction } from '@/app/actions/shop';
+import { attachItemAction, detachItemAction, pickProductAction, unpickProductAction } from '@/app/actions/shop';
 
 const ITEM = 'a'.repeat(24);
 const LOOK = 'b'.repeat(24);
@@ -77,5 +77,48 @@ describe('detachItemAction', () => {
       method: 'DELETE',
       token: 'access-token',
     });
+  });
+});
+
+describe('pickProductAction and unpickProductAction (#120)', () => {
+  const listing = {
+    store: 'amazon' as const,
+    title: 'Synthetic kurta',
+    price: 699,
+    link: 'https://www.google.com/search?ibp=oshop&q=synthetic',
+    imageUrl: null,
+  };
+
+  it('saves the pick on the look and returns the picks', async () => {
+    api.apiRequest.mockResolvedValue({ picks: [{ ...listing, slotId: 'top', pickedAt: '2026-10-23T00:00:00.000Z' }] });
+    const result = await pickProductAction(LOOK, 'top', listing);
+    expect(result.picks).toHaveLength(1);
+    expect(api.apiRequest).toHaveBeenCalledWith(`/v1/outfits/${LOOK}/picks`, {
+      method: 'PUT',
+      body: { slotId: 'top', listing },
+      token: 'access-token',
+    });
+  });
+
+  it('removes a pick', async () => {
+    api.apiRequest.mockResolvedValue({ picks: [] });
+    expect((await unpickProductAction(LOOK, 'top')).picks).toEqual([]);
+    expect(api.apiRequest).toHaveBeenCalledWith(`/v1/outfits/${LOOK}/picks/top`, {
+      method: 'DELETE',
+      token: 'access-token',
+    });
+  });
+
+  it('shows the API’s message, and calls nothing for a bad request or another origin', async () => {
+    api.apiRequest.mockRejectedValueOnce(
+      new ApiError(404, 'NOT_FOUND', 'That item is no longer in the search results.'),
+    );
+    expect((await pickProductAction(LOOK, 'top', listing)).error).toBe('That item is no longer in the search results.');
+    api.apiRequest.mockReset();
+    expect((await pickProductAction('nope', 'top', listing)).error).toBeDefined();
+    expect((await pickProductAction(LOOK, 'top', { ...listing, link: 'https://evil.example/' })).error).toBeDefined();
+    request.origin = 'https://evil.example';
+    expect((await unpickProductAction(LOOK, 'top')).error).toMatch(/blocked/);
+    expect(api.apiRequest).not.toHaveBeenCalled();
   });
 });

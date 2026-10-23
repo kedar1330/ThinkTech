@@ -26,6 +26,7 @@ export function photosRoutes(controller: PhotosController, auth: RequestHandler[
     imageOnly,
     controller.upload,
   );
+  router.post('/photos/try-on', ...auth, ...limits, rawImage, imageOnly, controller.uploadTryOn);
   router.get('/photos/:id/image', ...auth, controller.image);
   router.delete('/photos/:id', ...auth, controller.remove);
   return router;

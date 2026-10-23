@@ -4,28 +4,43 @@ import type { Logger } from 'pino';
 import {
   PRICE_RANGE_LABEL,
   PRICE_RANGE_STORE_IDS,
+  PRODUCTS_PER_STORE,
+  PRODUCT_MATCHES_LABEL,
   type LookInputs,
+  type LookPick,
   type LookPriceRange,
+  type LookProductMatches,
   type LookSlot,
+  type PickProductRequest,
   type PriceRangeStore,
+  type ProductListing,
   type SlotPriceRange,
+  type SlotProducts,
+  type StorePriceStats,
 } from '@styleme/contracts';
-import { ShoppingProviderError, type ShoppingSearchProvider } from '../integrations/shopping/serper-client';
+import {
+  ShoppingProviderError,
+  type ShoppingListing,
+  type ShoppingSearchProvider,
+} from '../integrations/shopping/serper-client';
 import type { Models } from '../models/index';
 import { AppError } from '../utils/errors';
 
-// Price ranges on Shop My Look tabs (#118). For each garment of one of the user's own looks, the service
-// searches store listings with the garment's search phrase and the department only (never sizes,
-// measurements, photos, appearance or anything else about the user), and reports the lowest and highest
-// Amazon, Flipkart and Meesho price found. A plain search rarely returns Flipkart or Meesho, so each garment
-// gets three searches: the plain one (its Amazon listings are kept) and the same query naming Flipkart, then
-// Meesho (only that store's listings are kept), so no listing is counted twice. Only prices the provider returned are used:
-// a garment without listings has no range, never a guessed one. Results are cached per query for a day
-// in `priceSearchCache` (system data: the key is the query, no user ID). Queries, listings and prices are
-// never logged.
+// Price ranges (#118) and similar products (#120) on Shop My Look. For each garment of one of the user's own
+// looks, the service searches store listings with the garment's search phrase (which carries the design
+// features saved in Outfit Categories, D-132) and the department only — never sizes, measurements, photos,
+// appearance or anything else about the user. A plain search rarely returns Flipkart or Meesho, so each
+// garment gets three searches: the plain one (its Amazon listings are kept) and the same query naming
+// Flipkart, then Meesho (only that store's listings are kept), so no listing is counted twice. Only listings
+// the provider returned are used, with the store's own title: a garment without listings has no range and
+// no products, never guessed ones. Listings are cached per search for a day in `priceSearchCache` (system
+// data: the key is the query, no user ID). Queries, listings, prices, links and image URLs are never logged.
 
 /** How long one query's listings are reused. */
 export const PRICE_SEARCH_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Bumped when the cached listing shape changes, so older entries are not read. */
+const CACHE_VERSION = 'v2';
 
 /** Footwear and accessories are hidden in looks (#111), so only garments are priced. */
 const GARMENT_SLOTS = new Set(['layer', 'one_piece', 'top', 'bottom']);
@@ -33,6 +48,7 @@ const GARMENT_SLOTS = new Set(['layer', 'one_piece', 'top', 'bottom']);
 /** Listing prices outside this band are parsing noise or not a garment, and are left out. */
 const MIN_PRICE = 50;
 const MAX_PRICE = 500_000;
+const TITLE_MAX = 200;
 
 const UNAVAILABLE = 'We couldn’t check prices just now. Please try again later.';
 
@@ -42,9 +58,12 @@ interface StoredLook {
   inputsUsed?: LookInputs;
 }
 
-interface CachedListing {
-  store: PriceRangeStore;
-  price: number;
+type CachedListing = ProductListing;
+
+interface Searched {
+  slot: LookSlot;
+  listings: CachedListing[];
+  checkedAt: Date;
 }
 
 /** Amazon, Flipkart or Meesho from a listing's store name (e.g. "Amazon.in", "Flipkart - Seller"). */
@@ -61,6 +80,31 @@ export function parseInr(text: string): number | null {
   return Number.isFinite(value) && value >= MIN_PRICE && value <= MAX_PRICE ? value : null;
 }
 
+/** An https URL on an allowed host, else null: replies are untrusted, so nothing else is passed on. */
+export function safeUrl(raw: string | null, host: (hostname: string) => boolean): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' && host(url.hostname) && url.href.length <= 2048 ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+const googleShopping = (h: string) => h === 'www.google.com';
+const googleThumbnail = (h: string) => h.endsWith('.gstatic.com');
+
+/** The store's own title, without control characters and cut to a safe length; null when empty. */
+export function cleanTitle(raw: string | null): string | null {
+  const text = (raw ?? '')
+    // eslint-disable-next-line no-control-regex -- stripping control characters from untrusted text
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return null;
+  return text.length <= TITLE_MAX ? text : `${text.slice(0, TITLE_MAX - 1)}…`;
+}
+
 /** The search query for one garment: its search phrase and the department, nothing else. */
 export function queryFor(slot: LookSlot, department: string | null | undefined): string {
   return [slot.searchPhrase, department].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -75,10 +119,30 @@ export function searchesFor(query: string): Array<{ query: string; store: PriceR
   ];
 }
 
+/** One store's listing from a raw reply, or null when it is another store or has no usable price or title. */
+export function toListing(raw: ShoppingListing, store: PriceRangeStore): CachedListing | null {
+  if (storeOf(raw.source) !== store) return null;
+  const price = parseInr(raw.price);
+  const title = cleanTitle(raw.title);
+  if (price === null || title === null) return null;
+  return {
+    store,
+    title,
+    price,
+    link: safeUrl(raw.link, googleShopping),
+    imageUrl: safeUrl(raw.imageUrl, googleThumbnail),
+  };
+}
+
 const cacheKeyOf = (provider: string, store: PriceRangeStore, query: string) =>
-  createHash('sha256').update(`price-search|${provider}|${store}|${query}`).digest('hex');
+  createHash('sha256').update(`price-search|${CACHE_VERSION}|${provider}|${store}|${query}`).digest('hex');
 
 const round = (n: number) => Math.round(n * 100) / 100;
+
+function median(sorted: number[]): number {
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid]! : round((sorted[mid - 1]! + sorted[mid]!) / 2);
+}
 
 export class PriceRangeService {
   constructor(
@@ -96,41 +160,18 @@ export class PriceRangeService {
 
   /** `GET /v1/outfits/:id/price-range`: the price range of one of the user's own looks. */
   async range(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<LookPriceRange> {
-    const look = await this.models.Outfit.findOne({
-      _id: outfitId,
-      userId,
-      $or: [{ expiresAt: null }, { expiresAt: { $gt: this.now() } }],
-    }).lean<StoredLook>();
-    if (!look) throw new AppError('NOT_FOUND');
-    if (!this.provider) throw new AppError('PROVIDER_NOT_CONFIGURED', 'Price ranges are not available yet.');
-
-    const garments = look.slots.filter((s) => GARMENT_SLOTS.has(s.slot));
-    const slotsToPrice = garments.length > 0 ? garments : look.slots;
-    const department = look.inputsUsed?.department ?? null;
-    const searched = await Promise.all(
-      slotsToPrice.map(async (slot) => {
-        const results = await Promise.all(
-          searchesFor(queryFor(slot, department)).map(({ query, store }) => this.listings(query, store)),
-        );
-        return {
-          listings: results.flatMap((r) => r.listings),
-          checkedAt: new Date(Math.min(...results.map((r) => r.checkedAt.getTime()))),
-        };
-      }),
-    );
-
-    const slots: SlotPriceRange[] = slotsToPrice.map((slot, i) => {
-      const prices = searched[i]!.listings.map((l) => l.price);
+    const searched = await this.search(userId, outfitId);
+    const slots: SlotPriceRange[] = searched.map(({ slot, listings }) => {
+      const prices = listings.map((l) => l.price);
       return {
         slotId: slot.slotId,
         min: prices.length ? round(Math.min(...prices)) : null,
         max: prices.length ? round(Math.max(...prices)) : null,
         listings: prices.length,
-        stores: PRICE_RANGE_STORE_IDS.filter((s) => searched[i]!.listings.some((l) => l.store === s)),
+        stores: PRICE_RANGE_STORE_IDS.filter((s) => listings.some((l) => l.store === s)),
       };
     });
     const priced = slots.filter((s) => s.listings > 0);
-    const checkedAt = new Date(Math.min(...searched.map((s) => s.checkedAt.getTime())));
     return {
       currency: 'INR',
       priceBasis: 'search_results',
@@ -140,9 +181,119 @@ export class PriceRangeService {
       totalSlots: slots.length,
       slots,
       stores: PRICE_RANGE_STORE_IDS.filter((s) => slots.some((slot) => slot.stores.includes(s))),
-      checkedAt: checkedAt.toISOString(),
+      checkedAt: oldest(searched).toISOString(),
       label: PRICE_RANGE_LABEL,
     };
+  }
+
+  /**
+   * `GET /v1/outfits/:id/products` (#120): for each garment, the cheapest `PRODUCTS_PER_STORE` listings per
+   * store, cheapest first, and the count, lowest, median and highest price per store found.
+   */
+  async products(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<LookProductMatches> {
+    const searched = await this.search(userId, outfitId);
+    const slots: SlotProducts[] = searched.map(({ slot, listings }) => {
+      const byStore = PRICE_RANGE_STORE_IDS.map((store) =>
+        listings.filter((l) => l.store === store).sort((a, b) => a.price - b.price),
+      );
+      const stats: StorePriceStats[] = byStore.flatMap((list) => {
+        if (list.length === 0) return [];
+        const prices = list.map((l) => l.price);
+        return [
+          {
+            store: list[0]!.store,
+            listings: list.length,
+            min: prices[0]!,
+            median: median(prices),
+            max: prices[prices.length - 1]!,
+          },
+        ];
+      });
+      return {
+        slotId: slot.slotId,
+        listings: byStore.flatMap((list) => list.slice(0, PRODUCTS_PER_STORE)).sort((a, b) => a.price - b.price),
+        stats,
+      };
+    });
+    return {
+      currency: 'INR',
+      priceBasis: 'search_results',
+      slots,
+      checkedAt: oldest(searched).toISOString(),
+      label: PRODUCT_MATCHES_LABEL,
+    };
+  }
+
+  /** `GET /v1/outfits/:id/picks` (#120): the products the user picked for the look's garments. */
+  async picks(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<LookPick[]> {
+    const look = await this.models.Outfit.findOne(this.owned(userId, outfitId), { shopPicks: 1 }).lean();
+    if (!look) throw new AppError('NOT_FOUND');
+    return (look.shopPicks ?? []) as LookPick[];
+  }
+
+  /**
+   * `PUT /v1/outfits/:id/picks` (#120): picks a product for one garment, replacing an earlier pick. Only a
+   * listing the search returned for that garment can be picked, so a pick is never a made-up product.
+   */
+  async pick(userId: Types.ObjectId, outfitId: Types.ObjectId, request: PickProductRequest): Promise<LookPick[]> {
+    const { slots } = await this.products(userId, outfitId);
+    const slot = slots.find((s) => s.slotId === request.slotId);
+    if (!slot) throw new AppError('INVALID_REQUEST', 'That part of the look can’t be shopped.');
+    const { listing } = request;
+    const found = slot.listings.find(
+      (l) =>
+        l.store === listing.store && l.title === listing.title && l.price === listing.price && l.link === listing.link,
+    );
+    if (!found) throw new AppError('NOT_FOUND', 'That item is no longer in the search results. Please pick another.');
+    const pick: LookPick = { ...found, slotId: slot.slotId, pickedAt: this.now().toISOString() };
+    // One pick per garment: drop the slot's earlier pick, then add this one.
+    await this.models.Outfit.updateOne(this.owned(userId, outfitId), { $pull: { shopPicks: { slotId: slot.slotId } } });
+    const doc = await this.models.Outfit.findOneAndUpdate(
+      this.owned(userId, outfitId),
+      { $push: { shopPicks: pick } },
+      { returnDocument: 'after', projection: { shopPicks: 1 } },
+    ).lean();
+    if (!doc) throw new AppError('NOT_FOUND');
+    return (doc.shopPicks ?? []) as LookPick[];
+  }
+
+  /** `DELETE /v1/outfits/:id/picks/:slotId` (#120): removes the pick for one garment (harmless if none). */
+  async unpick(userId: Types.ObjectId, outfitId: Types.ObjectId, slotId: string): Promise<LookPick[]> {
+    const doc = await this.models.Outfit.findOneAndUpdate(
+      this.owned(userId, outfitId),
+      { $pull: { shopPicks: { slotId } } },
+      { returnDocument: 'after', projection: { shopPicks: 1 } },
+    ).lean();
+    if (!doc) throw new AppError('NOT_FOUND');
+    return (doc.shopPicks ?? []) as LookPick[];
+  }
+
+  /** The user's own look if it still exists: saved, or a suggestion not past its expiry. */
+  private owned(userId: Types.ObjectId, outfitId: Types.ObjectId) {
+    return { _id: outfitId, userId, $or: [{ expiresAt: null }, { expiresAt: { $gt: this.now() } }] };
+  }
+
+  /** The look's garments, each with its Amazon, Flipkart and Meesho listings from the three searches. */
+  private async search(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<Searched[]> {
+    const look = await this.models.Outfit.findOne(this.owned(userId, outfitId)).lean<StoredLook>();
+    if (!look) throw new AppError('NOT_FOUND');
+    if (!this.provider) throw new AppError('PROVIDER_NOT_CONFIGURED', 'Price ranges are not available yet.');
+
+    const garments = look.slots.filter((s) => GARMENT_SLOTS.has(s.slot));
+    const slotsToPrice = garments.length > 0 ? garments : look.slots;
+    const department = look.inputsUsed?.department ?? null;
+    return Promise.all(
+      slotsToPrice.map(async (slot) => {
+        const results = await Promise.all(
+          searchesFor(queryFor(slot, department)).map(({ query, store }) => this.listings(query, store)),
+        );
+        return {
+          slot,
+          listings: results.flatMap((r) => r.listings),
+          checkedAt: new Date(Math.min(...results.map((r) => r.checkedAt.getTime()))),
+        };
+      }),
+    );
   }
 
   /** One store's listings for one query: cached for a day, else searched now. */
@@ -168,10 +319,7 @@ export class PriceRangeService {
       clearTimeout(timer);
     }
 
-    const listings = raw.flatMap((l): CachedListing[] => {
-      const price = storeOf(l.source) === store ? parseInr(l.price) : null;
-      return price !== null ? [{ store, price }] : [];
-    });
+    const listings = raw.flatMap((l) => toListing(l, store) ?? []);
     const checkedAt = this.now();
     await this.models.PriceSearchCache.updateOne(
       { cacheKey },
@@ -188,3 +336,5 @@ export class PriceRangeService {
     return { listings, checkedAt };
   }
 }
+
+const oldest = (searched: readonly Searched[]) => new Date(Math.min(...searched.map((s) => s.checkedAt.getTime())));

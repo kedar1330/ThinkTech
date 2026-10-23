@@ -38,7 +38,7 @@ StyleMe is a personal styling web app for users in India. It suggests complete l
 Landing → Sign up (email + 6-digit code, or Google) → Style profile setup  ──or──  Skip for now
         → Home (Personalized home + "Complete your profile")
         → Discover My Style → My Colour Palette → Outfit Categories
-        → a selected look → Save it · Shop for it · (later) Try it on · (later) Customise it in Design Studio
+        → a selected look → Save it · Shop for it · (later) Try it on · Change it in Design Studio (D-134)
 ```
 
 All nine sections are reachable from the top navigation (PR #26): Home, Discover My Style, My Colour Palette, Outfit Categories, Shop My Look, Virtual Try-On, Design Studio, Style Assistant, Saved Outfits. Sections that are not built show an honest "Coming soon" page and never a mock-up ([FRD.md](FRD.md) FR-UI-03, FR-DATA-02).
@@ -208,6 +208,8 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 **Tabs (#115, PR #116) and tab photo and price range (#118, local preview):** each saved Discover My Style look is a tab with its AI outfit image (or its garment colours) and a price range from Amazon, Flipkart and Meesho search results found with Serper.dev, labelled "not verified by StyleMe; not a checkout price". The range is live only with `SERPER_API_KEY` and `APP_ENV=local` until the founder decides whether store prices may be shown (D-77, D-43 … D-45).
 
+**Outfit, similar products and figure (#120, draft, local preview; needs founder approval):** the selected look shows its AI outfit image (with the Outfit Categories design in its search phrase), a 2D illustrated figure in the look's colours shaped by the profile's body type (D-119: drawn in the browser, no AI, labelled "Illustrative 2D preview"), and similar Amazon, Flipkart and Meesho items per garment from Serper.dev search results — store title, thumbnail, price and Google Shopping link — with a store filter, per-store price spread, and totals for the cheapest items and the user's picks against their budget per look. Picks are not saved yet.
+
 **Stage 1 (D-77 = B):** a **shortlist of items the user found themselves** — name, optional https link, the price they enter, optional note — attached to a look slot, with a budget summary. Every user-entered price is labelled "not verified by StyleMe"; StyleMe never fetches the link.
 
 **Later (product layer):** verified products with image, price, size and disclosures, filtered by budget and suitability, 3–5 alternatives — **only** from a retailer that has authorised StyleMe in writing. Flipkart and Meesho have **not** approved StyleMe (D-43 … D-45). No scraping. When verified data or usage rights are unavailable, explain that and offer styling alternatives (PDF p17).
@@ -224,11 +226,11 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ---
 
-## 11. Design Studio (PDF p20) — ⛔ Deferred (D-76)
+## 11. Design Studio (PDF p20) — ✅ Built and approved (D-134)
 
 **Intended.** Start from a blank design, a predefined template, a saved outfit or inspiration → garment type → silhouette and fit → fabric → colours → patterns → sleeves, neckline and details → combine garments → preview → save with a name and notes to the personal collection → continue editing · shop matching products · try on if available.
 
-**Status.** Only a "Coming soon" page. Building it needs the founder's D-76 decision (issue #56: requirements and approval gate only). **Owner:** Kedar (after approval).
+**Status (2026-10-23, #130).** `/design-studio`: the user **draws** (canvas), **uploads** a sketch or garment picture, or **describes** an idea; or opens a look from Discover My Style with **"Change it in Design Studio"** and says what to change (whole look or one piece, with quick changes such as puff sleeves or V-neck). Gemini writes a **tailor spec** (fabric, yardage estimate, cutting, stitching, finishing) and a garment-only prompt; Pollinations FLUX draws it, Cloudflare FLUX as fallback. `/design-studio/[id]` shows the picture, the sketch and the spec, and prints or saves as PDF. Live whenever the API has a Gemini key (D-134, approved 2026-10-23); `DESIGN_STUDIO_ENABLED=false` switches it off. Not yet: templates, fabric swatch pickers, shop matching products, try-on. **Owner:** Kedar (after approval).
 
 ---
 

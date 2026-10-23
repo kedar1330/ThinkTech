@@ -10,8 +10,11 @@ export type VisionFailure = 'timeout' | 'rate_limited' | 'provider_error' | 'inv
 
 /** A provider failure with a cause that is safe to log (no request or response content). */
 export class VisionProviderError extends Error {
-  constructor(readonly cause: VisionFailure) {
-    super(`Photo analysis provider failed: ${cause}`);
+  constructor(
+    readonly cause: VisionFailure,
+    readonly details?: string,
+  ) {
+    super(`Photo analysis provider failed: ${cause}${details ? ` (${details})` : ''}`);
     this.name = 'VisionProviderError';
   }
 }
@@ -67,12 +70,23 @@ export function geminiVisionProvider(
       throw new VisionProviderError(signal.aborted ? 'timeout' : 'provider_error');
     }
     if (res.status === 429) throw new VisionProviderError('rate_limited');
-    if (!res.ok) throw new VisionProviderError('provider_error');
+    if (!res.ok) {
+      let details: string | undefined;
+      try {
+        const errJson = (await res.json()) as { error?: { message?: string } };
+        details = errJson?.error?.message;
+      } catch {
+        // ignore
+      }
+      throw new VisionProviderError('provider_error', details);
+    }
     try {
       const body = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
       const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
       if (typeof text !== 'string') throw new Error('no text');
-      return JSON.parse(text) as unknown;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+      return JSON.parse(jsonStr) as unknown;
     } catch {
       throw new VisionProviderError(signal.aborted ? 'timeout' : 'invalid_output');
     }

@@ -29,8 +29,14 @@ describe('serperShoppingProvider', () => {
     });
     const listings = await search(fetchImpl as unknown as typeof fetch);
     expect(listings).toEqual([
-      { source: 'Amazon.in', price: '₹1,299.00', link: 'https://shop.example/a' },
-      { source: 'Meesho', price: '₹449', link: null },
+      {
+        source: 'Amazon.in',
+        price: '₹1,299.00',
+        title: 'Synthetic kurta',
+        link: 'https://shop.example/a',
+        imageUrl: null,
+      },
+      { source: 'Meesho', price: '₹449', title: null, link: null, imageUrl: null },
     ]);
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://google.serper.dev/shopping');

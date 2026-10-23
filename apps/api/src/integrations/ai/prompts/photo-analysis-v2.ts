@@ -12,11 +12,27 @@ export { buildFacePrompt };
 /** Body type from one full-body photo and, when given, the user's height in centimetres. */
 export function buildBodyPrompt(department: ClothingPreference, heightCm: number | null): string {
   const base = buildBodyPromptV1(department);
-  if (heightCm === null) return base;
-  const height = [
-    `The person's height, as they entered it, is ${heightCm} cm. Use it only as scale when judging the proportions`,
-    'of the shoulders, bust or chest, waist and hips against the length of the torso and legs. Never comment on the height.',
-  ].join(' ');
-  // Right after the list of body types to choose from.
-  return base.replace('\nNever choose any other value.', `\nNever choose any other value.\n${height}`);
+  const geometricGuide = [
+    'PROPORTION MEASUREMENT RULES:',
+    '- Compare visible shoulder width against hip width:',
+    '  * If hips are visibly wider than shoulders and chest/bust -> classify as "pear" (or "spoon" / "triangle").',
+    '  * If shoulders/chest/bust are visibly wider than hips -> classify as "inverted_triangle".',
+    '  * If shoulders and hips are roughly balanced:',
+    '    - Check waist indentation: An "hourglass" REQUIRES an obvious, dramatic inward waist cinch (waist clearly >=25% narrower than bust and hips).',
+    '    - If clothing is loose, straight-cut, or there is no dramatic inward waist taper, classify as "rectangle", NOT "hourglass".',
+    '    - If the torso/midsection is the widest point, classify as "oval" or "diamond".',
+    '- CRITICAL: Do NOT bias toward or default to "hourglass". Most individuals wearing everyday clothes or uncinched garments have "rectangle" or "pear" silhouettes.',
+  ].join('\n');
+
+  let prompt = base.replace('\nNever choose any other value.', `\n${geometricGuide}\nNever choose any other value.`);
+
+  if (heightCm !== null) {
+    const height = [
+      `The person's height, as they entered it, is ${heightCm} cm. Use it only as scale when judging the proportions`,
+      'of the shoulders, bust or chest, waist and hips against the length of the torso and legs. Never comment on the height.',
+    ].join(' ');
+    prompt = prompt.replace('\nNever choose any other value.', `\nNever choose any other value.\n${height}`);
+  }
+
+  return prompt;
 }

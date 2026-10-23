@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import { vi } from 'vitest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import request from 'supertest';
 import type { Express } from 'express';
@@ -5,9 +7,11 @@ import { createApp } from '../src/app';
 import type { Config } from '../src/config/env';
 import type { AppRateLimits } from '../src/middleware/rate-limit';
 import { connectDatabase, type Database } from '../src/db';
+import type { DesignAnalysisProvider } from '../src/integrations/ai/design-client';
 import type { OutfitImageProvider } from '../src/integrations/ai/image-client';
 import type { ShoppingSearchProvider } from '../src/integrations/shopping/serper-client';
 import type { PhotoAnalysisProvider } from '../src/integrations/ai/vision-client';
+import type { ImageGenerator } from '../src/integrations/image/image-client';
 import type { WordingProvider } from '../src/integrations/ai/wording-client';
 import { createLogger } from '../src/logger';
 import type { StyleLibrary } from '../src/services/engine';
@@ -49,7 +53,26 @@ export const BASE_CONFIG: Config = {
   OUTFIT_IMAGE_TIMEOUT_MS: 5000,
   SERPER_API_KEY: undefined,
   PRICE_SEARCH_TIMEOUT_MS: 8000,
+  DESIGN_STUDIO_ENABLED: true,
+  DESIGN_ANALYSIS_TIMEOUT_MS: 30_000,
+  CLOUDFLARE_ACCOUNT_ID: undefined,
+  CLOUDFLARE_API_TOKEN: undefined,
+  CLOUDFLARE_IMAGE_MODEL: '@cf/black-forest-labs/flux-1-schnell',
+  IMAGE_GENERATION_TIMEOUT_MS: 30_000,
 };
+
+/**
+ * Runs `fn` as if no `.env` file existed, so `loadConfig(env)` sees only the variables the test passes
+ * (it also reads `.env` and `apps/api/.env`, which hold the developer's real keys).
+ */
+export function withoutDotenvFiles<T>(fn: () => T): T {
+  const spy = vi.spyOn(fs, 'existsSync').mockImplementation(() => false);
+  try {
+    return fn();
+  } finally {
+    spy.mockRestore();
+  }
+}
 
 /** Captures messages instead of sending them; extracts codes and link tokens for the tests. */
 export class RecordingEmailSender implements EmailSender {
@@ -132,6 +155,9 @@ export interface AppOptions {
   outfitImages?: OutfitImageProvider;
   /** A fake store search provider (tests/fixtures/shopping.ts) for price ranges (#118). */
   shopping?: ShoppingSearchProvider;
+  /** Fake Design Studio providers (tests/fixtures/design-studio.ts); used while DESIGN_STUDIO_ENABLED is true. */
+  designAnalysis?: DesignAnalysisProvider;
+  imageGenerators?: ImageGenerator[];
   /** Custom rate limits (for rate limit tests). */
   rateLimits?: AppRateLimits;
 }
@@ -176,6 +202,8 @@ export async function startTestEnv(): Promise<TestEnv> {
         photoAnalysisProvider: options.vision ?? null,
         outfitImageProvider: options.outfitImages ?? null,
         shoppingProvider: options.shopping ?? null,
+        designAnalysisProvider: options.designAnalysis ?? null,
+        imageGenerators: options.imageGenerators ?? [],
         rateLimits: options.rateLimits,
       });
       return { ...app, config, mail, sms };

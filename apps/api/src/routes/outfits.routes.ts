@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from 'express';
-import { outfitFeedbackRequestSchema, outfitListQuerySchema } from '@styleme/contracts';
+import { outfitFeedbackRequestSchema, outfitListQuerySchema, pickProductRequestSchema } from '@styleme/contracts';
 import type { OutfitsController } from '../controllers/outfits.controller';
 import type { Limits } from '../middleware/rate-limit';
 import { validateBody, validateQuery } from '../middleware/validate';
@@ -24,6 +24,16 @@ export function outfitsRoutes(
   router.get('/outfits/:id', ...auth, controller.get);
   router.get('/outfits/:id/image', ...auth, ...(limits.image ?? []), controller.image);
   router.get('/outfits/:id/price-range', ...auth, ...(limits.priceRange ?? []), controller.priceRange);
+  router.get('/outfits/:id/products', ...auth, ...(limits.priceRange ?? []), controller.products);
+  router.get('/outfits/:id/picks', ...auth, controller.picks);
+  router.put(
+    '/outfits/:id/picks',
+    ...auth,
+    ...(limits.priceRange ?? []),
+    validateBody(pickProductRequestSchema),
+    controller.pick,
+  );
+  router.delete('/outfits/:id/picks/:slotId', ...auth, controller.unpick);
   router.post('/outfits/:id/save', ...auth, controller.save);
   router.post(
     '/outfits/:id/feedback',

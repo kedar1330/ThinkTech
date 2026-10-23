@@ -21,6 +21,13 @@ export class PhotosController {
     sendData(res, await this.photos.upload(req.auth.user._id, query, bytes), 201);
   };
 
+  /** Upload photo specifically for 3D Virtual Try-On avatar generation */
+  uploadTryOn: RequestHandler = async (req, res) => {
+    if (!req.auth) throw new AppError('UNAUTHENTICATED');
+    const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    sendData(res, await this.photos.uploadTryOnPhoto(req.auth.user._id, bytes), 201);
+  };
+
   /** The raw image of the user's own photo; never cached by the browser or any proxy. */
   image: RequestHandler = async (req, res) => {
     if (!req.auth) throw new AppError('UNAUTHENTICATED');

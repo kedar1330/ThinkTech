@@ -310,6 +310,38 @@ userPhotoSchema.index(
   { name: 'storageKey_when_set', unique: true, partialFilterExpression: { storageKey: { $type: 'string' } } },
 );
 
+// Design Studio designs (D-134, DATABASE.md §4e). The user's sketch (`sourceImage`) and the generated
+// picture (`image`) are stored here as BSON binary, never selected by default and never logged, so deleting
+// the design or the account deletes them with it. `imagePrompt` is Gemini's garment-only prompt, kept so the
+// picture can be generated again; it is the only thing the image services receive.
+const designImageSchema = new Schema(
+  { data: { type: Schema.Types.Mixed, required: true }, contentType: { type: String, required: true } },
+  { _id: false },
+);
+const designSchema = new Schema(
+  {
+    ...fixtureField,
+    userId: { type: Schema.Types.ObjectId, required: true },
+    source: { type: String, enum: ['sketch', 'upload', 'description', 'look'], required: true },
+    description: { type: String, default: '' },
+    lookId: { type: Schema.Types.ObjectId, default: null },
+    slotId: { type: String, default: null },
+    sourceImage: { type: designImageSchema, default: null, select: false },
+    image: { type: designImageSchema, default: null, select: false },
+    imageStatus: { type: String, enum: ['ready', 'failed'], required: true },
+    imageProvider: { type: String, enum: ['pollinations', 'cloudflare'], default: null },
+    imagePrompt: { type: String, required: true, select: false },
+    title: { type: String, required: true },
+    summary: { type: String, required: true },
+    tailorSpec: { type: Schema.Types.Mixed, required: true },
+    analysisModel: { type: String, required: true },
+    promptVersion: { type: String, required: true },
+    noticeVersion: { type: String, required: true },
+  },
+  { timestamps: true },
+);
+designSchema.index({ userId: 1, createdAt: -1 });
+
 // History of appearance analyses (DATABASE.md §3.8, D-103, D-129): photo analyses by Gemini and body types
 // identified from measurements. The value in use lives in `appearanceProfiles`; a new result is applied
 // there at once (unconfirmed) and the user confirms or corrects it. Deleting a photo does not delete
@@ -363,6 +395,8 @@ const profileSchema = new Schema(
     ageGroup: { type: String, enum: ['under_18', '18_24', '25_34', '35_44', '45_plus'], default: undefined },
     // Height in whole centimetres (D-131); unset until the user gives it.
     heightCm: { type: Number, min: 120, max: 230, default: undefined },
+    // 3D Virtual Try-On model preference: 'custom_photo' or 'dummy_model'
+    tryOnModel: { type: String, enum: ['custom_photo', 'dummy_model'], default: 'dummy_model' },
     // Body measurements entered by the user, stored in cm (`{ displayUnit, valuesCm, updatedAt }`, D-129):
     // body-type measurements and optional fit measurements for the user's Clothing Preference.
     measurements: { type: Schema.Types.Mixed, default: undefined },
@@ -422,6 +456,8 @@ const outfitSchema = new Schema(
     designMatch: { type: Schema.Types.Mixed, default: null },
     // The feature the look was created in (#115); migration 003 fills it on looks made before it existed.
     source: { type: String, enum: ['discover_my_style'], default: 'discover_my_style' },
+    // Products the user picked on Shop My Look (#120), one per garment: `lookPickSchema`, from search results.
+    shopPicks: { type: [Schema.Types.Mixed], default: [] },
     expiresAt: { type: Date, default: null },
   },
   { timestamps: true, minimize: false },
@@ -549,6 +585,7 @@ export type DesignFeatureDoc = InferSchemaType<typeof designFeatureSchema>;
 export type FeatureSuitabilityRuleDoc = InferSchemaType<typeof featureSuitabilityRuleSchema>;
 export type UserDesignPreferenceDoc = InferSchemaType<typeof userDesignPreferenceSchema>;
 export type UserDesignSelectionDoc = InferSchemaType<typeof userDesignSelectionSchema>;
+export type DesignDoc = InferSchemaType<typeof designSchema>;
 
 export interface Models {
   User: Model<UserDoc>;
@@ -596,6 +633,8 @@ export interface Models {
   ColourCategory: Model<InferSchemaType<typeof colourCategorySchema>>;
   UserColourPreference: Model<InferSchemaType<typeof userColourPreferenceSchema>>;
   UserColourCombination: Model<InferSchemaType<typeof userColourCombinationSchema>>;
+  // Design Studio (D-134).
+  Design: Model<DesignDoc>;
 }
 
 export function registerModels(main: Connection, tombstones: Connection): Models {
@@ -646,6 +685,7 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     ColourCategory: main.model('ColourCategory', colourCategorySchema, 'colourCategories'),
     UserColourPreference: main.model('UserColourPreference', userColourPreferenceSchema, 'userColourPreferences'),
     UserColourCombination: main.model('UserColourCombination', userColourCombinationSchema, 'userColourCombinations'),
+    Design: main.model('Design', designSchema, 'designs'),
   };
 }
 
@@ -684,4 +724,6 @@ export const USER_OWNED_COLLECTIONS = [
   // Colour library (D-133, DATABASE.md §4d).
   'userColourPreferences',
   'userColourCombinations',
+  // Design Studio (D-134, DATABASE.md §4e). Sketches and generated pictures are stored in `designs` itself.
+  'designs',
 ] as const;
