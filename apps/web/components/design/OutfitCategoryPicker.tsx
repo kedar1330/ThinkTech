@@ -11,9 +11,14 @@ interface OutfitCategoryPickerProps {
 }
 
 export function OutfitCategoryPicker({ taxonomy, outfit }: OutfitCategoryPickerProps) {
-  const department = taxonomy.department;
-  const label = CLOTHING_PREFERENCES.find((c) => c.id === department)?.label;
-  const current = taxonomy.outfitCategories.find((c) => c.id === outfit) ?? null;
+  const department = taxonomy.department ?? 'women';
+  const label = CLOTHING_PREFERENCES.find((c) => c.id === department)?.label ?? "Women's Wear";
+  const current =
+    taxonomy.outfitCategories.find((c) => c.id === outfit) ??
+    taxonomy.outfitCategories.find((c) => c.garmentTypes.length > 0) ??
+    taxonomy.outfitCategories[0] ??
+    null;
+  const activeOutfit = current?.id ?? outfit;
   const qs = (extra: Record<string, string>) => {
     const params = new URLSearchParams({
       ...(department && taxonomy.canSwitchDepartment ? { department } : {}),
@@ -71,10 +76,10 @@ export function OutfitCategoryPicker({ taxonomy, outfit }: OutfitCategoryPickerP
                 <li key={c.id}>
                   <Link
                     href={qs({ outfit: c.id })}
-                    aria-current={outfit === c.id ? 'true' : undefined}
+                    aria-current={activeOutfit === c.id ? 'true' : undefined}
                     className={cn(
                       'inline-block rounded-full border px-4 py-1.5 text-sm transition',
-                      outfit === c.id
+                      activeOutfit === c.id
                         ? 'border-accent bg-accent text-accent-foreground'
                         : 'border-border hover:border-accent/60',
                     )}

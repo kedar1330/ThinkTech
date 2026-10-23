@@ -60,7 +60,7 @@ function toResponse(doc: (ProfileDoc & { updatedAt?: Date }) | null): ProfileRes
     preferredStyles: (doc?.preferredStyles ?? []) as ProfileResponse['preferredStyles'],
     preferredOccasions: (doc?.preferredOccasions ?? []) as ProfileResponse['preferredOccasions'],
     budgetPreference: doc?.budgetPreference ?? null,
-    tryOnModel: (doc?.tryOnModel as ProfileResponse['tryOnModel']) ?? 'dummy_model',
+    tryOnModel: (doc?.tryOnModel as ProfileResponse['tryOnModel']) ?? 'custom_photo',
     updatedAt: doc?.updatedAt ? doc.updatedAt.toISOString() : null,
   };
 }

@@ -43,6 +43,9 @@ describe('T-47: Origin check on state-changing requests', () => {
     expect(isAllowedOrigin(null, authUrl)).toBe(false);
     expect(isAllowedOrigin('null', authUrl)).toBe(false);
     expect(isAllowedOrigin('https://styleme.example', undefined)).toBe(false);
+    // New device accessing via host header / LAN IP
+    expect(isAllowedOrigin('http://192.168.1.50:3000', 'http://localhost:3000', '192.168.1.50:3000')).toBe(true);
+    expect(isAllowedOrigin('http://evil.example', 'http://localhost:3000', '192.168.1.50:3000')).toBe(false);
   });
 });
 

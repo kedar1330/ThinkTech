@@ -80,3 +80,76 @@ export function pollinationsImageProvider(
     },
   };
 }
+
+/** Cloudflare Workers AI image provider for outfit visuals. */
+export function cloudflareOutfitImageProvider(
+  accountId: string,
+  apiToken: string,
+  model: string,
+  fetchImpl: typeof fetch = fetch,
+): OutfitImageProvider {
+  return {
+    name: 'cloudflare',
+    model,
+    async generate({ prompt, width, height }, signal) {
+      let res: Response;
+      try {
+        res = await fetchImpl(
+          `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`,
+          {
+            method: 'POST',
+            headers: { authorization: `Bearer ${apiToken}`, 'content-type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt.slice(0, 2048), steps: 8, width: width ?? 768, height: height ?? 1024 }),
+            signal,
+          },
+        );
+      } catch {
+        throw new ImageProviderError(signal.aborted ? 'timeout' : 'provider_error');
+      }
+      if (res.status === 429 || res.status === 503) throw new ImageProviderError('rate_limited');
+      if (res.status === 402) throw new ImageProviderError('budget_exhausted');
+      if (!res.ok) throw new ImageProviderError('provider_error');
+      const contentType = (res.headers.get('content-type') ?? '').split(';')[0]!.trim();
+      if (contentType.startsWith('image/')) {
+        return { bytes: Buffer.from(await res.arrayBuffer()), contentType: contentType as GeneratedImageType };
+      }
+      try {
+        const body = (await res.json()) as { result?: { image?: string }; image?: string };
+        const image = body.result?.image ?? body.image;
+        if (typeof image !== 'string' || image.length === 0) throw new Error('no image');
+        return { bytes: Buffer.from(image, 'base64'), contentType: 'image/jpeg' };
+      } catch {
+        throw new ImageProviderError('invalid_output');
+      }
+    },
+  };
+}
+
+/** Chains outfit image providers in order: falls back to the next provider if the previous one fails. */
+export function compositeOutfitImageProvider(
+  providers: OutfitImageProvider[],
+  logger?: { warn: (msg: unknown) => void },
+): OutfitImageProvider {
+  if (providers.length === 1) return providers[0]!;
+  return {
+    name: providers.map((p) => p.name).join('+'),
+    model: providers.map((p) => p.model).join(', '),
+    async generate(request, signal) {
+      let lastError: unknown;
+      for (const provider of providers) {
+        try {
+          return await provider.generate(request, signal);
+        } catch (err) {
+          lastError = err;
+          logger?.warn({
+            event: 'outfit_image_provider_fallback',
+            failedProvider: provider.name,
+            reason: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+      throw lastError;
+    },
+  };
+}
+

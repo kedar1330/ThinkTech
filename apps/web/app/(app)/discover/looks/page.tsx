@@ -41,7 +41,24 @@ export default async function DiscoverLooksPage({
       : null,
   ]);
   const opened = designData ? designSummary(designData) : null;
-  const designs = savedDesigns(selections, opened);
+  const userDesigns = savedDesigns(selections, opened);
+  const starterDesigns: typeof userDesigns = [
+    {
+      garmentType: 'kurta',
+      garmentName: 'Classic Kurta',
+      outfitCategory: 'indian',
+      outfitLabel: 'Indian Wear',
+      features: ['V-neck', 'Three-quarter sleeve'],
+      layers: [
+        { assetId: 'base', url: '/illustrations/design/women-base.svg', width: 640, height: 960 },
+        { assetId: 'v', url: '/illustrations/design/women-layer-neckline-v_neck.svg', width: 640, height: 960 },
+        { assetId: 's', url: '/illustrations/design/women-layer-sleeve-three_quarter.svg', width: 640, height: 960 },
+      ],
+      occasionFeature: 'occasion_casual',
+    },
+  ];
+  const designs = userDesigns.length > 0 ? userDesigns : starterDesigns;
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-3">
@@ -57,7 +74,7 @@ export default async function DiscoverLooksPage({
       <RequestForm
         sizes={profile.sizes}
         designs={designs}
-        initialDesign={opened?.garmentType ?? null}
+        initialDesign={opened?.garmentType ?? designs[0]?.garmentType ?? null}
         occasionPreferences={designPreferences?.occasionPreferences ?? []}
       />
     </div>
