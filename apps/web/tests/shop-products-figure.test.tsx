@@ -113,13 +113,37 @@ describe('similar products to compare', () => {
       'Amazon: 1 found, ₹699 – ₹699 (typical ₹699)',
     );
     const options = await openOptions('Synthetic kurta M');
-    const link = within(options).getByRole('link', { name: 'View on Google Shopping' });
-    expect(link).toHaveAttribute('href', 'https://www.google.com/search?ibp=oshop&q=synthetic');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow');
+    // #134: the store's own search for the title, and Google Shopping only as a secondary link.
+    const store = within(options).getByRole('link', {
+      name: 'Search for Synthetic kurta M on Meesho (opens in a new tab)',
+    });
+    expect(store).toHaveAttribute('href', 'https://www.meesho.com/search?q=Synthetic%20kurta%20M');
+    expect(store).toHaveAttribute('rel', 'noopener noreferrer nofollow');
+    expect(store).toHaveAttribute('target', '_blank');
+    expect(store).toHaveTextContent('View on Meesho');
+    const google = within(options).getByRole('link', { name: 'Google Shopping' });
+    expect(google).toHaveAttribute('href', 'https://www.google.com/search?ibp=oshop&q=synthetic');
     expect(kurta.querySelector('img')).toHaveAttribute('referrerpolicy', 'no-referrer');
     expect(screen.getByRole('group', { name: 'Compare totals' })).toHaveTextContent(
       'Cheapest found for this look: ₹798',
     );
+  });
+
+  it('#134 an item without a Google link still links to its store', async () => {
+    replyWith(
+      Response.json({
+        ...matches,
+        slots: [{ ...matches.slots[0]!, listings: [{ ...item('amazon', 'Synthetic kurta A', 699), link: null }] }],
+      }),
+    );
+    render(<ProductMatches look={look} budget={null} fallback={<p>Product data unavailable</p>} />);
+    await screen.findByRole('heading', { name: 'Similar items to compare' });
+    const options = await openOptions('Synthetic kurta A');
+    expect(within(options).getByRole('link', { name: /on Amazon/ })).toHaveAttribute(
+      'href',
+      'https://www.amazon.in/s?k=Synthetic%20kurta%20A',
+    );
+    expect(within(options).queryByRole('link', { name: 'Google Shopping' })).toBeNull();
   });
 
   it('#124 every item has a Virtual Try-On button that opens the Coming soon page until try-on exists', async () => {
