@@ -38,6 +38,17 @@ describe('Discover request form → POST /v1/recommendations body', () => {
     });
   });
 
+  it('sends the colours picked for the outfit image, and none when nothing is picked', () => {
+    expect(requestFormToRequest({ occasion: 'everyday', chosenColours: ['CLR-0012', 'CLR-0345'] })).toEqual({
+      ok: true,
+      body: { occasion: 'everyday', paletteMode: 'suggested', chosenColours: ['CLR-0012', 'CLR-0345'] },
+    });
+    expect(requestFormToRequest({ occasion: 'everyday', chosenColours: [] })).toEqual({
+      ok: true,
+      body: { occasion: 'everyday', paletteMode: 'suggested' },
+    });
+  });
+
   it('requires an occasion', () => {
     expect(requestFormToRequest({})).toEqual({ ok: false, fieldErrors: { occasion: 'Choose an occasion.' } });
   });
