@@ -1,7 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { objectIdSchema, slotIdSchema, type UserShortlistItem } from '@styleme/contracts';
+import {
+  objectIdSchema,
+  pickProductRequestSchema,
+  slotIdSchema,
+  type LookPick,
+  type LookPicksResponse,
+  type ProductListing,
+  type UserShortlistItem,
+} from '@styleme/contracts';
 import { apiRequest } from '@/lib/api/server';
 import { BLOCKED, errorState, redirectIfSignedOut, sameOrigin, str, tokenOrLogin, type FormState } from '@/lib/actions';
 
@@ -48,4 +56,52 @@ export async function detachItemAction(_prev: FormState, formData: FormData): Pr
   }
   revalidatePath('/shop');
   return { success: 'Taken off the look. It is still in your shortlist.' };
+}
+
+export type PicksResult = { picks: LookPick[]; error?: undefined } | { picks?: undefined; error: string };
+
+/**
+ * Picks one of the similar products for a garment of the look (#120), replacing an earlier pick. The API
+ * accepts only a listing its search returned for that garment, so a pick is never a made-up product.
+ */
+export async function pickProductAction(
+  outfitId: string,
+  slotId: string,
+  listing: ProductListing,
+): Promise<PicksResult> {
+  if (!(await sameOrigin())) return { error: BLOCKED?.error ?? GONE };
+  const token = await tokenOrLogin();
+  const id = objectIdSchema.safeParse(outfitId);
+  const body = pickProductRequestSchema.safeParse({ slotId, listing });
+  if (!id.success || !body.success) return { error: GONE };
+  try {
+    const { picks } = await apiRequest<LookPicksResponse>(`/v1/outfits/${id.data}/picks`, {
+      method: 'PUT',
+      body: body.data,
+      token,
+    });
+    return { picks };
+  } catch (err) {
+    redirectIfSignedOut(err);
+    return { error: errorState(err)?.error ?? GONE };
+  }
+}
+
+/** Removes the pick for one garment of the look (#120). */
+export async function unpickProductAction(outfitId: string, slotId: string): Promise<PicksResult> {
+  if (!(await sameOrigin())) return { error: BLOCKED?.error ?? GONE };
+  const token = await tokenOrLogin();
+  const id = objectIdSchema.safeParse(outfitId);
+  const slot = slotIdSchema.safeParse(slotId);
+  if (!id.success || !slot.success) return { error: GONE };
+  try {
+    const { picks } = await apiRequest<LookPicksResponse>(`/v1/outfits/${id.data}/picks/${slot.data}`, {
+      method: 'DELETE',
+      token,
+    });
+    return { picks };
+  } catch (err) {
+    redirectIfSignedOut(err);
+    return { error: errorState(err)?.error ?? GONE };
+  }
 }

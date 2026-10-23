@@ -11,10 +11,12 @@ import {
 export type FakeShoppingReply =
   { kind: 'listings'; listings: ShoppingListing[] } | { kind: 'fail'; cause: ShoppingFailure };
 
-export const listing = (source: string, price: string): ShoppingListing => ({
+export const listing = (source: string, price: string, title = `Synthetic ${source} item`): ShoppingListing => ({
   source,
   price,
-  link: 'https://shop.example/synthetic',
+  title,
+  link: 'https://www.google.com/search?ibp=oshop&q=synthetic',
+  imageUrl: 'https://encrypted-tbn0.gstatic.com/shopping?q=tbn:synthetic',
 });
 
 export class FakeShoppingProvider implements ShoppingSearchProvider {

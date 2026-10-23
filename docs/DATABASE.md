@@ -400,7 +400,7 @@ The input to the optional AI wording step contains only rule references and attr
 |---|---|
 | `cacheKey` | SHA-256 of provider + normalised query (a garment's search phrase and the department); unique |
 | `provider` | `"serper"` |
-| `listings` | `[{ store: "amazon" \| "flipkart" \| "meesho", price }]`: only the store and the parsed price; no titles, links or images |
+| `listings` | `[{ store: "amazon" \| "flipkart" \| "meesho", title, price, link, imageUrl }]` (#120): the store's title, the parsed price, a Google Shopping link and a Google thumbnail URL (both host-checked, else null). The key includes a cache version, so older price-only entries are not read |
 | `checkedAt`, `expiresAt` | TTL index on `expiresAt` (24 hours after `checkedAt`) |
 
 The query holds no personal data and the entry no user ID, so it is system data, not user-owned. Prices are third-party search results, shown only with `PRICE_RANGE_LABEL`.

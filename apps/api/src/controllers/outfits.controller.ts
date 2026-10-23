@@ -2,8 +2,12 @@ import type { Request, RequestHandler } from 'express';
 import { Types } from 'mongoose';
 import {
   objectIdSchema,
+  slotIdSchema,
+  type LookPicksResponse,
+  type PickProductRequest,
   type DeletedResponse,
   type LookPriceRange,
+  type LookProductMatches,
   type FeedbackRecordedResponse,
   type OutfitFeedbackRequest,
   type OutfitListQuery,
@@ -44,6 +48,35 @@ export class OutfitsController {
     if (!this.priceRanges) throw new AppError('PROVIDER_NOT_CONFIGURED');
     sendData<LookPriceRange>(res, await this.priceRanges.range(userOf(req), outfitIdOf(req)));
   };
+
+  /** Similar products for the look's garments from store search results (#120); labelled, never exact. */
+  products: RequestHandler = async (req, res) => {
+    if (!this.priceRanges) throw new AppError('PROVIDER_NOT_CONFIGURED');
+    sendData<LookProductMatches>(res, await this.priceRanges.products(userOf(req), outfitIdOf(req)));
+  };
+
+  /** The products the user picked for the look's garments (#120). */
+  picks: RequestHandler = async (req, res) => {
+    sendData<LookPicksResponse>(res, { picks: await this.priceRangesOrFail().picks(userOf(req), outfitIdOf(req)) });
+  };
+
+  pick: RequestHandler = async (req, res) => {
+    const picks = await this.priceRangesOrFail().pick(userOf(req), outfitIdOf(req), req.body as PickProductRequest);
+    sendData<LookPicksResponse>(res, { picks });
+  };
+
+  unpick: RequestHandler = async (req, res) => {
+    const slotId = slotIdSchema.safeParse(req.params.slotId);
+    if (!slotId.success) throw new AppError('INVALID_REQUEST');
+    sendData<LookPicksResponse>(res, {
+      picks: await this.priceRangesOrFail().unpick(userOf(req), outfitIdOf(req), slotId.data),
+    });
+  };
+
+  private priceRangesOrFail(): PriceRangeService {
+    if (!this.priceRanges) throw new AppError('PROVIDER_NOT_CONFIGURED');
+    return this.priceRanges;
+  }
 
   save: RequestHandler = async (req, res) => {
     sendData(res, await this.outfits.save(userOf(req), outfitIdOf(req)));

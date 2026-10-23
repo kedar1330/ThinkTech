@@ -12,11 +12,13 @@ export class ShoppingProviderError extends Error {
   }
 }
 
-/** One listing as the provider returned it: the store name and the price text, unparsed. */
+/** One listing as the provider returned it: the store name, the price text (unparsed), title, link, thumbnail. */
 export interface ShoppingListing {
   source: string;
   price: string;
+  title: string | null;
   link: string | null;
+  imageUrl: string | null;
 }
 
 export interface ShoppingSearchProvider {
@@ -55,9 +57,18 @@ export function serperShoppingProvider(apiKey: string, fetchImpl: typeof fetch =
       const shopping = (body as { shopping?: unknown } | null)?.shopping;
       if (!Array.isArray(shopping)) throw new ShoppingProviderError('invalid_output');
       return shopping.flatMap((raw): ShoppingListing[] => {
-        const item = raw as { source?: unknown; price?: unknown; link?: unknown };
+        const item = raw as { source?: unknown; price?: unknown; title?: unknown; link?: unknown; imageUrl?: unknown };
         if (typeof item.source !== 'string' || typeof item.price !== 'string') return [];
-        return [{ source: item.source, price: item.price, link: typeof item.link === 'string' ? item.link : null }];
+        const text = (v: unknown) => (typeof v === 'string' ? v : null);
+        return [
+          {
+            source: item.source,
+            price: item.price,
+            title: text(item.title),
+            link: text(item.link),
+            imageUrl: text(item.imageUrl),
+          },
+        ];
       });
     },
   };
