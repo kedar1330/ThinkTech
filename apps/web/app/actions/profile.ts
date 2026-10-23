@@ -33,3 +33,27 @@ export async function saveProfileAction(_prev: FormState, formData: FormData): P
   revalidatePath('/home');
   return { success: 'Saved.' };
 }
+
+export async function saveTryOnModelAction(model: 'custom_photo' | 'dummy_model'): Promise<FormState> {
+  if (!isAllowedOrigin((await headers()).get('origin'), process.env.AUTH_URL)) {
+    return { error: 'This request was blocked. Please reload the page and try again.' };
+  }
+  const token = await getAccessToken();
+  if (!token) redirect('/login');
+  try {
+    const profile = await apiRequest<{ department: string | null }>('/v1/profile', { token });
+    if (!profile.department) {
+      return { error: 'Please choose your clothing preference first.' };
+    }
+    await apiRequest('/v1/profile', {
+      method: 'PUT',
+      body: { department: profile.department, tryOnModel: model },
+      token,
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) redirect('/login?expired=1');
+    return { error: 'Something went wrong. Please try again.' };
+  }
+  revalidatePath('/profile');
+  return { success: '3D Virtual Try-On preference saved.' };
+}

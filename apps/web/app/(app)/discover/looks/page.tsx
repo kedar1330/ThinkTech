@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import {
   garmentTypeIdSchema,
+  type AppearanceResponse,
   type ColourPreferencesResponse,
   type DesignFeaturesResponse,
   type DesignPreferencesResponse,
@@ -24,10 +25,11 @@ export default async function DiscoverLooksPage({
   const params = searchParams ? await searchParams : {};
   const { accessToken } = await requireOnboarded();
   const garment = params.from === 'design' ? garmentTypeIdSchema.safeParse(params.garment) : null;
-  // What the user chose elsewhere: designs saved in Outfit Categories and colours from My Colour Palette.
-  // Each section loads on its own, so one failure never blocks the page.
-  const [profile, selections, designPreferences, colours, designData] = await Promise.all([
+  // What the user chose elsewhere: designs saved in Outfit Categories, colours from My Colour Palette and the
+  // appearance signals from My Profile (D-129). Each section loads on its own, so one failure never blocks the page.
+  const [profile, appearance, selections, designPreferences, colours, designData] = await Promise.all([
     apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }),
+    apiRequest<AppearanceResponse>('/v1/appearance', { token: accessToken }).catch(() => null),
     apiRequest<DesignSelectionItem[]>('/v1/design/selections', { token: accessToken }).catch(() => []),
     apiRequest<DesignPreferencesResponse>('/v1/design/preferences', { token: accessToken }).catch(() => null),
     apiRequest<ColourPreferencesResponse>('/v1/colours/preferences', { token: accessToken }).catch(() => null),
@@ -50,7 +52,7 @@ export default async function DiscoverLooksPage({
           colours from My Colour Palette. Your profile is applied automatically.
         </p>
       </header>
-      <ProfileSummary profile={profile} />
+      <ProfileSummary profile={profile} appearance={appearance} />
       <PaletteColours colours={colours} />
       <RequestForm
         sizes={profile.sizes}

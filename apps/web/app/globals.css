@@ -118,3 +118,11 @@ h3 {
     scroll-behavior: auto !important;
   }
 }
+
+/* Design Studio (D-134): a design page prints as a clean sheet for the tailor, without the app's header and footer. */
+@media print {
+  body:has([data-tailor-sheet]) header,
+  body:has([data-tailor-sheet]) footer {
+    display: none !important;
+  }
+}

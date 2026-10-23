@@ -1,5 +1,5 @@
-// Dashboard sections. Only "Discover My Style" and "Saved Outfits" exist today; everything else is
-// labelled "Coming soon" and opens an honest description page, never a mock of the feature.
+// Dashboard sections. A section without an `href` is labelled "Coming soon" and opens an honest
+// description page, never a mock of the feature.
 
 export type FeatureIcon = 'sparkles' | 'palette' | 'shirt' | 'bag' | 'camera' | 'ruler' | 'chat' | 'heart';
 
@@ -52,7 +52,9 @@ export const FEATURES: Feature[] = [
     slug: 'design-studio',
     label: 'Design Studio',
     icon: 'ruler',
-    summary: 'Sketch and refine custom pieces to take to your tailor.',
+    href: '/design-studio',
+    summary:
+      'Draw, upload or describe an outfit, or change a recommended look, and get a design and spec for your tailor.',
   },
   {
     slug: 'style-assistant',
