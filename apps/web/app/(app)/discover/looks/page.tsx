@@ -42,6 +42,7 @@ export default async function DiscoverLooksPage({
   ]);
   const opened = designData ? designSummary(designData) : null;
   const designs = savedDesigns(selections, opened);
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="space-y-3">
@@ -57,7 +58,7 @@ export default async function DiscoverLooksPage({
       <RequestForm
         sizes={profile.sizes}
         designs={designs}
-        initialDesign={opened?.garmentType ?? null}
+        initialDesign={opened?.garmentType ?? designs[0]?.garmentType ?? null}
         occasionPreferences={designPreferences?.occasionPreferences ?? []}
       />
     </div>

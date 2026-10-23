@@ -6,8 +6,10 @@ import { ColourAlbum } from '@/components/colours/ColourAlbum';
 import { CombinationGallery } from '@/components/colours/CombinationGallery';
 import { CoordinatingColours } from '@/components/colours/CoordinatingColours';
 import { MISSING_COLOURS } from '@/components/colours/WhyMyColours';
+import { StarterPaletteShowcase } from '@/components/colours/StarterPaletteShowcase';
 import { apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
+import { STARTER_PALETTE_COLOURS } from '@/lib/palette/starter-palette';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'My colours' };
@@ -103,29 +105,46 @@ export default async function MyColoursPage({
         </p>
       )}
 
-      {category && (
-        <nav
-          aria-label="My colours views"
-          className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface-muted/50 p-1 sm:inline-flex"
-        >
-          {VIEWS.map((v) => (
-            <Link
-              key={v.id}
-              href={v.href}
-              aria-current={view === v.id ? 'page' : undefined}
-              className={cn(
-                'rounded-md px-3.5 py-1.5 text-xs font-medium transition-all',
-                view === v.id ? 'bg-plum text-white shadow-xs' : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {v.label}
-            </Link>
-          ))}
-        </nav>
-      )}
+      <nav
+        aria-label="My colours views"
+        className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface-muted/50 p-1 sm:inline-flex"
+      >
+        {VIEWS.map((v) => (
+          <Link
+            key={v.id}
+            href={v.href}
+            aria-current={view === v.id ? 'page' : undefined}
+            className={cn(
+              'rounded-md px-3.5 py-1.5 text-xs font-medium transition-all',
+              view === v.id ? 'bg-plum text-white shadow-xs' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {v.label}
+          </Link>
+        ))}
+      </nav>
 
       {category && view === 'colours' ? (
         <ColourAlbum key={category.categoryId} colours={data.colours} />
+      ) : !category && view === 'colours' ? (
+        <div className="space-y-6">
+          <div className="space-y-3 rounded-xl border border-dashed border-plum/30 bg-plum/5 p-6 text-center">
+            <p className="font-display text-xl text-primary">{missing.title}</p>
+            <p className="mx-auto max-w-md text-sm text-muted-foreground">{missing.body}</p>
+            {missing.link && (
+              <Link
+                href="/profile"
+                className="inline-block text-sm font-semibold text-plum underline underline-offset-2"
+              >
+                Go to My Profile
+              </Link>
+            )}
+            <p className="text-xs text-muted-foreground pt-1">
+              Explore our versatile starter palette below while you personalize your profile:
+            </p>
+          </div>
+          <StarterPaletteShowcase colours={STARTER_PALETTE_COLOURS} />
+        </div>
       ) : category && combos && !combos.missing && view === 'coordinating' ? (
         <CoordinatingColours colours={combos.colours} coordinating={combos.coordinating} />
       ) : category && combos && !combos.missing && view === 'combinations' ? (

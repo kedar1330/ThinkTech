@@ -31,7 +31,10 @@ const UNAVAILABLE = 'Something went wrong on our side. Your entries are kept —
 const OFFLINE = 'We could not reach StyleMe. Check your connection; your entries are kept.';
 
 export async function sameOrigin(): Promise<boolean> {
-  return isAllowedOrigin((await headers()).get('origin'), process.env.AUTH_URL);
+  const h = await headers();
+  const origin = h.get('origin') ?? (h.get('referer') ? new URL(h.get('referer')!).origin : null);
+  const host = h.get('x-forwarded-host') ?? h.get('host');
+  return isAllowedOrigin(origin, process.env.AUTH_URL, host);
 }
 
 export async function clientIp(): Promise<string | undefined> {

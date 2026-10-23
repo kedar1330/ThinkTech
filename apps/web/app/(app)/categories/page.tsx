@@ -18,10 +18,16 @@ export default async function OutfitCategoriesPage({
   const { accessToken } = await requireOnboarded();
   const department = params.department === 'women' || params.department === 'men' ? params.department : null;
 
-  const taxonomy = await apiRequest<DesignTaxonomyResponse>(
+  let taxonomy = await apiRequest<DesignTaxonomyResponse>(
     `/v1/design/taxonomy${department ? `?department=${department}` : ''}`,
     { token: accessToken },
   ).catch(() => null);
+
+  if (taxonomy && !taxonomy.department) {
+    taxonomy = await apiRequest<DesignTaxonomyResponse>('/v1/design/taxonomy?department=women', {
+      token: accessToken,
+    }).catch(() => taxonomy);
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">

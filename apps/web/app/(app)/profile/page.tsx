@@ -71,7 +71,7 @@ export default async function ProfilePage() {
             Upload a face photo and we’ll analyse both for you, or choose them yourself.
           </p>
         </div>
-        <SkinToneSection appearance={appearance} analysisAvailable={photos.analysisAvailable} />
+        <SkinToneSection appearance={appearance} analysisAvailable={photos?.analysisAvailable ?? true} />
       </Card>
 
       <Card id="body-type" className="scroll-mt-20 space-y-4">
@@ -82,11 +82,11 @@ export default async function ProfilePage() {
           </p>
         </div>
         <BodyTypeSection
-          key={department ?? 'none'}
-          department={department}
+          key={department ?? 'women'}
+          department={department ?? 'women'}
           appearance={appearance}
           measurements={measurements}
-          analysisAvailable={photos.analysisAvailable}
+          analysisAvailable={photos?.analysisAvailable ?? true}
         />
       </Card>
 

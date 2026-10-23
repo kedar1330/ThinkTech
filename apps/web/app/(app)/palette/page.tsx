@@ -57,9 +57,16 @@ export default async function PalettePage() {
               className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-xs transition-shadow hover:shadow-md"
             >
               <span className="block font-display text-2xl text-primary">{s.title}</span>
-              {i === 0 && category && category.preview.length > 0 && (
+              {i === 0 && (
                 <span aria-hidden className="flex gap-1.5">
-                  {category.preview.map((p) => (
+                  {(category?.preview && category.preview.length > 0
+                    ? category.preview
+                    : [
+                        { name: 'Classic Navy', hex: '#1E3A8A' },
+                        { name: 'Warm Rust', hex: '#A8432A' },
+                        { name: 'Soft Cream', hex: '#F2E8CF' },
+                      ]
+                  ).map((p) => (
                     <span
                       key={p.hex}
                       className="size-7 rounded-full border border-black/10"

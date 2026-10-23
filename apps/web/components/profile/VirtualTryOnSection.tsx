@@ -16,9 +16,7 @@ import { cn } from '@/lib/utils';
  */
 export function VirtualTryOnSection({ profile, photos }: { profile: ProfileResponse; photos: UserPhoto[] }) {
   const existingBodyPhoto = photos.find((p) => p.kind === 'body');
-  const [selectedModel, setSelectedModel] = useState<TryOnModel>(
-    profile.tryOnModel ?? (existingBodyPhoto ? 'custom_photo' : 'dummy_model'),
-  );
+  const [selectedModel, setSelectedModel] = useState<TryOnModel>(profile.tryOnModel ?? 'custom_photo');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);

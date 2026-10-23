@@ -4,7 +4,12 @@ import { connectDatabase, type Database } from './db';
 import { createLogger } from './logger';
 import { geminiAssistantProvider } from './integrations/ai/assistant-client';
 import { geminiDesignProvider } from './integrations/ai/design-client';
-import { pollinationsImageProvider } from './integrations/ai/image-client';
+import {
+  cloudflareOutfitImageProvider,
+  compositeOutfitImageProvider,
+  pollinationsImageProvider,
+  type OutfitImageProvider,
+} from './integrations/ai/image-client';
 import { serperShoppingProvider } from './integrations/shopping/serper-client';
 import { geminiVisionProvider } from './integrations/ai/vision-client';
 import { cloudflareGenerator, pollinationsGenerator, type ImageGenerator } from './integrations/image/image-client';
@@ -41,10 +46,21 @@ export async function startServer(deps: StartServerDeps = {}) {
     config.PHOTO_ANALYSIS_ENABLED && config.GEMINI_API_KEY
       ? geminiVisionProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
       : null;
-  // AI outfit images: off by default; loadConfig allows them only locally and requires the key when on.
-  const outfitImageProvider = config.OUTFIT_IMAGES_ENABLED
-    ? pollinationsImageProvider(config.POLLINATIONS_API_KEY!, config.POLLINATIONS_IMAGE_MODEL)
-    : null;
+  // AI outfit images: off by default; supports Pollinations with Cloudflare failover when configured.
+  const outfitProviders: OutfitImageProvider[] = [];
+  if (config.OUTFIT_IMAGES_ENABLED && config.POLLINATIONS_API_KEY) {
+    outfitProviders.push(pollinationsImageProvider(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
+  }
+  if (config.OUTFIT_IMAGES_ENABLED && config.CLOUDFLARE_ACCOUNT_ID && config.CLOUDFLARE_API_TOKEN) {
+    outfitProviders.push(
+      cloudflareOutfitImageProvider(
+        config.CLOUDFLARE_ACCOUNT_ID,
+        config.CLOUDFLARE_API_TOKEN,
+        config.CLOUDFLARE_IMAGE_MODEL,
+      ),
+    );
+  }
+  const outfitImageProvider = outfitProviders.length > 0 ? compositeOutfitImageProvider(outfitProviders, log) : null;
   // Price ranges (#118): live whenever a Serper.dev key is set, and only locally until the founder approves
   // showing store prices (D-77); elsewhere the key is ignored and the tabs say prices are unavailable.
   const shoppingProvider =
