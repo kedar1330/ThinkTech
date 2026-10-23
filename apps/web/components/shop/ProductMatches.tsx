@@ -14,6 +14,7 @@ import {
 import { pickProductAction, unpickProductAction, type PicksResult } from '@/app/actions/shop';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
+import { TryOnButton } from './TryOnButton';
 import { garmentSlots, slotLabel, vocabLabel } from '@/lib/outfits/look-text';
 import { formatInr } from '@/lib/shop/format';
 import { cn } from '@/lib/utils';
@@ -239,6 +240,8 @@ export function ProductMatches({
                             View on Google Shopping
                           </a>
                         )}
+                        {/* Coming soon until Virtual Try-On is built; then it opens with this garment (#124). */}
+                        <TryOnButton outfitId={look.id} lookName={l.title} slotId={slot.slotId} />
                       </div>
                     </li>
                   );
