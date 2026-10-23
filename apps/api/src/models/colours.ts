@@ -1,6 +1,8 @@
 import { Schema } from 'mongoose';
 import {
   COLOUR_DEPTHS,
+  COMBINATION_HARMONIES,
+  COMBINATION_ROLES,
   COLOUR_FAMILY_IDS,
   COLOUR_INTENSITIES,
   COLOUR_PREFERENCES,
@@ -94,6 +96,52 @@ export const userColourPreferenceSchema = new Schema(
       ],
       default: [],
     },
+    ...fixtureField,
+  },
+  { timestamps: true },
+);
+
+/**
+ * The user's coordinating colours and curated combinations (#105), built from their own category minus avoided
+ * colours. One document per user; `inputsKey` records what it was built from, so a change of category,
+ * content or liked / avoided colours rebuilds it on the next read.
+ */
+export const userColourCombinationSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true, unique: true },
+    inputsKey: { type: String, required: true },
+    categoryId: { type: String, required: true },
+    combinations: {
+      type: [
+        new Schema(
+          {
+            combinationId: { type: String, required: true },
+            harmony: { type: String, enum: COMBINATION_HARMONIES.map((h) => h.id), required: true },
+            colours: {
+              type: [
+                new Schema(
+                  {
+                    colourId: { type: String, required: true },
+                    role: { type: String, enum: COMBINATION_ROLES, required: true },
+                  },
+                  { _id: false },
+                ),
+              ],
+              default: [],
+            },
+            score: { type: Number, min: 0, max: 100, required: true },
+            likedCount: { type: Number, min: 0, required: true },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
+    coordinating: {
+      type: [new Schema({ colourId: { type: String, required: true }, matches: [String] }, { _id: false })],
+      default: [],
+    },
+    generatedAt: { type: Date, required: true },
     ...fixtureField,
   },
   { timestamps: true },

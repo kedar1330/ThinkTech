@@ -174,3 +174,62 @@ export interface ColourPreferencesResponse {
   avoided: ColourItem[];
   updatedAt: string | null;
 }
+
+// --- Coordinating colours and curated combinations (#105) -------------------------------------------------
+
+/**
+ * How the colours in a combination relate on the colour wheel. Combinations are built only from the user's own
+ * category, by deterministic rules on OKLCH hue and lightness; avoided colours never appear.
+ */
+export const COMBINATION_HARMONIES = [
+  { id: 'neutral_accent', label: 'Neutral and accent' },
+  { id: 'tonal', label: 'Tonal' },
+  { id: 'analogous', label: 'Analogous' },
+  { id: 'complementary', label: 'Complementary' },
+  { id: 'split_complementary', label: 'Split complementary' },
+  { id: 'triadic', label: 'Triadic' },
+] as const;
+export type CombinationHarmony = (typeof COMBINATION_HARMONIES)[number]['id'];
+
+/** Base (most of the outfit), accent, and an optional small pop of colour. */
+export const COMBINATION_ROLES = ['base', 'accent', 'pop'] as const;
+export type CombinationRole = (typeof COMBINATION_ROLES)[number];
+
+export interface CombinationColour {
+  colourId: ColourId;
+  name: string;
+  hex: string;
+  role: CombinationRole;
+  preference: ColourPreference | null;
+}
+
+export interface ColourCombination {
+  /** Stable for the same colours: `CMB-` and the colour IDs. */
+  combinationId: string;
+  harmony: CombinationHarmony;
+  colours: CombinationColour[];
+  /** 0 – 100: how well the colours suit the user and each other. */
+  score: number;
+  reason: string;
+  likedCount: number;
+}
+
+export interface CoordinatingColours {
+  colourId: ColourId;
+  /** Colours from the user's own category that go well with this one, best first. */
+  matches: ColourId[];
+}
+
+/**
+ * `GET /v1/colours/combinations`: coordinating colours and curated combinations from the user's own category.
+ * Generated on first request and stored; rebuilt when the category or liked and avoided colours change.
+ */
+export interface MyColourCombinationsResponse {
+  missing: MyColoursMissing | null;
+  /** The colours referred to by `combinations` and `coordinating`, avoided ones excluded. */
+  colours: Array<Pick<ColourItem, 'colourId' | 'name' | 'hex' | 'family' | 'preference'>>;
+  harmonies: Array<{ id: CombinationHarmony; label: string; count: number }>;
+  combinations: ColourCombination[];
+  coordinating: CoordinatingColours[];
+  generatedAt: string | null;
+}
