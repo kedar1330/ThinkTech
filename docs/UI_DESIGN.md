@@ -202,7 +202,7 @@ Token pages send no Referer and are not cached (`next.config.ts`).
 | Shop My Look | Placeholder | Not built (#37, #38, #43); specified (§13.5); real products blocked |
 | Virtual Try-On | Placeholder | 2D illustrative version specified and approved (D-119, §13.6); photo-based try-on deferred (D-48) |
 | Design Studio | Placeholder | Deferred (D-76) |
-| Style Assistant | Placeholder | Deferred (D-76) |
+| Style Assistant | `/assistant`: conversations list, chat with suggestion chips, replies with look / colour / palette / design cards and feature links, design offer with the Design Studio notice (`components/chat/AssistantChat.tsx`) | Built (D-136) |
 | Saved Outfits | Placeholder | Not built (#41); specified (§13.7) |
 
 Planned pages have no route yet; the empty `apps/web/app/{outfits,products,analyze,avatar,chat,design,tailor,tryon}/` folders hold only `.gitkeep`.

@@ -60,7 +60,9 @@ export const FEATURES: Feature[] = [
     slug: 'style-assistant',
     label: 'Style Assistant',
     icon: 'chat',
-    summary: 'Ask styling questions in plain language and get answers grounded in your profile.',
+    href: '/assistant',
+    summary:
+      'Ask in plain language: looks for an occasion, your colours and palettes, a design for your tailor, saved outfits and shopping.',
   },
   {
     slug: 'saved-outfits',

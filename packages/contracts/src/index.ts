@@ -18,3 +18,4 @@ export * from './saved-items';
 export * from './admin';
 export * from './manual';
 export * from './design';
+export * from './chat';

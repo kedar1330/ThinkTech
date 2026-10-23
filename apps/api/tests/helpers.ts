@@ -7,6 +7,7 @@ import { createApp } from '../src/app';
 import type { Config } from '../src/config/env';
 import type { AppRateLimits } from '../src/middleware/rate-limit';
 import { connectDatabase, type Database } from '../src/db';
+import type { AssistantProvider } from '../src/integrations/ai/assistant-client';
 import type { DesignAnalysisProvider } from '../src/integrations/ai/design-client';
 import type { OutfitImageProvider } from '../src/integrations/ai/image-client';
 import type { ShoppingSearchProvider } from '../src/integrations/shopping/serper-client';
@@ -59,6 +60,8 @@ export const BASE_CONFIG: Config = {
   CLOUDFLARE_API_TOKEN: undefined,
   CLOUDFLARE_IMAGE_MODEL: '@cf/black-forest-labs/flux-1-schnell',
   IMAGE_GENERATION_TIMEOUT_MS: 30_000,
+  STYLE_ASSISTANT_AI_ENABLED: true,
+  STYLE_ASSISTANT_TIMEOUT_MS: 5000,
 };
 
 /**
@@ -158,6 +161,8 @@ export interface AppOptions {
   /** Fake Design Studio providers (tests/fixtures/design-studio.ts); used while DESIGN_STUDIO_ENABLED is true. */
   designAnalysis?: DesignAnalysisProvider;
   imageGenerators?: ImageGenerator[];
+  /** A fake Style Assistant provider (tests/fixtures/style-assistant.ts); used while STYLE_ASSISTANT_AI_ENABLED is true. */
+  assistant?: AssistantProvider;
   /** Custom rate limits (for rate limit tests). */
   rateLimits?: AppRateLimits;
 }
@@ -204,6 +209,7 @@ export async function startTestEnv(): Promise<TestEnv> {
         shoppingProvider: options.shopping ?? null,
         designAnalysisProvider: options.designAnalysis ?? null,
         imageGenerators: options.imageGenerators ?? [],
+        assistantProvider: options.assistant ?? null,
         rateLimits: options.rateLimits,
       });
       return { ...app, config, mail, sms };

@@ -174,9 +174,8 @@ describe('app top navigation', () => {
     expect(more).toHaveAttribute('aria-expanded', 'false');
     await user.click(more);
     const menu = document.getElementById('nav-more')!;
-    for (const name of ['Virtual Try-On', 'Style Assistant']) {
-      expect(within(menu).getByRole('link', { name: new RegExp(name) })).toHaveTextContent('Coming soon');
-    }
+    expect(within(menu).getByRole('link', { name: /Virtual Try-On/ })).toHaveTextContent('Coming soon');
+    expect(within(menu).getByRole('link', { name: 'Style Assistant' })).toHaveAttribute('href', '/assistant');
     expect(within(menu).getByRole('link', { name: 'Design Studio' })).toHaveAttribute('href', '/design-studio');
     expect(within(menu).getByRole('link', { name: 'Outfit Categories' })).toHaveAttribute('href', '/categories');
     expect(within(menu).getByRole('link', { name: 'My Colour Palette' })).toHaveAttribute('href', '/palette');
@@ -236,7 +235,7 @@ describe('app top navigation', () => {
       // nine sections + the logo
       10,
     );
-    expect(within(drawer).getByRole('link', { name: /Style Assistant/ })).toHaveTextContent('Coming soon');
+    expect(within(drawer).getByRole('link', { name: 'Style Assistant' })).toHaveAttribute('href', '/assistant');
     expect(within(drawer).getByRole('link', { name: 'My Colour Palette' })).toHaveAttribute('href', '/palette');
     expect(within(drawer).getByRole('link', { name: 'Saved Outfits' })).toHaveAttribute('href', '/saved');
     expect(within(drawer).getByRole('button', { name: 'Close menu' })).toHaveFocus();

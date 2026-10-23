@@ -86,6 +86,14 @@ const envSchema = z.object({
   CLOUDFLARE_API_TOKEN: optional,
   CLOUDFLARE_IMAGE_MODEL: z.string().trim().min(1).default('@cf/black-forest-labs/flux-1-schnell'),
   IMAGE_GENERATION_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(45_000),
+  // Style Assistant (D-136, approved 2026-10-23). The assistant always answers; with GEMINI_API_KEY set, Gemini
+  // (GEMINI_MODEL, else GEMINI_VISION_MODEL) reads questions and writes replies from the features' results. Set
+  // STYLE_ASSISTANT_AI_ENABLED=false to use only the keyword matcher and fixed wording.
+  STYLE_ASSISTANT_AI_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  STYLE_ASSISTANT_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(15_000),
 });
 
 const configSchema = envSchema.superRefine((env, ctx) => {

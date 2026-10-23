@@ -155,7 +155,7 @@ The onboarding "Appearance" step (D-94) collects these self-reported signals onl
 
 | Feature | AI design | Conditions before starting |
 |---|---|---|
-| Fashion chatbot | Gemini (Groq fallback) with minimised context; product facts only from stored verified data | No photos, measurements or appearance signals in prompts; AI failure → clear error |
+| Fashion chatbot (Style Assistant) | **Built and approved (D-136, 2026-10-23).** `assistant-client.ts`, prompt `style-assistant-v1`: Gemini (1) chooses the intent and details from the question and the user's last three questions, and (2) writes the reply from the facts the feature returned (garment and colour names, palette names, design titles), or general advice for a general question. Both replies are Zod-checked; a failure, timeout or invalid reply falls back to the keyword matcher and fixed wording | Rule 16 exception (D-136): no photos, measurements, height, look explanations or skin tone, undertone and body type labels in prompts; no prices or products (Shop My Look shows those); AI replies are labelled "Written with AI" |
 | Sketch-to-design | **Built and approved (D-134, 2026-10-23).** Gemini reads a sketch, garment picture, description or look + change and returns a Zod-validated tailor spec and a garment-only image prompt; Pollinations (FLUX), with Cloudflare Workers AI (FLUX) as fallback, draws from the text prompt only | A sketch is not a personal photo; photos showing a face are refused; the image services never receive the sketch or anything about the user |
 | Retailer text in prompts | Product titles, descriptions and review excerpts are untrusted data, passed as delimited data and never as instructions | Applies to any feature that sends retailer text to AI |
 
