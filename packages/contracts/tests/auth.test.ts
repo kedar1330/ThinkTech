@@ -7,6 +7,7 @@ import {
   otpSchema,
   passwordSchema,
   registerRequestSchema,
+  searchCities,
 } from '../src/index';
 
 const valid = {
@@ -65,5 +66,19 @@ describe('Indian cities', () => {
     expect(INDIAN_CITIES.length).toBeGreaterThan(150);
     expect(cityLabel('pune')).toBe('Pune, Maharashtra');
     expect(cityLabel('nowhere')).toBeNull();
+  });
+
+  it('keeps Amravati (Maharashtra) and Amaravati (Andhra Pradesh) apart', () => {
+    expect(cityLabel('amravati')).toBe('Amravati, Maharashtra');
+    expect(cityLabel('amaravati')).toBe('Amaravati, Andhra Pradesh');
+    expect(searchCities('amravati').map((c) => c.id)).toEqual(['amravati']);
+    // "Amaravati" is also a common spelling of the Maharashtra city, so both are offered, each with its state.
+    expect(searchCities('amaravati').map((c) => c.id)).toEqual(['amaravati', 'amravati']);
+  });
+
+  it('finds cities by their other spellings and former names', () => {
+    expect(searchCities('bangalore')[0]?.id).toBe('bengaluru');
+    expect(searchCities('bombay')[0]?.id).toBe('mumbai');
+    expect(searchCities('gurgaon')[0]?.id).toBe('gurugram');
   });
 });

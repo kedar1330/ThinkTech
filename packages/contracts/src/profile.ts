@@ -127,6 +127,11 @@ const uniqueList = <T extends z.ZodType>(item: T, max: number) =>
     .max(max)
     .refine((list) => new Set(list).size === list.length, { message: 'Duplicate values' });
 
+// --- 3D Virtual Try-On model preference (D-119) -------------------------------------------
+export const TRY_ON_MODELS = ['custom_photo', 'dummy_model'] as const;
+export const tryOnModelSchema = z.enum(TRY_ON_MODELS);
+export type TryOnModel = z.infer<typeof tryOnModelSchema>;
+
 /** Optional per-look budget in whole rupees; compared only with totals of user-entered prices in Stage 1. */
 export const budgetPreferenceSchema = z.number().int().positive().max(1_000_000);
 
@@ -151,6 +156,7 @@ export const updateProfileRequestSchema = z
     preferredStyles: nullableOptional(uniqueList(styleSchema, 20)),
     preferredOccasions: nullableOptional(uniqueList(occasionSchema, 20)),
     budgetPreference: nullableOptional(budgetPreferenceSchema),
+    tryOnModel: nullableOptional(tryOnModelSchema),
   })
   .strict();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
@@ -186,5 +192,7 @@ export interface ProfileResponse {
   preferredStyles: Style[];
   preferredOccasions: Occasion[];
   budgetPreference: number | null;
+  /** 3D Virtual Try-On model: 'custom_photo' to make 3D model from user photo, or 'dummy_model' */
+  tryOnModel?: TryOnModel | null;
   updatedAt: string | null;
 }

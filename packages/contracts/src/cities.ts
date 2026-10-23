@@ -235,14 +235,46 @@ export function cityLabel(id: string | null | undefined): string | null {
   return city ? `${city.name}, ${city.state}` : null;
 }
 
-/** Case- and accent-insensitive prefix/word match on city and state names. */
+// Other spellings and former names people type, so they still find the right city. Amravati (Maharashtra) is
+// often written "Amaravati", which is also the Andhra Pradesh capital: searching it lists both, each with its
+// state, so the user picks the right one.
+const ALIASES: Partial<Record<CityId, readonly string[]>> = {
+  amravati: ['amaravati', 'amraoti'],
+  visakhapatnam: ['vizag', 'vishakhapatnam'],
+  rajahmundry: ['rajamahendravaram'],
+  vadodara: ['baroda'],
+  gurugram: ['gurgaon'],
+  shimla: ['simla'],
+  bengaluru: ['bangalore'],
+  mysuru: ['mysore'],
+  mangaluru: ['mangalore'],
+  hubballi: ['hubli'],
+  belagavi: ['belgaum'],
+  kalaburagi: ['gulbarga'],
+  thiruvananthapuram: ['trivandrum'],
+  kochi: ['cochin'],
+  mumbai: ['bombay'],
+  chennai: ['madras'],
+  varanasi: ['banaras', 'benares'],
+  prayagraj: ['allahabad'],
+  kolkata: ['calcutta'],
+  puducherry: ['pondicherry'],
+};
+
+/** Case-insensitive prefix/word match on city names, their other spellings and state names. */
 export function searchCities(query: string, limit = 8) {
   const q = query.trim().toLowerCase();
   if (!q) return INDIAN_CITIES.slice(0, limit);
   const scored = INDIAN_CITIES.map((c) => {
-    const name = c.name.toLowerCase();
-    const words = `${name} ${c.state.toLowerCase()}`.split(/[\s(),-]+/);
-    const score = name.startsWith(q) ? 0 : words.some((w) => w.startsWith(q)) ? 1 : name.includes(q) ? 2 : 3;
+    const names = [c.name.toLowerCase(), ...(ALIASES[c.id] ?? [])];
+    const words = `${names.join(' ')} ${c.state.toLowerCase()}`.split(/[\s(),-]+/);
+    const score = names.some((n) => n.startsWith(q))
+      ? 0
+      : words.some((w) => w.startsWith(q))
+        ? 1
+        : names.some((n) => n.includes(q))
+          ? 2
+          : 3;
     return { c, score };
   }).filter((x) => x.score < 3);
   scored.sort((a, b) => a.score - b.score || a.c.name.localeCompare(b.c.name));
