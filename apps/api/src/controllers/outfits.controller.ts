@@ -4,6 +4,7 @@ import {
   objectIdSchema,
   type DeletedResponse,
   type LookPriceRange,
+  type LookProductMatches,
   type FeedbackRecordedResponse,
   type OutfitFeedbackRequest,
   type OutfitListQuery,
@@ -43,6 +44,12 @@ export class OutfitsController {
   priceRange: RequestHandler = async (req, res) => {
     if (!this.priceRanges) throw new AppError('PROVIDER_NOT_CONFIGURED');
     sendData<LookPriceRange>(res, await this.priceRanges.range(userOf(req), outfitIdOf(req)));
+  };
+
+  /** Similar products for the look's garments from store search results (#120); labelled, never exact. */
+  products: RequestHandler = async (req, res) => {
+    if (!this.priceRanges) throw new AppError('PROVIDER_NOT_CONFIGURED');
+    sendData<LookProductMatches>(res, await this.priceRanges.products(userOf(req), outfitIdOf(req)));
   };
 
   save: RequestHandler = async (req, res) => {

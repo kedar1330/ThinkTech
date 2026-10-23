@@ -1,7 +1,15 @@
 import request from 'supertest';
 import type { Express } from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { PRICE_RANGE_LABEL, lookPriceRangeSchema, lookSchema, type Look } from '@styleme/contracts';
+import {
+  PRICE_RANGE_LABEL,
+  PRODUCTS_PER_STORE,
+  PRODUCT_MATCHES_LABEL,
+  lookPriceRangeSchema,
+  lookProductMatchesSchema,
+  lookSchema,
+  type Look,
+} from '@styleme/contracts';
 import { PRICE_SEARCH_TTL_MS, parseInr, storeOf } from '../../src/services/price-range.service';
 import { loadStyleLibrary } from '../../src/style-rules';
 import { FakeShoppingProvider, listing } from '../fixtures/shopping';
@@ -193,7 +201,99 @@ describe('GET /v1/outfits/:id/price-range (#118)', () => {
 
     const logs = logTextForPrivacyChecks(env.logLines);
     for (const slot of look.slots) expect(logs).not.toContain(slot.searchPhrase);
-    expect(logs).not.toMatch(/1,?299|449|Amazon\.in|Meesho/);
+    // Price text, price fields, store names and listing titles; not bare digits, which also occur in request
+    // IDs and timings.
+    expect(logs).not.toMatch(/₹|Rs\. ?\d|"price"|Amazon\.in|Flipkart|Meesho|Synthetic /);
     expect(logs).toContain('price_search_failed');
+  });
+});
+
+describe('GET /v1/outfits/:id/products (#120)', () => {
+  it('lists each store’s cheapest listings per garment with its own title, cheapest first, and price stats', async () => {
+    const shopping = new FakeShoppingProvider();
+    shopping.reply = {
+      kind: 'listings',
+      listings: [
+        listing('Amazon.in', '₹1,299.00', 'Synthetic navy kurta A'),
+        listing('Amazon.in', '₹699', 'Synthetic navy kurta B'),
+        listing('Amazon.in', '₹899', 'Synthetic navy kurta C'),
+        listing('Flipkart', '₹449', 'Synthetic navy kurta D'),
+        listing('Meesho', '₹299', 'Synthetic navy kurta E'),
+        listing('Myntra', '₹199', 'Synthetic navy kurta F'),
+      ],
+    };
+    const { app, token } = await signedIn('products@example.com', shopping);
+    const look = await firstLook(app, token);
+
+    const res = await request(app).get(`/v1/outfits/${look.id}/products`).set(bearer(token));
+    expect(res.status).toBe(200);
+    const matches = lookProductMatchesSchema.parse(res.body.data);
+    expect(matches.label).toBe(PRODUCT_MATCHES_LABEL);
+    const garments = look.slots.filter((s) => GARMENTS.has(s.slot));
+    expect(matches.slots.map((s) => s.slotId)).toEqual(garments.map((s) => s.slotId));
+    for (const slot of matches.slots) {
+      // Each search keeps only its own store, so the fake's listings count once per store; Myntra is left out.
+      expect(slot.listings.map((l) => [l.store, l.price, l.title])).toEqual([
+        ['meesho', 299, 'Synthetic navy kurta E'],
+        ['flipkart', 449, 'Synthetic navy kurta D'],
+        ['amazon', 699, 'Synthetic navy kurta B'],
+        ['amazon', 899, 'Synthetic navy kurta C'],
+        ['amazon', 1299, 'Synthetic navy kurta A'],
+      ]);
+      expect(slot.stats).toEqual([
+        { store: 'amazon', listings: 3, min: 699, median: 899, max: 1299 },
+        { store: 'flipkart', listings: 1, min: 449, median: 449, max: 449 },
+        { store: 'meesho', listings: 1, min: 299, median: 299, max: 299 },
+      ]);
+    }
+    // The same cached searches serve the price range: no new searches.
+    const searched = shopping.queries.length;
+    await priceRange(app, token, look.id).expect(200);
+    expect(shopping.queries).toHaveLength(searched);
+  });
+
+  it(`returns at most ${PRODUCTS_PER_STORE} per store, and passes on only Google Shopping links and Google thumbnails`, async () => {
+    const shopping = new FakeShoppingProvider();
+    const many = Array.from({ length: 12 }, (_, i) => listing('Amazon.in', `₹${500 + i}`, `Synthetic item ${i}`));
+    const unsafe = [
+      {
+        ...listing('Amazon.in', '₹100', 'Synthetic bad link'),
+        link: 'javascript:alert(1)',
+        imageUrl: 'http://evil.example/x.png',
+      },
+      {
+        ...listing('Amazon.in', '₹120', 'Synthetic other host'),
+        link: 'https://evil.example/',
+        imageUrl: 'https://evil.example/x.png',
+      },
+      { ...listing('Amazon.in', '₹130', 'Synthetic no title'), title: '   ' },
+    ];
+    shopping.reply = { kind: 'listings', listings: [...many, ...unsafe] };
+    const { app, token } = await signedIn('safe-products@example.com', shopping);
+    const look = await firstLook(app, token);
+    const matches = lookProductMatchesSchema.parse(
+      (await request(app).get(`/v1/outfits/${look.id}/products`).set(bearer(token))).body.data,
+    );
+    const slot = matches.slots[0]!;
+    expect(slot.listings).toHaveLength(PRODUCTS_PER_STORE);
+    expect(slot.listings.map((l) => l.title)).not.toContain('Synthetic no title');
+    const bad = slot.listings.filter(
+      (l) => l.title.startsWith('Synthetic bad') || l.title.startsWith('Synthetic other'),
+    );
+    expect(bad).toHaveLength(2);
+    for (const l of bad) expect([l.link, l.imageUrl]).toEqual([null, null]);
+    expect(slot.stats[0]).toMatchObject({ store: 'amazon', listings: 14 });
+  });
+
+  it('is owner-only and unavailable without a key', async () => {
+    const shopping = new FakeShoppingProvider();
+    const owner = await signedIn('owner-products@example.com', shopping);
+    const look = await firstLook(owner.app, owner.token);
+    const other = await signedIn('other-products@example.com', shopping);
+    expect((await request(other.app).get(`/v1/outfits/${look.id}/products`).set(bearer(other.token))).status).toBe(404);
+    const off = await signedIn('off-products@example.com');
+    const offLook = await firstLook(off.app, off.token);
+    const res = await request(off.app).get(`/v1/outfits/${offLook.id}/products`).set(bearer(off.token));
+    expect(res.body.error.code).toBe('PROVIDER_NOT_CONFIGURED');
   });
 });

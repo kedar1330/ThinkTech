@@ -5,6 +5,7 @@ import { Info } from 'lucide-react';
 import {
   SHORTLIST_LIMITS,
   objectIdSchema,
+  type AppearanceResponse,
   slotIdSchema,
   type Look,
   type OutfitDetail,
@@ -13,9 +14,12 @@ import {
   type ShortlistListResponse,
   type UserShortlistItem,
 } from '@styleme/contracts';
+import { OutfitImage } from '@/components/outfits/OutfitImage';
 import { SaveLookButton } from '@/components/outfits/SaveLookButton';
+import { BodyTypeFigure } from '@/components/shop/BodyTypeFigure';
 import { LookShopper } from '@/components/shop/LookShopper';
 import { LookTabs } from '@/components/shop/LookTabs';
+import { ProductMatches } from '@/components/shop/ProductMatches';
 import { Card } from '@/components/ui/card';
 import { ApiError, apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
@@ -48,6 +52,9 @@ async function discoverLooks(token: string): Promise<Look[]> {
     if (res.looks.length < PAGE || looks.length >= res.total) return looks;
   }
 }
+
+/** The figure is a woman's or a man's; any other Clothing Preference shows the default figure. */
+const figureDepartment = (d: string | null | undefined) => (d === 'women' || d === 'men' ? d : null);
 
 /** Workflow PDF p17: StyleMe has no retailer products yet, so the page works over the user's own shortlist. */
 function ProductDataUnavailable() {
@@ -117,11 +124,14 @@ export default async function ShopPage({
   let look: OutfitDetail;
   let items: UserShortlistItem[];
   let profile: ProfileResponse;
+  let appearance: AppearanceResponse | null;
   try {
-    [look, items, profile] = await Promise.all([
+    [look, items, profile, appearance] = await Promise.all([
       apiRequest<OutfitDetail>(`/v1/outfits/${selectedId}`, { token }),
       allItems(token),
       apiRequest<ProfileResponse>('/v1/profile', { token }),
+      // Only picks the figure's shape (#120); without it the default figure is shown.
+      apiRequest<AppearanceResponse>('/v1/appearance', { token }).catch(() => null),
     ]);
   } catch (err) {
     if (err instanceof ApiError && err.code === 'NOT_FOUND') notFound();
@@ -136,7 +146,25 @@ export default async function ShopPage({
         <h1 className="font-display text-3xl text-primary sm:text-4xl">{lookTitle(look)}</h1>
       </header>
       {looks.length > 0 && <LookTabs looks={looks} selectedId={look.id} />}
-      <ProductDataUnavailable />
+      <section aria-labelledby="your-outfit" className="space-y-3">
+        <h2 id="your-outfit" className="font-display text-2xl text-primary">
+          Your outfit
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {look.image && <OutfitImage outfitId={look.id} ready={look.image === 'ready'} />}
+          <BodyTypeFigure
+            look={look}
+            department={figureDepartment(look.inputsUsed.department ?? profile.department)}
+            bodyType={appearance?.bodyType?.value ?? null}
+          />
+        </div>
+      </section>
+      <ProductMatches
+        key={look.id}
+        look={look}
+        budget={profile.budgetPreference ?? null}
+        fallback={<ProductDataUnavailable />}
+      />
       {look.status === 'saved' ? (
         <LookShopper
           key={look.id}

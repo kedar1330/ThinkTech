@@ -24,6 +24,7 @@ export function outfitsRoutes(
   router.get('/outfits/:id', ...auth, controller.get);
   router.get('/outfits/:id/image', ...auth, ...(limits.image ?? []), controller.image);
   router.get('/outfits/:id/price-range', ...auth, ...(limits.priceRange ?? []), controller.priceRange);
+  router.get('/outfits/:id/products', ...auth, ...(limits.priceRange ?? []), controller.products);
   router.post('/outfits/:id/save', ...auth, controller.save);
   router.post(
     '/outfits/:id/feedback',
