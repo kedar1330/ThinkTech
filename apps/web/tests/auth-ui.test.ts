@@ -146,6 +146,7 @@ describe('dashboard sections', () => {
       'outfit-categories',
       'shop-my-look',
       'design-studio',
+      'style-assistant',
       'saved-outfits',
     ]);
     for (const f of FEATURES.filter((x) => !x.href)) expect(featureHref(f)).toBe(`/features/${f.slug}`);

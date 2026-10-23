@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { loadConfig, type Config } from './config/env';
 import { connectDatabase, type Database } from './db';
 import { createLogger } from './logger';
+import { geminiAssistantProvider } from './integrations/ai/assistant-client';
 import { geminiDesignProvider } from './integrations/ai/design-client';
 import { pollinationsImageProvider } from './integrations/ai/image-client';
 import { serperShoppingProvider } from './integrations/shopping/serper-client';
@@ -54,6 +55,12 @@ export async function startServer(deps: StartServerDeps = {}) {
     config.DESIGN_STUDIO_ENABLED && config.GEMINI_API_KEY
       ? geminiDesignProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
       : null;
+  // Style Assistant (D-136): Gemini plans and words replies whenever a key is set, unless STYLE_ASSISTANT_AI_ENABLED=false;
+  // without it the assistant uses its keyword matcher and fixed wording.
+  const assistantProvider =
+    config.STYLE_ASSISTANT_AI_ENABLED && config.GEMINI_API_KEY
+      ? geminiAssistantProvider(config.GEMINI_API_KEY, config.GEMINI_MODEL ?? config.GEMINI_VISION_MODEL)
+      : null;
   const imageGenerators: ImageGenerator[] = [];
   if (config.POLLINATIONS_API_KEY)
     imageGenerators.push(pollinationsGenerator(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
@@ -92,6 +99,7 @@ export async function startServer(deps: StartServerDeps = {}) {
     shoppingProvider,
     designAnalysisProvider,
     imageGenerators,
+    assistantProvider,
   });
 
   if (deps.listen === false) {
@@ -112,6 +120,7 @@ export async function startServer(deps: StartServerDeps = {}) {
       priceRanges: Boolean(shoppingProvider),
       designStudio: Boolean(designAnalysisProvider),
       designImages: imageGenerators.map((g) => g.name),
+      styleAssistantAi: Boolean(assistantProvider),
     });
   });
 

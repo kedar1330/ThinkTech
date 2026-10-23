@@ -18,7 +18,9 @@ import { PhotosController } from './controllers/photos.controller';
 import { ProfileController } from './controllers/profile.controller';
 import { RecommendationsController } from './controllers/recommendations.controller';
 import { ShortlistController } from './controllers/shortlist.controller';
+import { StyleAssistantController } from './controllers/style-assistant.controller';
 import type { Database } from './db';
+import type { AssistantProvider } from './integrations/ai/assistant-client';
 import type { DesignAnalysisProvider } from './integrations/ai/design-client';
 import type { OutfitImageProvider } from './integrations/ai/image-client';
 import type { ShoppingSearchProvider } from './integrations/shopping/serper-client';
@@ -43,6 +45,7 @@ import { photosRoutes } from './routes/photos.routes';
 import { profileRoutes } from './routes/profile.routes';
 import { recommendationsRoutes } from './routes/recommendations.routes';
 import { shortlistRoutes } from './routes/shortlist.routes';
+import { styleAssistantRoutes } from './routes/style-assistant.routes';
 import { AppearanceService } from './services/appearance.service';
 import { AccountService } from './services/account.service';
 import { AuthService } from './services/auth.service';
@@ -64,6 +67,7 @@ import { PhotoService } from './services/photo.service';
 import { ProfileService } from './services/profile.service';
 import { RecommendationsService } from './services/recommendations.service';
 import { ShortlistService } from './services/shortlist.service';
+import { StyleAssistantService } from './services/style-assistant.service';
 import { WordingService, mongoWordingCache } from './services/wording.service';
 import { SHIPPED_LIBRARY, loadStyleLibrary } from './style-rules';
 import { sendError } from './utils/respond';
@@ -92,6 +96,8 @@ export interface AppDeps {
   designAnalysisProvider?: DesignAnalysisProvider | null;
   /** Design Studio image generators, tried in order (Pollinations, then Cloudflare); tests pass fakes. */
   imageGenerators?: ImageGenerator[];
+  /** Style Assistant (D-136): Gemini plans and words replies. Used only while STYLE_ASSISTANT_AI_ENABLED is true. */
+  assistantProvider?: AssistantProvider | null;
   /** Rate limits across auth, recommendations, feedback and shortlist. Defaults to D-38 in-memory stores. */
   rateLimits?: AppRateLimits;
 }
@@ -116,6 +122,7 @@ export function createApp({
   shoppingProvider = null,
   designAnalysisProvider = null,
   imageGenerators = [],
+  assistantProvider = null,
   rateLimits = createRateLimits(),
 }: AppDeps): App {
   const app = express();
@@ -224,11 +231,12 @@ export function createApp({
     '/v1',
     recommendationsRoutes(new RecommendationsController(recommendations), withPassword, rateLimits.recommendations),
   );
+  const outfits = new OutfitsService(db.models, styleLibrary, undefined, outfitImages);
   app.use(
     '/v1',
     outfitsRoutes(
       new OutfitsController(
-        new OutfitsService(db.models, styleLibrary, undefined, outfitImages),
+        outfits,
         feedbackService,
         new PriceRangeService(db.models, shoppingProvider, config.PRICE_SEARCH_TIMEOUT_MS, logger),
       ),
@@ -252,6 +260,25 @@ export function createApp({
   );
   app.use('/v1', designStudioRoutes(new DesignStudioController(designStudio), withPassword, rateLimits.designStudio));
   app.use('/v1', colourLibraryRoutes(new ColourLibraryController(colourLibrary), withPassword));
+  const assistant = new StyleAssistantService({
+    models: db.models,
+    recommendations,
+    outfits,
+    palettes,
+    colours: colourLibrary,
+    designStudio,
+    designAvailable: config.DESIGN_STUDIO_ENABLED && designAnalysisProvider !== null,
+    provider: config.STYLE_ASSISTANT_AI_ENABLED ? assistantProvider : null,
+    timeoutMs: config.STYLE_ASSISTANT_TIMEOUT_MS,
+    logger,
+  });
+  app.use(
+    '/v1',
+    styleAssistantRoutes(new StyleAssistantController(assistant), withPassword, {
+      message: rateLimits.assistant,
+      design: rateLimits.designStudio,
+    }),
+  );
   const manualService = new ManualService(db.models);
   app.use('/v1', manualRoutes(new ManualController(manualService), withPassword));
 

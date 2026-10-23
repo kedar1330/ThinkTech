@@ -55,6 +55,8 @@ export interface AppRateLimits extends AuthRateLimits {
   priceRange?: Limits;
   /** New designs and picture retries: each one is a Gemini call and an image generation (D-134). */
   designStudio?: Limits;
+  /** Style Assistant messages: each may be two Gemini calls and a feature run (D-136). */
+  assistant?: Limits;
 }
 
 export function createAuthRateLimits(): AuthRateLimits {
@@ -81,5 +83,6 @@ export function createRateLimits(): AppRateLimits {
     outfitImage: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
     priceRange: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
     designStudio: [limiter(MINUTE, 5, byUser), limiter(HOUR, 30, byUser)],
+    assistant: [limiter(MINUTE, 10, byUser), limiter(HOUR, 120, byUser)],
   };
 }

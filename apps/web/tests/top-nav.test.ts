@@ -29,8 +29,8 @@ describe('navigation items', () => {
       'Style Assistant',
       'Saved Outfits',
     ]);
-    // Virtual Try-On and Style Assistant; Design Studio is live (D-134).
-    expect(NAV_ITEMS.filter((i) => i.soon)).toHaveLength(2);
+    // Virtual Try-On only; Design Studio (D-134) and Style Assistant (D-136) are live.
+    expect(NAV_ITEMS.filter((i) => i.soon)).toHaveLength(1);
   });
   it('matches the active route without false prefixes', () => {
     expect(isActive('/home', '/home')).toBe(true);

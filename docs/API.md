@@ -111,8 +111,8 @@ Remaining numbered endpoints (continuing the first table):
 | 30 | GET | `/v1/design/:id` | Get a design | Deferred (D-76) |
 | 31 | POST | `/v1/design/sketch` | Interpret a sketch | Deferred (D-76) |
 | 32 | POST | `/v1/design/generate` | Generate a design | Deferred (D-76) |
-| 33 | POST | `/v1/chat` | Chat message | Deferred (D-76) |
-| 34 | GET | `/v1/chat/conversations` | List conversations | Deferred (D-76) |
+| 33 | POST | `/v1/chat` | Style Assistant message | Built (D-136), §3.15 |
+| 34 | GET | `/v1/chat` | Style Assistant overview and conversations | Built (D-136), §3.15 |
 | 35 | POST | `/v1/tailor/pdf` | Tailor PDF | Deferred (D-76) |
 | 36 | POST | `/v1/tryon` | Try-on request | Future (D-48) |
 | 37 | GET | `/v1/tryon/:id` | Try-on result | Future (D-48) |
@@ -267,7 +267,6 @@ These are specified only at the level needed for planning. Their full contracts 
 | `PUT /v1/appearance/confirm` | `action: confirm \| correct` per attribute; confidence never changes ([DATABASE.md](DATABASE.md) §5) |
 | `POST /v1/design`, `GET /v1/design/:id` | Save and read designs |
 | `POST /v1/design/sketch`, `POST /v1/design/generate` | Sketch → structured specification (Zod) → user confirmation → generation. AI failure → clear error |
-| `POST /v1/chat`, `GET /v1/chat/conversations` | Minimised context; product facts only from stored verified data; AI failure → clear error |
 | `POST /v1/tailor/pdf` | PDF from a saved design |
 | `POST /v1/tryon`, `GET /v1/tryon/:id` | **Not approved.** The earlier design (user photo + `consent: true` → Leffa / Hugging Face / Qwen) is superseded by AI rule 16. Consent alone does not authorise sending a personal photo to an external provider. Requires D-48 |
 
@@ -425,6 +424,19 @@ Authenticated, password set. Contract: `packages/contracts/src/design.ts`. `POST
 | GET | `/v1/design-studio/designs/:id/image?which=design\|source` | The generated picture (default) or the user's sketch; raw image, `cache-control: private, no-store`. The web app serves it through `/api/design-studio/:id/image` |
 | POST | `/v1/design-studio/designs/:id/render` | Draws the picture again from the stored prompt (no Gemini call). `AI_UNAVAILABLE` when every image service fails |
 | DELETE | `/v1/design-studio/designs/:id` | Deletes the design with its sketch and picture |
+
+### 3.15 Style Assistant (D-136; always on, Gemini when `GEMINI_API_KEY` is set unless `STYLE_ASSISTANT_AI_ENABLED=false`)
+
+Contract: `chat.ts`. One question → a plan (intent and details) → the feature that answers it, run for the user → a reply with the results as cards and links. Gemini plans from the question (and the user's last three questions) and writes the reply from the feature's facts (garment and colour names, palette names, design titles); never photos, measurements, height, look explanations or appearance labels. Without Gemini, or when it fails or times out, a keyword matcher plans and fixed wording replies (`wording: fixed`). Rate limit: 10 a minute, 120 an hour per user.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/v1/chat` | `{aiAvailable, designAvailable, suggestions[], conversations[] {id, title, updatedAt}}` (newest first) |
+| POST | `/v1/chat` | `{message (1 – 500), conversationId?}` → `{conversation}` with the user's message and the reply appended. Intents: `looks` (Discover My Style, up to 3 looks), `colours` (colour library, top 8), `palettes` (top 3), `design` (a `design_offer` card; nothing is designed yet), `saved` (latest 3), `shop` (looks with a link to Shop My Look; never prices), `try_on` (not available yet), `profile`, `general` (Gemini's general advice, or fixed help), `help`. A feature error becomes a plain reply, never an invented answer. 404 for another user's conversation |
+| POST | `/v1/chat/design` | `{conversationId, description (10 – 1200), notice: DESIGN_NOTICE_VERSION}` → 201 `{conversation}` with a `design` card. Runs Design Studio (`source: description`), with its errors and the Design Studio rate limit |
+| GET | `/v1/chat/conversations/:id` | One conversation with its messages (owner only, else 404) |
+| DELETE | `/v1/chat/conversations/:id` | Deletes one conversation |
+| DELETE | `/v1/chat/conversations` | Deletes all the user's conversations |
 
 ### 3.10 Health
 

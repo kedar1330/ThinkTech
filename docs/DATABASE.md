@@ -50,7 +50,8 @@
 | `usageDailyStats` | Aggregate daily counters for the admin dashboard; no user ID (§4b.3) | System | 1 (D-125) — model declared, unused |
 | `manualSteps` | Interactive website manual workflow steps with feature roadmap, imagery and metadata | Shared | 1 |
 | `productImportRuns` | Results of product imports and syncs (§4.6) | System | Product layer — not created |
-| `designs`, `chatMessages` | Design Studio, chatbot | Per user | Deferred (D-76) |
+| `designs` | Design Studio (§4e) | Per user | 1 (D-134) |
+| `chatConversations` | Style Assistant conversations (§4f) | Per user | 1 (D-136) |
 | try-on results | Photo-based or generative try-on | Per user | Future (D-48). The 2D try-on stores only configurations in `savedItems` (D-119, D-128) |
 
 **Where the styling knowledge lives (D-110).** The runtime source of truth for palettes, templates, rules, clothing styles, categories, attributes and illustrations is the set of shared MongoDB collections in §4a. The JSON files in `apps/api/src/style-rules/data/` remain the founder-review and seed format until the admin panel edits the catalogue; an import script loads approved records into MongoDB, validated by the same Zod schemas and linter (§6).
@@ -622,6 +623,16 @@ Monk tone (1 – 10) → undertone (warm, cool, neutral, olive) → 100+ colours
 | `designs` | **user** | One design from a sketch, upload, description or look + change | `userId`; `source` (`sketch`, `upload`, `description`, `look`); `description`; `lookId`, `slotId` (look only); `sourceImage {data, contentType}` (the user's sketch, BSON binary, `select: false`); `image {data, contentType}` (the generated picture, `select: false`); `imageStatus` (`ready`, `failed`); `imageProvider` (`pollinations`, `cloudflare`); `imagePrompt` (Gemini's garment-only prompt, `select: false`, reused for redraws); `title`, `summary`, `tailorSpec` (Mixed, validated by `tailorSpecSchema`); `analysisModel`, `promptVersion`, `noticeVersion`; timestamps. Index `{userId, createdAt: -1}`. At most 50 per user |
 
 `designs` is in `USER_OWNED_COLLECTIONS`; deleting a design or the account deletes its sketch and picture with it. A look's `outfits` document is only read, never changed; deleting the look leaves designs made from it.
+
+---
+
+## 4f. Style Assistant (D-136)
+
+| Collection | Owner | Purpose | Key fields and indexes |
+|---|---|---|---|
+| `chatConversations` | **user** | One Style Assistant conversation | `userId`; `title` (the first question, ≤ 60 characters); `messages[]` embedded, at most 100 (oldest drop off): `{_id, role: user \| assistant, text, intent, cards[], links[] {label, href}, wording: ai \| fixed \| null, createdAt}`; `isFixture`; timestamps. Index `{userId: 1, updatedAt: -1}` |
+
+`cards` are snapshots of the user's own results (looks, colour names and hex values, palette names, a design summary or a design offer), so an old conversation still reads well after a suggested look expires; image bytes are never copied. At most 30 conversations per user: starting a new one removes the oldest. `chatConversations` is in `USER_OWNED_COLLECTIONS`, so account deletion and tombstone replay remove it; the user can also delete one conversation or all. No migration is needed (a new collection).
 
 ---
 

@@ -342,6 +342,31 @@ const designSchema = new Schema(
 );
 designSchema.index({ userId: 1, createdAt: -1 });
 
+// Style Assistant conversations (D-136, DATABASE.md §4f). Messages are embedded (at most CHAT_MESSAGE_LIMIT);
+// cards are snapshots of the user's own looks, colours and designs (no image bytes). Never logged.
+const chatMessageSchema = new Schema(
+  {
+    role: { type: String, enum: ['user', 'assistant'], required: true },
+    text: { type: String, required: true },
+    intent: { type: String, default: null },
+    cards: { type: [Schema.Types.Mixed], default: [] },
+    links: { type: [Schema.Types.Mixed], default: [] },
+    wording: { type: String, enum: ['ai', 'fixed', null], default: null },
+    createdAt: { type: Date, required: true },
+  },
+  { _id: true },
+);
+const chatConversationSchema = new Schema(
+  {
+    ...fixtureField,
+    userId: { type: Schema.Types.ObjectId, required: true },
+    title: { type: String, required: true },
+    messages: { type: [chatMessageSchema], default: [] },
+  },
+  { timestamps: true },
+);
+chatConversationSchema.index({ userId: 1, updatedAt: -1 });
+
 // History of appearance analyses (DATABASE.md §3.8, D-103, D-129): photo analyses by Gemini and body types
 // identified from measurements. The value in use lives in `appearanceProfiles`; a new result is applied
 // there at once (unconfirmed) and the user confirms or corrects it. Deleting a photo does not delete
@@ -586,6 +611,7 @@ export type FeatureSuitabilityRuleDoc = InferSchemaType<typeof featureSuitabilit
 export type UserDesignPreferenceDoc = InferSchemaType<typeof userDesignPreferenceSchema>;
 export type UserDesignSelectionDoc = InferSchemaType<typeof userDesignSelectionSchema>;
 export type DesignDoc = InferSchemaType<typeof designSchema>;
+export type ChatConversationDoc = InferSchemaType<typeof chatConversationSchema>;
 
 export interface Models {
   User: Model<UserDoc>;
@@ -635,6 +661,8 @@ export interface Models {
   UserColourCombination: Model<InferSchemaType<typeof userColourCombinationSchema>>;
   // Design Studio (D-134).
   Design: Model<DesignDoc>;
+  // Style Assistant (D-136).
+  ChatConversation: Model<ChatConversationDoc>;
 }
 
 export function registerModels(main: Connection, tombstones: Connection): Models {
@@ -686,6 +714,7 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     UserColourPreference: main.model('UserColourPreference', userColourPreferenceSchema, 'userColourPreferences'),
     UserColourCombination: main.model('UserColourCombination', userColourCombinationSchema, 'userColourCombinations'),
     Design: main.model('Design', designSchema, 'designs'),
+    ChatConversation: main.model('ChatConversation', chatConversationSchema, 'chatConversations'),
   };
 }
 
@@ -726,4 +755,6 @@ export const USER_OWNED_COLLECTIONS = [
   'userColourCombinations',
   // Design Studio (D-134, DATABASE.md §4e). Sketches and generated pictures are stored in `designs` itself.
   'designs',
+  // Style Assistant (D-136, DATABASE.md §4f).
+  'chatConversations',
 ] as const;

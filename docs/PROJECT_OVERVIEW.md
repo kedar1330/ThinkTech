@@ -234,11 +234,11 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ---
 
-## 12. Style Assistant (PDF p19) — ⛔ Deferred (D-76)
+## 12. Style Assistant (PDF p19) — ✅ Built (D-136, 2026-10-23)
 
-**Intended.** Suggested questions → the user asks → the assistant identifies the intent (colour, outfit, occasion, fabric and pattern, budget and shopping) → applies the shared styling rules (and authorised product data only if needed) → a supported answer → follow-up, open outfit, save recommendation.
+**How it works.** Suggested questions → the user asks in plain language at `/assistant` → the assistant works out what is asked (looks for an occasion, colours, palettes, a design, saved outfits, shopping, profile, or a general styling question) → runs that feature for the user with the shared styling rules → replies with the results as cards (looks with Save, Shop this look and Change in Design Studio; colours; palettes; a design) and links into each feature. A design is made only after the user agrees to the Design Studio notice in the chat. Conversations are kept (30 per user) and can be deleted.
 
-**Status.** "Coming soon" page; the chatbot is deferred (D-76). Any AI use must follow [AI.md](AI.md) §2 (no personal photos or appearance signals sent to external AI; deterministic core). **Owner:** Shreya (later).
+**AI.** Gemini reads the question and writes the reply from the feature's results (garment and colour names, palette names, design titles), never photos, measurements, height or the skin tone, undertone and body type labels (D-136 widens AI rule 16). Without Gemini a keyword matcher and fixed wording answer instead. It never quotes prices or products; Shop My Look shows those. Virtual Try-On questions are answered as not available yet. **Owner:** Shreya.
 
 ---
 
@@ -282,7 +282,7 @@ Recorded for founder review. Rows marked **Resolved** cite the decision that set
 | 2 | Photos and measurements | p1, p4, p11, p16, p18 | D-76, FR-SIZE-06, AI rule 16 | **Resolved 2026-10-18:** measurements and photo analysis approved (D-102, D-103); Gemini for full-body photos approved (D-122), behind the privacy review |
 | 3 | Kids department | p1 (unverified) | **Resolved (D-101):** no kids department in Stage 1 | A later addition needs a legal review (D-74), a kids size system and founder approval |
 | 4 | Retailer products | p1, p17 | D-43 … D-45 blocked; no scraping | Retailer permission in writing |
-| 5 | Design Studio, Style Assistant, Try-On in the roadmap | p13, p18–p20 | D-76, D-48. **Partly resolved (D-119):** a 2D illustrative try-on is approved | Founder decisions for Design Studio, Style Assistant and photo-based try-on |
+| 5 | Design Studio, Style Assistant, Try-On in the roadmap | p13, p18–p20 | D-76, D-48. **Partly resolved:** a 2D illustrative try-on is approved (D-119); Design Studio (D-134) and Style Assistant (D-136) are built | Founder decision for photo-based try-on |
 | 6 | Outfit Categories gallery | p16 | **Resolved (D-109):** FRD §4.19 | — |
 | 7 | Save a palette | p15 | **Resolved (D-109):** FR-PAL-19 … 21 | — |
 | 8 | Request a copy of my data | p4 | JSON and PDF export (FR-MYP-17) | **Resolved:** D-105 approved 2026-10-18 |

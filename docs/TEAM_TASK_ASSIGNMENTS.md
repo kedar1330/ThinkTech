@@ -59,7 +59,7 @@ Every shared file has exactly one owner. Others change it only through a pull re
 * Look engine: matching, ranking, combination signatures, defaults and conflicts, `INSUFFICIENT_MATCHES` (never padded), the `outfits` model, `POST /v1/recommendations` (FR-LOOK, AI.md §3).
 * Explanation fidelity, diversity, alternatives and search phrases in the engine (FR-LOOK-12 … 15); palette ranking for `GET /v1/style/palettes` (FR-PAL).
 * Contracts for recommendations, outfits and palettes; coverage reports and evaluation support.
-* Later: Style Assistant logic (⛔ D-76) and shared weather-styling rules (⛔ Stage 2, D-60).
+* Style Assistant built (D-136, 2026-10-23). Later: shared weather-styling rules (⛔ Stage 2, D-60).
 
 **Likely files.** `packages/contracts/src/{style-vocabulary,outfit,profile,appearance,index}.ts`; `apps/api/src/style-rules/**`; new `apps/api/src/services/recommendation*.ts`, controller and routes; `apps/api/src/models/index.ts`; tests in `apps/api/tests/unit/style-rules*.test.ts` and new engine tests.
 
