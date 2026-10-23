@@ -445,9 +445,7 @@ export const lookSpecAttributeSchema = z.enum(LOOK_SPEC_ATTRIBUTES);
 export type LookSpecAttribute = z.infer<typeof lookSpecAttributeSchema>;
 
 /** A listing that matches the look: which of the garment's attributes its store title mentions (#133). */
-export const matchedListingSchema = productListingSchema
-  .extend({ matched: z.array(lookSpecAttributeSchema) })
-  .strict();
+export const matchedListingSchema = productListingSchema.extend({ matched: z.array(lookSpecAttributeSchema) }).strict();
 export type MatchedListing = z.infer<typeof matchedListingSchema>;
 
 /** At most this many other styles of the same garment per store (#133). */

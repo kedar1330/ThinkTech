@@ -257,7 +257,9 @@ describe('similar products to compare', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Amazon' }));
     expect(screen.queryByText('Synthetic kurta M')).toBeNull();
-    expect(screen.getByRole('region', { name: /^Trousers/ })).toHaveTextContent('No items matching your look found on Amazon.');
+    expect(screen.getByRole('region', { name: /^Trousers/ })).toHaveTextContent(
+      'No items matching your look found on Amazon.',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'All stores' }));
 
     const kurta = item('amazon', 'Synthetic kurta A', 699);
