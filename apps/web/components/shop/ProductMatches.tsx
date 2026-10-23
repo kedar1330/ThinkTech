@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import { Heart } from 'lucide-react';
 import {
   CATEGORIES,
   PRICE_RANGE_STORES,
@@ -14,6 +15,7 @@ import {
 import { pickProductAction, unpickProductAction, type PicksResult } from '@/app/actions/shop';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
+import { TryOnButton } from './TryOnButton';
 import { garmentSlots, slotLabel, vocabLabel } from '@/lib/outfits/look-text';
 import { formatInr } from '@/lib/shop/format';
 import { cn } from '@/lib/utils';
@@ -28,7 +30,8 @@ const pickKey = (l: ProductListing) => `${l.store}|${l.title}|${l.price}`;
  * Similar products for each garment of the look (#120), from Amazon, Flipkart and Meesho search results:
  * the store's own title, thumbnail and price, cheapest first, with each store's price spread. The user can
  * pick one per garment to compare totals with the cheapest picks and their budget per look; picks are saved on
- * the look. Only real listings are shown, always with the label; without them, `fallback` is shown.
+ * the look. Clicking an item opens its options: save it to the look, Virtual Try-On, and its Google Shopping page
+ * (#125). Only real listings are shown, always with the label; without them, `fallback` is shown.
  */
 export function ProductMatches({
   look,
@@ -49,6 +52,21 @@ export function ProductMatches({
   );
   const [pickError, setPickError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
+  /** The one item whose options are open (#125): `<slotId>|<item>`. */
+  const [openKey, setOpenKey] = useState<string | null>(null);
+
+  // Escape closes the open options and returns focus to the item.
+  useEffect(() => {
+    if (!openKey) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const toggle = document.querySelector<HTMLButtonElement>('[aria-expanded="true"][aria-controls^="options-"]');
+      setOpenKey(null);
+      toggle?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openKey]);
 
   /** Shows the change at once, saves it, and puts the picks back if saving fails. */
   const togglePick = (slotId: string, listing: ProductListing, picked: boolean) => {
@@ -145,7 +163,7 @@ export function ProductMatches({
         )}
         {picked.length > 0 && (
           <p>
-            Your picks ({picked.length} of {matches.slots.length}):{' '}
+            Your saved items ({picked.length} of {matches.slots.length}):{' '}
             <span className="font-medium">{formatInr(pickedTotal)}</span>
             {budget !== null &&
               (pickedTotal <= budget
@@ -154,7 +172,7 @@ export function ProductMatches({
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Search-result prices; they can change and aren’t a checkout price. Your picks are saved with this look.
+          Search-result prices; they can change and aren’t a checkout price. Saved items stay with this look.
         </p>
         {pickError && <Alert tone="error">{pickError}</Alert>}
       </Card>
@@ -191,8 +209,11 @@ export function ProductMatches({
               </p>
             ) : (
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {shown.map((l) => {
+                {shown.map((l, i) => {
                   const isPicked = picks[slot.slotId] && pickKey(picks[slot.slotId]!) === pickKey(l);
+                  const optionsKey = `${slot.slotId}|${pickKey(l)}`;
+                  const open = openKey === optionsKey;
+                  const optionsId = `options-${slot.slotId}-${i}`;
                   return (
                     <li
                       key={pickKey(l)}
@@ -201,45 +222,73 @@ export function ProductMatches({
                         isPicked ? 'border-primary ring-1 ring-primary' : 'border-border',
                       )}
                     >
-                      {l.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- the store's Google-hosted thumbnail, as the search returned it
-                        <img
-                          src={l.imageUrl}
-                          alt=""
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                          className="aspect-square w-full rounded-lg bg-surface-muted object-contain"
-                        />
-                      ) : (
-                        <div aria-hidden className="aspect-square w-full rounded-lg bg-surface-muted" />
-                      )}
-                      <p className="line-clamp-2 text-foreground">{l.title}</p>
-                      <p>
-                        <span className="text-sm font-medium text-foreground">{formatInr(l.price)}</span>{' '}
-                        <span className="text-muted-foreground">· {storeName(l.store)}</span>
-                      </p>
-                      <div className="mt-auto flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          aria-pressed={Boolean(isPicked)}
-                          aria-label={`${isPicked ? 'Unpick' : 'Pick'} ${l.title} for ${name}`}
-                          disabled={saving}
-                          onClick={() => togglePick(slot.slotId, l, Boolean(isPicked))}
-                          className="rounded-full border border-border px-2.5 py-0.5 hover:border-plum/60"
-                        >
-                          {isPicked ? 'Picked' : 'Pick'}
-                        </button>
-                        {l.link && (
-                          <a
-                            href={l.link}
-                            target="_blank"
-                            rel="noopener noreferrer nofollow"
-                            className="text-plum underline underline-offset-2"
-                          >
-                            View on Google Shopping
-                          </a>
+                      {/* The item itself opens its options (#125). */}
+                      <button
+                        type="button"
+                        id={`${optionsId}-toggle`}
+                        aria-expanded={open}
+                        aria-controls={optionsId}
+                        onClick={() => setOpenKey(open ? null : optionsKey)}
+                        className="flex flex-col gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {l.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- the store's Google-hosted thumbnail, as the search returned it
+                          <img
+                            src={l.imageUrl}
+                            alt=""
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            className="aspect-square w-full rounded-lg bg-surface-muted object-contain"
+                          />
+                        ) : (
+                          <span aria-hidden className="block aspect-square w-full rounded-lg bg-surface-muted" />
                         )}
-                      </div>
+                        {isPicked && (
+                          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+                            <Heart aria-hidden className="size-3 fill-current" />
+                            Saved
+                          </span>
+                        )}
+                        <span className="line-clamp-2 text-foreground">{l.title}</span>
+                        <span>
+                          <span className="text-sm font-medium text-foreground">{formatInr(l.price)}</span>{' '}
+                          <span className="text-muted-foreground">· {storeName(l.store)}</span>
+                        </span>
+                      </button>
+                      {open ? (
+                        <div
+                          id={optionsId}
+                          role="group"
+                          aria-label={`Options for ${l.title}`}
+                          className="mt-auto flex flex-col gap-2 rounded-lg bg-surface-muted p-2"
+                        >
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => togglePick(slot.slotId, l, Boolean(isPicked))}
+                            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+                          >
+                            <Heart aria-hidden className="size-3.5" />
+                            {isPicked ? 'Remove from this look' : 'Save to this look'}
+                          </button>
+                          {/* Coming soon until Virtual Try-On is built; then it opens with this garment (#124). */}
+                          <TryOnButton outfitId={look.id} lookName={l.title} slotId={slot.slotId} />
+                          {l.link && (
+                            <a
+                              href={l.link}
+                              target="_blank"
+                              rel="noopener noreferrer nofollow"
+                              className="text-center text-plum underline underline-offset-2"
+                            >
+                              View on Google Shopping
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mt-auto">
+                          <TryOnButton outfitId={look.id} lookName={l.title} slotId={slot.slotId} />
+                        </div>
+                      )}
                     </li>
                   );
                 })}

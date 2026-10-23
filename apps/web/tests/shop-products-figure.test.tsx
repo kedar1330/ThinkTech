@@ -94,6 +94,12 @@ afterEach(() => {
 
 const asPick = (slotId: string, l: ProductListing) => ({ ...l, slotId, pickedAt: '2026-10-23T05:30:00.000Z' });
 
+/** Clicks an item to open its options (#125) and returns them. */
+async function openOptions(title: string) {
+  await userEvent.click(screen.getByRole('button', { name: new RegExp(title) }));
+  return screen.getByRole('group', { name: `Options for ${title}` });
+}
+
 describe('similar products to compare', () => {
   it('lists each garment’s items with the store’s title, price, thumbnail and Google Shopping link, with the label', async () => {
     replyWith(Response.json(matches));
@@ -106,13 +112,51 @@ describe('similar products to compare', () => {
     expect(within(kurta).getByRole('list', { name: 'Prices by store for Kurta' })).toHaveTextContent(
       'Amazon: 1 found, ₹699 – ₹699 (typical ₹699)',
     );
-    const link = within(kurta).getAllByRole('link', { name: 'View on Google Shopping' })[0]!;
+    const options = await openOptions('Synthetic kurta M');
+    const link = within(options).getByRole('link', { name: 'View on Google Shopping' });
     expect(link).toHaveAttribute('href', 'https://www.google.com/search?ibp=oshop&q=synthetic');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow');
     expect(kurta.querySelector('img')).toHaveAttribute('referrerpolicy', 'no-referrer');
     expect(screen.getByRole('group', { name: 'Compare totals' })).toHaveTextContent(
       'Cheapest found for this look: ₹798',
     );
+  });
+
+  it('#124 every item has a Virtual Try-On button that opens the Coming soon page until try-on exists', async () => {
+    replyWith(Response.json(matches));
+    render(<ProductMatches look={look} budget={null} fallback={<p>Product data unavailable</p>} />);
+    await screen.findByRole('heading', { name: 'Similar items to compare' });
+    for (const title of ['Synthetic kurta M', 'Synthetic kurta A', 'Synthetic trousers F']) {
+      const tryOn = screen.getByRole('link', { name: `Virtual Try-On: ${title} (coming soon)` });
+      expect(tryOn).toHaveAttribute('href', '/features/virtual-try-on');
+      expect(tryOn).toHaveTextContent('Soon');
+    }
+  });
+
+  it('#125 clicking an item opens its Save and Virtual Try-On options; clicking again or Escape closes them', async () => {
+    replyWith(Response.json(matches));
+    render(<ProductMatches look={look} budget={null} fallback={<p>Product data unavailable</p>} />);
+    await screen.findByRole('heading', { name: 'Similar items to compare' });
+    expect(screen.queryByRole('button', { name: /Save to this look/ })).toBeNull();
+
+    const card = screen.getByRole('button', { name: /^Synthetic kurta A/ });
+    expect(card).toHaveAttribute('aria-expanded', 'false');
+    const options = await openOptions('Synthetic kurta A');
+    expect(card).toHaveAttribute('aria-expanded', 'true');
+    expect(within(options).getByRole('button', { name: 'Save to this look' })).toBeInTheDocument();
+    expect(
+      within(options).getByRole('link', { name: 'Virtual Try-On: Synthetic kurta A (coming soon)' }),
+    ).toHaveAttribute('href', '/features/virtual-try-on');
+    // Only one item's options are open at a time.
+    await openOptions('Synthetic kurta M');
+    expect(screen.queryByRole('group', { name: 'Options for Synthetic kurta A' })).toBeNull();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('group', { name: /^Options for/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /^Synthetic kurta M/ })).toHaveFocus();
+    await openOptions('Synthetic kurta M');
+    await userEvent.click(screen.getByRole('button', { name: /^Synthetic kurta M/ }));
+    expect(screen.queryByRole('group', { name: /^Options for/ })).toBeNull();
   });
 
   it('filters by store and compares the picks with the budget per look', async () => {
@@ -131,14 +175,24 @@ describe('similar products to compare', () => {
       .mockResolvedValueOnce({ picks: [asPick('top', kurta)] })
       .mockResolvedValueOnce({ picks: [asPick('top', kurta), asPick('bottom', trousers)] });
     shopActions.unpickProductAction.mockResolvedValueOnce({ picks: [asPick('bottom', trousers)] });
-    await userEvent.click(screen.getByRole('button', { name: 'Pick Synthetic kurta A for Kurta' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Pick Synthetic trousers F for Trousers' }));
+    await userEvent.click(
+      within(await openOptions('Synthetic kurta A')).getByRole('button', { name: 'Save to this look' }),
+    );
+    await userEvent.click(
+      within(await openOptions('Synthetic trousers F')).getByRole('button', { name: 'Save to this look' }),
+    );
     expect(shopActions.pickProductAction).toHaveBeenLastCalledWith(ID, 'bottom', trousers);
     const totals = screen.getByRole('group', { name: 'Compare totals' });
-    expect(totals).toHaveTextContent('Your picks (2 of 2): ₹1,198 — over your ₹1,000 budget per look by ₹198.');
+    expect(totals).toHaveTextContent('Your saved items (2 of 2): ₹1,198 — over your ₹1,000 budget per look by ₹198.');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Unpick Synthetic kurta A for Kurta' }));
-    expect(totals).toHaveTextContent('Your picks (1 of 2): ₹499 — within your ₹1,000 budget per look, ₹501 left.');
+    await userEvent.click(
+      within(await openOptions('Synthetic kurta A')).getByRole('button', { name: 'Remove from this look' }),
+    );
+    expect(totals).toHaveTextContent(
+      'Your saved items (1 of 2): ₹499 — within your ₹1,000 budget per look, ₹501 left.',
+    );
+    expect(screen.getByRole('button', { name: /Synthetic kurta A/ })).not.toHaveTextContent(/^Saved/);
+    expect(screen.getByRole('button', { name: /Synthetic trousers F/ })).toHaveTextContent(/^Saved/);
   });
 
   it('starts from the picks saved on the look, and puts them back with the reason when saving fails', async () => {
@@ -148,18 +202,25 @@ describe('similar products to compare', () => {
       <ProductMatches look={look} budget={null} fallback={<p>Product data unavailable</p>} initialPicks={[saved]} />,
     );
     await screen.findByRole('heading', { name: 'Similar items to compare' });
-    expect(screen.getByRole('button', { name: 'Unpick Synthetic kurta M for Kurta' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    expect(screen.getByRole('group', { name: 'Compare totals' })).toHaveTextContent('Your picks (1 of 2): ₹299');
+    // #126: the saved item is marked on its card without opening it.
+    expect(screen.getByRole('button', { name: /Synthetic kurta M/ })).toHaveTextContent(/^Saved/);
+    expect(screen.getByRole('button', { name: /Synthetic kurta A/ })).not.toHaveTextContent(/^Saved/);
+    expect(
+      within(await openOptions('Synthetic kurta M')).getByRole('button', { name: 'Remove from this look' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Compare totals' })).toHaveTextContent('Your saved items (1 of 2): ₹299');
 
     shopActions.pickProductAction.mockResolvedValueOnce({
       error: 'That item is no longer in the search results. Please pick another.',
     });
-    await userEvent.click(screen.getByRole('button', { name: 'Pick Synthetic kurta A for Kurta' }));
+    await userEvent.click(
+      within(await openOptions('Synthetic kurta A')).getByRole('button', { name: 'Save to this look' }),
+    );
     expect(await screen.findByRole('alert')).toHaveTextContent('no longer in the search results');
-    expect(screen.getByRole('button', { name: 'Unpick Synthetic kurta M for Kurta' })).toBeInTheDocument();
+    // The earlier saved item is still the saved one.
+    expect(
+      within(await openOptions('Synthetic kurta M')).getByRole('button', { name: 'Remove from this look' }),
+    ).toBeInTheDocument();
   });
 
   it('never shows made-up items: an error or a malformed reply shows the fallback', async () => {
