@@ -13,6 +13,8 @@ export interface RequestFormFields {
   designOutfit?: string;
   /** Custom colours selected by user for this style. */
   customColors?: string[];
+  /** CLR-XXXX colour IDs the user explicitly picked for the outfit image (optional). */
+  chosenColours?: string[];
 }
 
 export type RequestFormResult =
@@ -29,6 +31,7 @@ export function requestFormToRequest(fields: RequestFormFields): RequestFormResu
         ? { garmentType: fields.designGarment, outfitCategory: fields.designOutfit }
         : undefined,
     customColors: fields.customColors && fields.customColors.length > 0 ? fields.customColors : undefined,
+    chosenColours: fields.chosenColours?.length ? fields.chosenColours : undefined,
   });
   if (parsed.success) return { ok: true, body: parsed.data };
 

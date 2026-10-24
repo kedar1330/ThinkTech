@@ -64,10 +64,14 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   return json.data;
 }
 
-/** Fetches a raw image from the API (e.g. the user's own photo); null when it is missing or not theirs. */
+/**
+ * Fetches a raw image from the API (e.g. the user's own photo), or another file type that `accept` allows (a
+ * try-on's 3D model); null when it is missing or not theirs.
+ */
 export async function apiImage(
   path: string,
   token: string,
+  accept: (contentType: string) => boolean = (type) => type.startsWith('image/'),
 ): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
   const baseUrl = process.env.API_BASE_URL;
   const bffSecret = process.env.BFF_SHARED_SECRET;
@@ -77,7 +81,7 @@ export async function apiImage(
     cache: 'no-store',
   }).catch(() => null);
   const contentType = res?.headers.get('content-type') ?? '';
-  if (!res?.ok || !contentType.startsWith('image/')) return null;
+  if (!res?.ok || !accept(contentType)) return null;
   return { bytes: await res.arrayBuffer(), contentType };
 }
 

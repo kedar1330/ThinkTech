@@ -109,7 +109,34 @@ h3 {
   }
 }
 
+/* Button shine (#139): a light sweep across primary and accent buttons on hover and keyboard focus. It sits
+   behind the label (the button is `isolate`), and never runs with reduced motion or on disabled buttons. */
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.3) 50%, transparent 70%);
+  transform: translateX(-120%);
+}
+.btn-shine:hover::after,
+.btn-shine:focus-visible::after {
+  animation: btn-shine 0.8s ease-out;
+}
+.btn-shine:disabled::after {
+  animation: none;
+}
+@keyframes btn-shine {
+  to {
+    transform: translateX(120%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .btn-shine::after {
+    display: none;
+  }
   *,
   *::before,
   *::after {

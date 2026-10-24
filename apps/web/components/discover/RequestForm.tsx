@@ -2,7 +2,13 @@
 
 import { startTransition, useActionState, useRef, useState } from 'react';
 import Link from 'next/link';
-import { STYLING_GOALS, type ProfileSizes, type RecommendationResponse } from '@styleme/contracts';
+import {
+  CHOSEN_COLOURS_MAX,
+  STYLING_GOALS,
+  type MyColourCombinationsResponse,
+  type ProfileSizes,
+  type RecommendationResponse,
+} from '@styleme/contracts';
 import { requestLooksAction, type LooksState } from '@/app/actions/discover';
 import type { FormState } from '@/lib/actions';
 import { requestFromDesign, type DesignRequest, type DesignSummary } from '@/lib/discover/design-summary';
@@ -17,8 +23,8 @@ import { Spinner } from '@/components/ui/spinner';
 
 // Discover My Style look request (FR-LOOK-01), built from Outfit Categories (D-132): the chosen saved design
 // gives the garment to build around, the occasion (its occasion tag, else the occasion preferences, else
-// Everyday) and the wear type (its outfit category). Colours come from My Colour Palette on the API side,
-// or custom colours selected by user for this style.
+// Everyday) and the wear type (its outfit category). Colours for the outfit image come from custom selected
+// colours or coordinating combinations from My Colour Palette.
 
 function Status({ state }: { state: FormState }) {
   if (state?.error) return <Alert tone="error">{state.error}</Alert>;
@@ -174,6 +180,165 @@ function RequestSummary({
   );
 }
 
+/** A palette colour entry used in the colour picker. */
+interface PickableColour {
+  colourId: string;
+  name: string;
+  hex: string;
+  preference: 'liked' | 'avoided' | null;
+}
+
+/**
+ * Optional colour picker for the outfit image — lets the user select up to CHOSEN_COLOURS_MAX colours
+ * from their palette. When nothing is picked the API uses coordinating/combination colours automatically.
+ */
+function ColourPicker({
+  colours,
+  chosen,
+  onToggle,
+}: {
+  colours: PickableColour[];
+  chosen: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const atLimit = chosen.size >= CHOSEN_COLOURS_MAX;
+
+  return (
+    <section
+      aria-labelledby="colour-picker-heading"
+      className="space-y-3 rounded-2xl border border-border bg-surface p-4"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 id="colour-picker-heading" className="text-sm font-semibold">
+            Choose colours for your outfit image
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Optional — pick up to {CHOSEN_COLOURS_MAX} colours. Leave empty to use your coordinating palette colours
+            automatically.
+          </p>
+        </div>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="colour-picker-grid"
+          onClick={() => setOpen((v) => !v)}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium hover:border-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+        >
+          {open ? 'Hide' : chosen.size > 0 ? `${chosen.size} chosen` : 'Choose'}
+        </button>
+      </div>
+
+      {/* Chosen colour chips — always visible when something is picked */}
+      {chosen.size > 0 && (
+        <ul aria-label="Chosen colours" className="flex flex-wrap gap-1.5">
+          {colours
+            .filter((c) => chosen.has(c.colourId))
+            .map((c) => (
+              <li key={c.colourId}>
+                <button
+                  type="button"
+                  aria-label={`Remove ${c.name}`}
+                  onClick={() => onToggle(c.colourId)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-plum/60 bg-plum/5 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-plum/10"
+                >
+                  <span
+                    aria-hidden
+                    className="size-3 shrink-0 rounded-full border border-foreground/20"
+                    style={{ backgroundColor: c.hex }}
+                  />
+                  {c.name}
+                  <span aria-hidden className="ml-0.5 text-muted-foreground">
+                    ×
+                  </span>
+                </button>
+              </li>
+            ))}
+          <li>
+            <button
+              type="button"
+              onClick={() => colours.filter((c) => chosen.has(c.colourId)).forEach((c) => onToggle(c.colourId))}
+              className="inline-flex min-h-7 items-center rounded-full px-2 text-xs text-muted-foreground underline hover:text-foreground"
+            >
+              Clear all
+            </button>
+          </li>
+        </ul>
+      )}
+
+      {/* Expandable colour grid */}
+      {open && (
+        <div id="colour-picker-grid">
+          {atLimit && (
+            <p className="mb-2 text-xs text-muted-foreground" role="status">
+              Maximum {CHOSEN_COLOURS_MAX} colours. Remove one to add another.
+            </p>
+          )}
+          <ul className="flex flex-wrap gap-2" aria-label="Your palette colours">
+            {colours.map((c) => {
+              const isChosen = chosen.has(c.colourId);
+              const disabled = atLimit && !isChosen;
+              return (
+                <li key={c.colourId}>
+                  <button
+                    type="button"
+                    aria-pressed={isChosen}
+                    disabled={disabled}
+                    onClick={() => onToggle(c.colourId)}
+                    title={c.name}
+                    className={[
+                      'group relative flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30',
+                      isChosen
+                        ? 'border-plum shadow-md shadow-plum/20 scale-110'
+                        : disabled
+                          ? 'border-border opacity-40 cursor-not-allowed'
+                          : 'border-border hover:border-plum/60 hover:scale-105',
+                    ].join(' ')}
+                  >
+                    <span
+                      className="size-7 rounded-full border border-foreground/10"
+                      style={{ backgroundColor: c.hex }}
+                      aria-hidden
+                    />
+                    {isChosen && (
+                      <span
+                        aria-hidden
+                        className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-plum text-[9px] text-white"
+                      >
+                        ✓
+                      </span>
+                    )}
+                    <span className="sr-only">
+                      {c.name}
+                      {isChosen ? ' (chosen)' : ''}
+                      {c.preference === 'liked' ? ' · liked' : c.preference === 'avoided' ? ' · avoided' : ''}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {colours.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No palette colours yet.{' '}
+              <Link href="/palette/colours" className="text-plum underline">
+                Choose colours in My Colour Palette
+              </Link>{' '}
+              to enable this.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Hidden form inputs for chosen colours */}
+      {[...chosen].map((id) => (
+        <input key={id} type="hidden" name="chosenColours" value={id} />
+      ))}
+    </section>
+  );
+}
+
 export function RequestForm({
   sizes,
   designs = [],
@@ -182,6 +347,7 @@ export function RequestForm({
   stylingGoals = [],
   customColors = [],
   customColorHexes = [],
+  paletteColours = null,
 }: {
   sizes: ProfileSizes;
   /** The user's saved Outfit Categories designs, newest first. */
@@ -195,10 +361,12 @@ export function RequestForm({
   /** Custom colours selected specifically for this request. */
   customColors?: string[];
   customColorHexes?: string[];
+  /** Coordinating and combination colours from the user's palette, for the optional colour picker. */
+  paletteColours?: MyColourCombinationsResponse | null;
 }) {
   // The last request, so Retry can send it again.
   const lastRequest = useRef<FormData | null>(null);
-  const [chosen, setChosen] = useState<string | null>(initialDesign ?? designs[0]?.garmentType ?? null);
+  const [chosen, setChosen] = useState(initialDesign ?? designs[0]?.garmentType ?? null);
   const activeDesign = designs.find((d) => d.garmentType === chosen) ?? null;
   const request = activeDesign ? requestFromDesign(activeDesign, occasionPreferences) : null;
   const [state, action, pending] = useActionState((prev: LooksState, formData: FormData) => {
@@ -209,6 +377,21 @@ export function RequestForm({
     const last = lastRequest.current;
     if (last) startTransition(() => action(last));
   };
+
+  // Colour picker state — which CLR-XXXX IDs the user has explicitly chosen.
+  const [chosenColours, setChosenColours] = useState<Set<string>>(new Set());
+  const toggleColour = (id: string) =>
+    setChosenColours((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < CHOSEN_COLOURS_MAX) next.add(id);
+      return next;
+    });
+
+  // Build the flat list of pickable colours from the combination data (non-avoided, best first).
+  const pickableColours: PickableColour[] = (paletteColours?.colours ?? [])
+    .filter((c) => c.preference !== 'avoided')
+    .map((c) => ({ colourId: c.colourId, name: c.name, hex: c.hex, preference: c.preference }));
 
   if (designs.length === 0) {
     return (
@@ -256,6 +439,10 @@ export function RequestForm({
             stylingGoals={stylingGoals}
             customColors={customColors}
           />
+          {/* Optional colour picker — only shown when the user has palette colours and hasn't selected custom colors */}
+          {customColors.length === 0 && (pickableColours.length > 0 || paletteColours !== null) && (
+            <ColourPicker colours={pickableColours} chosen={chosenColours} onToggle={toggleColour} />
+          )}
           <Status state={state} />
           {state?.error && !state.fieldErrors && (
             <Button type="button" variant="outline" size="full" onClick={retry} disabled={pending}>

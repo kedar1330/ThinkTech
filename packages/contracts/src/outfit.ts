@@ -21,6 +21,7 @@ import {
 } from './style-vocabulary';
 import { objectIdSchema, paginationQuerySchema, paletteIdSchema, slotIdSchema, templateIdSchema } from './common';
 import { garmentTypeIdSchema } from './design-features';
+import { colourIdSchema } from './colour-library';
 import { userPriceSummarySchema, userShortlistItemSchema } from './product';
 import { FIT_GROUPS, SIZED_GROUPS_STAGE_1 } from './profile';
 
@@ -54,6 +55,12 @@ export const designRequestSchema = z
   .strict();
 export type DesignRequest = z.infer<typeof designRequestSchema>;
 
+/**
+ * Up to this many colours the user may explicitly pick for the outfit image in Discover My Style.
+ * Optional: when absent the image uses coordinating/combination colours from their palette instead.
+ */
+export const CHOSEN_COLOURS_MAX = 12;
+
 export const recommendationRequestSchema = z
   .object({
     occasion: occasionSchema,
@@ -62,6 +69,11 @@ export const recommendationRequestSchema = z
     paletteMode: paletteModeSchema.default('suggested'),
     design: designRequestSchema.optional(),
     customColors: z.array(z.string().trim().min(1)).max(10).optional(),
+    /**
+     * Colour IDs (`CLR-XXXX`) the user explicitly picked for the outfit image in Discover My Style.
+     * Optional: when absent the image falls back to coordinating/combination colours from their palette.
+     */
+    chosenColours: uniqueList(colourIdSchema, CHOSEN_COLOURS_MAX).min(1).optional(),
   })
   .strict();
 export type RecommendationRequest = z.infer<typeof recommendationRequestSchema>;

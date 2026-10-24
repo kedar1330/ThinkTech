@@ -31,6 +31,7 @@ export async function requestLooksAction(_prev: LooksState, formData: FormData):
       : str(formData, 'customColors')
         ? str(formData, 'customColors')!.split(',').map((s) => s.trim()).filter(Boolean)
         : undefined,
+    chosenColours: formData.getAll('chosenColours').filter((v): v is string => typeof v === 'string'),
   });
   if (!form.ok) return { error: 'Please check the highlighted fields.', fieldErrors: form.fieldErrors };
 

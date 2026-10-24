@@ -6,6 +6,7 @@ import {
   type DesignFeaturesResponse,
   type DesignPreferencesResponse,
   type DesignSelectionItem,
+  type MyColourCombinationsResponse,
   type ProfileResponse,
 } from '@styleme/contracts';
 import { PaletteColours } from '@/components/discover/PaletteColours';
@@ -38,13 +39,16 @@ export default async function DiscoverLooksPage({
         .filter(Boolean)
     : [];
 
-  // What the user chose elsewhere: designs saved in Outfit Categories and appearance signals from My Profile (D-129).
-  // Each section loads on its own, so one failure never blocks the page.
-  const [profile, appearance, selections, designPreferences, designData] = await Promise.all([
+  // What the user chose elsewhere: designs saved in Outfit Categories, colours from My Colour Palette and the
+  // appearance signals from My Profile (D-129). Each section loads on its own, so one failure never blocks the page.
+  const [profile, appearance, selections, designPreferences, colours, combinations, designData] = await Promise.all([
     apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }),
     apiRequest<AppearanceResponse>('/v1/appearance', { token: accessToken }).catch(() => null),
     apiRequest<DesignSelectionItem[]>('/v1/design/selections', { token: accessToken }).catch(() => []),
     apiRequest<DesignPreferencesResponse>('/v1/design/preferences', { token: accessToken }).catch(() => null),
+    apiRequest<ColourPreferencesResponse>('/v1/colours/preferences', { token: accessToken }).catch(() => null),
+    // Combination colours are shown in the colour picker for outfit image generation (optional).
+    apiRequest<MyColourCombinationsResponse>('/v1/colours/combinations', { token: accessToken }).catch(() => null),
     // The design comes from the user's own saved selection, never from the link.
     garment?.success
       ? apiRequest<DesignFeaturesResponse>(`/v1/design/features?garmentType=${garment.data}&view=all`, {
@@ -79,6 +83,7 @@ export default async function DiscoverLooksPage({
         stylingGoals={designPreferences?.stylingGoals ?? []}
         customColors={customColors}
         customColorHexes={customColorHexes}
+        paletteColours={combinations}
       />
     </div>
   );

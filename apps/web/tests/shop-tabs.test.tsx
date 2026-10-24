@@ -62,15 +62,13 @@ describe('Shop My Look tabs', () => {
     expect(current[0]).toHaveAttribute('href', `/shop?outfitId=${looks[1]!.id}`);
   });
 
-  it('gives each tab a Virtual Try-On button that opens the honest Coming soon page until try-on exists', () => {
+  it('gives each tab a Virtual Try-On button that tries the whole look on (D-137)', () => {
     const looks = [look(1), look(2)];
     render(<LookTabs looks={looks} />);
     for (const [i, item] of within(tabs()).getAllByRole('listitem').entries()) {
-      const tryOn = within(item).getByRole('link', {
-        name: `Virtual Try-On: ${lookTitle(looks[i]!)} (coming soon)`,
-      });
-      expect(tryOn).toHaveAttribute('href', '/features/virtual-try-on');
-      expect(tryOn).toHaveTextContent('Soon');
+      const tryOn = within(item).getByRole('link', { name: `Virtual Try-On: ${lookTitle(looks[i]!)}` });
+      expect(tryOn).toHaveAttribute('href', `/try-on?outfitId=${looks[i]!.id}`);
+      expect(tryOn).not.toHaveTextContent('Soon');
     }
   });
 });

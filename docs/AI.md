@@ -21,7 +21,8 @@ StyleMe's core is **deterministic**. Look generation, selection, ranking, explan
 | Natural-language style search | Deterministic parser; optional AI turns the query text only into filters (off by default) | 1 (D-123) |
 | Full-body photo analysis with Gemini | Body-shape estimate from one consented full-body photo; user confirms or corrects | 1, approved (D-122 = b); no real photo sent before the privacy review |
 | 2D illustrative virtual try-on | None — SVG layers rendered in the browser | 1 (D-119) |
-| Photo-based or generative virtual try-on | Generative image model; not approved | Future (D-48) |
+| 3D Virtual Try-On on the user's photo | fal.ai: FASHN dresses the user's try-on photo in a similar item; TRELLIS turns the result into a 3D model (§8) | 1, approved (D-137) |
+| Other photo-based or generative virtual try-on | Not approved | Future (D-48) |
 
 **Providers.** Stage 1 needs **no** AI provider. The optional wording step uses at most one provider, Gemini (D-12); its fallback is the deterministic template text, not a second provider. Gemini with a Groq fallback is a documented option for the AI-required deferred features only. No provider is enabled before its current pricing, limits and data-use terms are checked and recorded (NFR-COST-03); for example, Google's free tier uses submitted content to improve its products and the paid tier does not ([DEPLOYMENT.md](DEPLOYMENT.md) §9.1).
 
@@ -161,9 +162,24 @@ The onboarding "Appearance" step (D-94) collects these self-reported signals onl
 
 ---
 
-## 8. Virtual Try-On (Future, D-48)
+## 8. Virtual Try-On (D-137; otherwise Future, D-48)
 
-The earlier design, which sent the user's photo and a garment image to hosted providers (Leffa / Hugging Face / Qwen), is **not approved** and must not be implemented as written. Try-on can only proceed after:
+**3D Virtual Try-On, approved 2026-10-23 (D-137, #106).** This is the rule 16 decision for this processing only. From Shop My Look, the user's newest full-body try-on photo (stored via My Profile → 3D Virtual Try-On) and the Google Shopping thumbnail of a similar item go to **fal.ai**, after the user agrees to the try-on notice each time:
+- **FASHN** (`FAL_TRY_ON_MODEL`) dresses the photo. A whole look is layered garment by garment, each step on the last result, with at most 3 garments.
+- **TRELLIS** (`FAL_3D_MODEL`) turns the dressed picture into a GLB model for the 360° viewer. Its sides and back are an estimate, and the viewer is labelled to say so.
+- Nothing else about the user is sent: no profile, measurements, appearance signals or face photo.
+- The picture and model are stored in `tryOnJobs` for 24 hours. Results are never logged.
+- **Fallback:** if the 3D step fails, the user sees the picture. If the try-on fails, the user sees the store's own pictures, with the reason.
+- **Open risks:**
+  - The privacy review (D-74) has not been done.
+  - fal.ai's and FASHN's retention terms have not been checked. fal keeps result files on its CDN, and StyleMe can't delete them.
+  - No retailer has permitted AI processing of its images (D-47).
+
+**Free cartoon avatar try-on, approved 2026-10-23 (D-138).** The default view of the fitting room. A Bitmoji-style avatar, one per Clothing Preference, is drawn once from a fixed prompt and shared. Pollinations image editing (`DRAPE_MODELS`, models offered without paid Pollen) puts each item's store thumbnail on it, one garment per call. **No personal data is sent:** no user photo, profile, measurements or appearance signals. Front view only, labelled as an AI-drawn preview. The rotatable 3D mannequin beside it uses no AI at all.
+
+**Realistic model and views, approved 2026-10-24 (D-139).** The shared avatar is a photorealistic *synthetic* model, an AI-generated person who is neither a real person nor the user. After it is dressed, the three-quarter, side and back views are drawn from the dressed front by the same free image editing. Side and back views are labelled as AI estimates.
+
+Any other photo-based or generative try-on is still Future (D-48). The earlier design, which sent the user's photo and a garment image to hosted providers (Leffa / Hugging Face / Qwen), is **not approved** and must not be implemented as written. Another try-on can only proceed after:
 - a founder decision, a privacy review and user consent authorise the specific processing (rule 16);
 - confirmed rights to use the garment image, and retailer permission for AI processing and transformation of their images;
 - storage and deletion controls for photos and generated images;

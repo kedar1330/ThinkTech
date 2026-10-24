@@ -1,25 +1,32 @@
 import { Types, mongo } from 'mongoose';
 import type { Logger } from 'pino';
-import type { LookImageStatus, LookInputs, LookSlot, RecommendationRequest } from '@styleme/contracts';
+import type { ColourId, LookImageStatus, LookInputs, LookSlot, RecommendationRequest } from '@styleme/contracts';
+import { DESIGN_FEATURES, GARMENT_TYPES } from '../design/catalogue';
 import { ImageProviderError, type OutfitImageProvider } from '../integrations/ai/image-client';
 import {
   OUTFIT_IMAGE_PROMPT_VERSION,
   OUTFIT_IMAGE_SIZE,
   buildOutfitImagePrompt,
   seedFor,
-} from '../integrations/ai/prompts/outfit-image-v2';
+  type OutfitImageDesign,
+} from '../integrations/ai/prompts/outfit-image-v3';
 import type { Models } from '../models/index';
 import { AppError } from '../utils/errors';
 import type { ColourLibraryService } from './colour-library.service';
 import { closestOf } from './engine';
 
 // AI outfit images on looks. A look's image is generated the first time its owner views it, from the look
-// (garments, occasion, style, department; see the prompt's notes on AI rule 16) shown in colours from the
-// user's My Colour Palette (D-133): each piece in the palette colour closest to the look's colour. The
-// palette is the colours they liked; without any, the top colours of their own palette less the ones they
-// avoid; without a palette, the look's own colours. The image is stored in `outfitImages` with the look's
-// lifetime: it expires with a suggested look and stays once the look is saved (OutfitsService). Every read
-// is scoped by `userId`. Prompts, image bytes and replies are never logged.
+// (garments, occasion, wear type, style, department; see the prompt's notes on AI rule 16) and, for a look
+// built around a garment designed in Outfit Categories (D-132), that garment's chosen features, shown in
+// colours from the user's My Colour Palette (D-133). Colour resolution (highest priority first):
+//   1. Colours the user explicitly picked in Discover My Style (`chosenColours` on the request).
+//   2. Coordinating/combination colours from their palette (deterministic colour-theory rules, D-133 §3.14).
+//   3. Liked palette colours (the colours they marked as liked in My Colour Palette).
+//   4. The top colours of their own palette less the ones they avoid.
+//   5. Without a palette, no colour override — the look's own swatches are shown as-is.
+// The image is stored in `outfitImages` with the look's lifetime: it expires with a suggested look and
+// stays once the look is saved (OutfitsService). Every read is scoped by `userId`. Prompts, image bytes
+// and replies are never logged.
 
 /** How many of the user's top-ranked palette colours are used when they haven't liked any. */
 const TOP_PALETTE_COLOURS = 24;
@@ -47,10 +54,17 @@ export class OutfitImageService {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  /** The colours to dress the image in: custom colours if selected, else liked ones, else the top of the user's own palette less avoided ones. */
+  /**
+   * Resolves the colour palette to dress the outfit image in (highest priority first):
+   * 1. customColors — explicit colour names / hexes passed in the request.
+   * 2. chosenColourIds — explicit CLR-XXXX colour IDs the user picked in the Discover My Style form.
+   * 3. Coordinating / combination colours from their palette (D-133 §3.14).
+   * 4. User's full seasonal category palette less avoided colours.
+   */
   private async palette(
     userId: Types.ObjectId,
     customColors?: readonly string[],
+    chosenColourIds?: readonly ColourId[],
   ): Promise<Array<{ name: string; hex: string }>> {
     if (customColors && customColors.length > 0) {
       if (this.colours) {
@@ -66,7 +80,28 @@ export class OutfitImageService {
         hex: c.startsWith('#') ? c : '#A8432A',
       }));
     }
+
     if (!this.colours) return [];
+
+    if (chosenColourIds && chosenColourIds.length > 0) {
+      const prefs = await this.colours.getPreferences(userId);
+      const allKnown = [...prefs.liked, ...prefs.avoided];
+      const knownIds = new Set(allKnown.map((c) => c.colourId));
+      const missingIds = chosenColourIds.filter((id) => !knownIds.has(id));
+      const mine = missingIds.length > 0 ? await this.colours.mine(userId) : null;
+      const extra = mine ? mine.colours.filter((c) => missingIds.includes(c.colourId as ColourId)) : [];
+      const lookup = new Map([...allKnown, ...extra].map((c) => [c.colourId, c]));
+      return chosenColourIds.flatMap((id) => {
+        const c = lookup.get(id);
+        return c ? [{ name: c.name, hex: c.hex }] : [];
+      });
+    }
+
+    const combs = await this.colours.combinations(userId);
+    if (combs.colours.length > 0) {
+      return combs.colours.filter((c) => c.preference !== 'avoided').map((c) => ({ name: c.name, hex: c.hex }));
+    }
+
     const { avoided } = await this.colours.getPreferences(userId);
     const mine = await this.colours.mine(userId);
     const skip = new Set(avoided.map((c) => c.colourId));
@@ -78,8 +113,9 @@ export class OutfitImageService {
     userId: Types.ObjectId,
     slots: readonly LookSlot[],
     customColors?: readonly string[],
+    chosenColourIds?: readonly ColourId[],
   ): Promise<Map<string, string>> {
-    const palette = await this.palette(userId, customColors);
+    const palette = await this.palette(userId, customColors, chosenColourIds);
     const colours = new Map<string, string>();
     for (const slot of slots) {
       const hex = slot.swatches[0]?.hex;
@@ -88,6 +124,24 @@ export class OutfitImageService {
       else if (palette.length > 0) colours.set(slot.slotId, palette[0]!.name);
     }
     return colours;
+  }
+
+  /** The user's own saved design of the garment the look was built around, with its features' names. */
+  private async design(userId: Types.ObjectId, look: StoredLook): Promise<OutfitImageDesign | null> {
+    const request = look.request.design;
+    if (!request) return null;
+    const selection = await this.models.UserDesignSelection.findOne({
+      userId,
+      garmentType: request.garmentType,
+      outfitCategory: request.outfitCategory,
+    }).lean();
+    const garment = GARMENT_TYPES.find((g) => g.id === request.garmentType);
+    if (!selection || !garment) return null;
+    const features = Object.values(selection.selectedFeatures ?? {})
+      .map((id) => DESIGN_FEATURES.find((f) => f.featureId === id && f.selectable !== false))
+      .filter((f) => f !== undefined)
+      .map((f) => ({ category: f.category, name: f.name }));
+    return { category: garment.id, garmentName: garment.name, features };
   }
 
   /** Whether new images can be generated (the flag is on and a provider is configured). */
@@ -122,14 +176,15 @@ export class OutfitImageService {
     if (stored) return stored;
     if (!this.provider) throw new AppError('NOT_FOUND');
 
+    const wearTypes = look.request.wearType ?? [];
     const prompt = buildOutfitImagePrompt({
       slots: look.slots,
       occasion: look.request.occasion,
       style: look.request.style ?? null,
+      wearType: look.request.design?.outfitCategory ?? (wearTypes.length === 1 ? wearTypes[0] : null),
       department: look.inputsUsed?.department ?? null,
-      colours: await this.slotColours(userId, look.slots, look.request.customColors),
-      designGarment: look.request.design?.garmentType ?? null,
-      customColors: look.request.customColors ?? null,
+      colours: await this.slotColours(userId, look.slots, look.request.customColors, look.request.chosenColours),
+      design: await this.design(userId, look),
     });
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);

@@ -145,6 +145,7 @@ describe('dashboard sections', () => {
       'colour-palette',
       'outfit-categories',
       'shop-my-look',
+      'virtual-try-on',
       'design-studio',
       'style-assistant',
       'saved-outfits',

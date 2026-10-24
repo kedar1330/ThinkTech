@@ -11,6 +11,8 @@ import {
   type OutfitImageProvider,
 } from './integrations/ai/image-client';
 import { serperShoppingProvider } from './integrations/shopping/serper-client';
+import { falTryOnRenderer, openSourceTryOnRenderer } from './integrations/tryon/fal-client';
+import { pollinationsImageEditor } from './integrations/image/image-edit-client';
 import { geminiVisionProvider } from './integrations/ai/vision-client';
 import { cloudflareGenerator, pollinationsGenerator, type ImageGenerator } from './integrations/image/image-client';
 import { geminiWordingProvider } from './integrations/ai/wording-client';
@@ -84,6 +86,18 @@ export async function startServer(deps: StartServerDeps = {}) {
     imageGenerators.push(
       cloudflareGenerator(config.CLOUDFLARE_ACCOUNT_ID, config.CLOUDFLARE_API_TOKEN, config.CLOUDFLARE_IMAGE_MODEL),
     );
+  // Cartoon avatar drape (D-138): Pollinations image editing whenever its key is set, unless DRAPE_ENABLED=false.
+  const imageEditor =
+    config.DRAPE_ENABLED && config.POLLINATIONS_API_KEY
+      ? pollinationsImageEditor(config.POLLINATIONS_API_KEY, config.DRAPE_MODELS)
+      : null;
+  // 3D Virtual Try-On (D-137, Pillar 1): live whenever TRIPOSR_URL or FAL_KEY is set, unless TRY_ON_ENABLED=false.
+  const tryOnRenderer =
+    config.TRY_ON_ENABLED && (config.TRIPOSR_URL || config.FAL_KEY)
+      ? config.TRIPOSR_URL
+        ? openSourceTryOnRenderer(config.TRIPOSR_URL)
+        : falTryOnRenderer(config.FAL_KEY!, { tryOn: config.FAL_TRY_ON_MODEL, model3d: config.FAL_3D_MODEL })
+      : null;
 
   // Validate, lint and index the style knowledge base before anything else; an invalid library
   // stops the API (FR-STY-03). The look generator receives this library.
@@ -116,6 +130,8 @@ export async function startServer(deps: StartServerDeps = {}) {
     designAnalysisProvider,
     imageGenerators,
     assistantProvider,
+    tryOnRenderer,
+    imageEditor,
   });
 
   if (deps.listen === false) {
@@ -137,6 +153,8 @@ export async function startServer(deps: StartServerDeps = {}) {
       designStudio: Boolean(designAnalysisProvider),
       designImages: imageGenerators.map((g) => g.name),
       styleAssistantAi: Boolean(assistantProvider),
+      tryOn: Boolean(tryOnRenderer),
+      drape: Boolean(imageEditor) && imageGenerators.length > 0,
     });
   });
 

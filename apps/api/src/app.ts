@@ -19,6 +19,7 @@ import { ProfileController } from './controllers/profile.controller';
 import { RecommendationsController } from './controllers/recommendations.controller';
 import { ShortlistController } from './controllers/shortlist.controller';
 import { StyleAssistantController } from './controllers/style-assistant.controller';
+import { TryOnController } from './controllers/try-on.controller';
 import type { Database } from './db';
 import type { AssistantProvider } from './integrations/ai/assistant-client';
 import type { DesignAnalysisProvider } from './integrations/ai/design-client';
@@ -26,6 +27,8 @@ import type { OutfitImageProvider } from './integrations/ai/image-client';
 import type { ShoppingSearchProvider } from './integrations/shopping/serper-client';
 import type { PhotoAnalysisProvider } from './integrations/ai/vision-client';
 import type { ImageGenerator } from './integrations/image/image-client';
+import type { TryOnRenderer } from './integrations/tryon/fal-client';
+import type { ImageEditor } from './integrations/image/image-edit-client';
 import type { WordingProvider } from './integrations/ai/wording-client';
 import { authenticate, requirePasswordSet } from './middleware/authenticate';
 import { clientIp } from './middleware/client-ip';
@@ -46,6 +49,7 @@ import { profileRoutes } from './routes/profile.routes';
 import { recommendationsRoutes } from './routes/recommendations.routes';
 import { shortlistRoutes } from './routes/shortlist.routes';
 import { styleAssistantRoutes } from './routes/style-assistant.routes';
+import { tryOnRoutes } from './routes/try-on.routes';
 import { AppearanceService } from './services/appearance.service';
 import { AccountService } from './services/account.service';
 import { AuthService } from './services/auth.service';
@@ -68,6 +72,8 @@ import { ProfileService } from './services/profile.service';
 import { RecommendationsService } from './services/recommendations.service';
 import { ShortlistService } from './services/shortlist.service';
 import { StyleAssistantService } from './services/style-assistant.service';
+import { TryOnService } from './services/try-on.service';
+import { DrapeService } from './services/drape.service';
 import { WordingService, mongoWordingCache } from './services/wording.service';
 import { SHIPPED_LIBRARY, loadStyleLibrary } from './style-rules';
 import { sendError } from './utils/respond';
@@ -98,6 +104,10 @@ export interface AppDeps {
   imageGenerators?: ImageGenerator[];
   /** Style Assistant (D-136): Gemini plans and words replies. Used only while STYLE_ASSISTANT_AI_ENABLED is true. */
   assistantProvider?: AssistantProvider | null;
+  /** 3D Virtual Try-On (D-137) through fal.ai. Used only while TRY_ON_ENABLED is true; tests pass a fake. */
+  tryOnRenderer?: TryOnRenderer | null;
+  /** Cartoon avatar drape (D-138): Pollinations image editing. Used only while DRAPE_ENABLED is true; tests pass a fake. */
+  imageEditor?: ImageEditor | null;
   /** Rate limits across auth, recommendations, feedback and shortlist. Defaults to D-38 in-memory stores. */
   rateLimits?: AppRateLimits;
 }
@@ -123,6 +133,8 @@ export function createApp({
   designAnalysisProvider = null,
   imageGenerators = [],
   assistantProvider = null,
+  tryOnRenderer = null,
+  imageEditor = null,
   rateLimits = createRateLimits(),
 }: AppDeps): App {
   const app = express();
@@ -232,17 +244,14 @@ export function createApp({
     recommendationsRoutes(new RecommendationsController(recommendations), withPassword, rateLimits.recommendations),
   );
   const outfits = new OutfitsService(db.models, styleLibrary, undefined, outfitImages);
+  const priceRanges = new PriceRangeService(db.models, shoppingProvider, config.PRICE_SEARCH_TIMEOUT_MS, logger);
   app.use(
     '/v1',
-    outfitsRoutes(
-      new OutfitsController(
-        outfits,
-        feedbackService,
-        new PriceRangeService(db.models, shoppingProvider, config.PRICE_SEARCH_TIMEOUT_MS, logger),
-      ),
-      withPassword,
-      { feedback: rateLimits.feedback, image: rateLimits.outfitImage, priceRange: rateLimits.priceRange },
-    ),
+    outfitsRoutes(new OutfitsController(outfits, feedbackService, priceRanges), withPassword, {
+      feedback: rateLimits.feedback,
+      image: rateLimits.outfitImage,
+      priceRange: rateLimits.priceRange,
+    }),
   );
   const palettes = new PaletteService(styleLibrary, profileService, appearanceService);
   app.use('/v1', paletteRoutes(new PaletteController(palettes), withPassword));
@@ -259,6 +268,32 @@ export function createApp({
     logger,
   );
   app.use('/v1', designStudioRoutes(new DesignStudioController(designStudio), withPassword, rateLimits.designStudio));
+  const drapeEditor = config.DRAPE_ENABLED ? imageEditor : null;
+  const tryOn = new TryOnService(
+    db.models,
+    config.TRY_ON_ENABLED ? tryOnRenderer : null,
+    priceRanges,
+    { requestMs: config.TRY_ON_REQUEST_TIMEOUT_MS, stepMs: config.TRY_ON_STEP_TIMEOUT_MS },
+    logger,
+    drapeEditor !== null && imageGenerators.length > 0,
+  );
+  const drapes = new DrapeService(
+    db.models,
+    drapeEditor,
+    imageGenerators,
+    tryOn,
+    { editMs: config.DRAPE_TIMEOUT_MS, imageMs: config.IMAGE_GENERATION_TIMEOUT_MS },
+    logger,
+  );
+  app.use(
+    '/v1',
+    tryOnRoutes(new TryOnController(tryOn, drapes), withPassword, {
+      start: rateLimits.tryOn,
+      poll: rateLimits.tryOnPoll,
+      drape: rateLimits.drape,
+      drapeView: rateLimits.drapeView,
+    }),
+  );
   app.use('/v1', colourLibraryRoutes(new ColourLibraryController(colourLibrary), withPassword));
   const assistant = new StyleAssistantService({
     models: db.models,

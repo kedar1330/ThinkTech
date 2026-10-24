@@ -174,7 +174,7 @@ describe('app top navigation', () => {
     expect(more).toHaveAttribute('aria-expanded', 'false');
     await user.click(more);
     const menu = document.getElementById('nav-more')!;
-    expect(within(menu).getByRole('link', { name: /Virtual Try-On/ })).toHaveTextContent('Coming soon');
+    expect(within(menu).getByRole('link', { name: 'Virtual Try-On' })).toHaveAttribute('href', '/try-on');
     expect(within(menu).getByRole('link', { name: 'Style Assistant' })).toHaveAttribute('href', '/assistant');
     expect(within(menu).getByRole('link', { name: 'Design Studio' })).toHaveAttribute('href', '/design-studio');
     expect(within(menu).getByRole('link', { name: 'Outfit Categories' })).toHaveAttribute('href', '/categories');

@@ -268,7 +268,7 @@ These are specified only at the level needed for planning. Their full contracts 
 | `POST /v1/design`, `GET /v1/design/:id` | Save and read designs |
 | `POST /v1/design/sketch`, `POST /v1/design/generate` | Sketch → structured specification (Zod) → user confirmation → generation. AI failure → clear error |
 | `POST /v1/tailor/pdf` | PDF from a saved design |
-| `POST /v1/tryon`, `GET /v1/tryon/:id` | **Not approved.** The earlier design (user photo + `consent: true` → Leffa / Hugging Face / Qwen) is superseded by AI rule 16. Consent alone does not authorise sending a personal photo to an external provider. Requires D-48 |
+| `POST /v1/tryon`, `GET /v1/tryon/:id` | **Not approved.** The earlier design (user photo + `consent: true` → Leffa / Hugging Face / Qwen) is superseded by AI rule 16. Consent alone does not authorise sending a personal photo to an external provider. Requires D-48. The approved 3D Virtual Try-On (D-137) is `/v1/try-on` (§3.15) |
 
 ### 3.9b My Profile redesign — built (D-129, 2026-10-22)
 
@@ -437,6 +437,23 @@ Contract: `chat.ts`. One question → a plan (intent and details) → the featur
 | GET | `/v1/chat/conversations/:id` | One conversation with its messages (owner only, else 404) |
 | DELETE | `/v1/chat/conversations/:id` | Deletes one conversation |
 | DELETE | `/v1/chat/conversations` | Deletes all the user's conversations |
+### 3.16 3D Virtual Try-On (D-137; live when `FAL_KEY` is set, unless `TRY_ON_ENABLED=false`)
+
+Authenticated, password set. Contract: `packages/contracts/src/try-on.ts`. `POST …/jobs` is limited to 3 per minute and 20 per hour per user; polls to 60 per minute.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/v1/try-on` | `{available, tryOnModel (custom_photo \| dummy_model, from My Profile; without a choice, custom_photo when a body photo is stored), hasPhoto}` |
+| POST | `/v1/try-on/jobs` | `{outfitId (the user's own look), slotId? (one garment), item? {store, title, price} (one similar item; needs slotId), notice: TRY_ON_NOTICE_VERSION}`. The garments are listings `GET /v1/outfits/:id/products` returns: the item, else the saved pick, else the first with a picture; for the whole look each garment layered bottom-up (at most 3). Sends the newest body photo and the first garment's thumbnail to fal.ai (FASHN). 202 with the `TryOnJob` `{id, outfitId, slotId, stage, step, totalSteps, garments[], imageReady, model3d, message, createdAt, expiresAt}`; an earlier, kept try-on of the same photo and garments is returned instead of a new one. `CONFLICT` (409) without a body photo, when the user chose the dummy model, or when no garment has a picture; `NOT_FOUND` for another user's look or an item the search didn't return; `AI_UNAVAILABLE` or `RATE_LIMITED` when fal refuses; `PROVIDER_NOT_CONFIGURED` when off |
+| GET | `/v1/try-on/jobs/:id` | The try-on (owner only, else 404). While it runs, each call checks fal and moves it on: the next garment, then the picture is stored and TRELLIS starts the 3D model, then the model is stored (`stage: done`). A 3D failure ends with `model3d: failed` and the picture kept; a try-on failure ends with `stage: failed` and `message`. A step that takes longer than `TRY_ON_STEP_TIMEOUT_MS` fails |
+| GET | `/v1/try-on/jobs/:id/image` | The dressed picture (raw image, `cache-control: private, no-store`). The web app serves it through `/api/try-on/:id/image` |
+| GET | `/v1/try-on/jobs/:id/model` | The 3D model (`model/gltf-binary`, `private, no-store`), through `/api/try-on/:id/model` |
+| DELETE | `/v1/try-on/jobs/:id` | Deletes the try-on with its picture and model |
+| GET | `/v1/try-on/avatars/:department` | The shared cartoon avatar (`women` \| `men`, D-138), drawn on first request by the Design Studio image services and then stored; `private, max-age=86400` |
+| POST | `/v1/try-on/drapes` | `{outfitId, department, items[] {slotId, store, title, price} (1 – 3, one per part)}`: Pollinations image editing puts each item's store thumbnail on the avatar, one per call, layered bottom-up (about 10 – 20 s each). 201 with `{id, outfitId, department, garments[], createdAt, expiresAt}`; the same avatar and items return the kept picture. `NOT_FOUND` for an item the search didn't return or another user's look; `AI_UNAVAILABLE` / `RATE_LIMITED` when the editor fails; `PROVIDER_NOT_CONFIGURED` when off. 8 per minute and 60 per hour per user. `GET /v1/try-on` reports `drapeAvailable` |
+| GET | `/v1/try-on/drapes/:id/image?view=front\|three_quarter\|side\|back` | One view of the dressed model (default front; owner only, `private, no-store`; 404 for a view not drawn yet), through `/api/try-on/drapes/:id/image` |
+| POST | `/v1/try-on/drapes/:id/views/:view` | Draws `three_quarter`, `side` or `back` from the dressed front (D-139; one edit, about 15 s) and keeps it; an existing view is returned without a new edit. Returns the drape, whose `views` lists what is drawn. 24 per minute and 180 per hour per user |
+| DELETE | `/v1/try-on/drapes/:id` | Deletes the dressed avatar |
 
 ### 3.10 Health
 

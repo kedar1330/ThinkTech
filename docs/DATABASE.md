@@ -368,7 +368,7 @@ One document per look. `POST /v1/recommendations` creates up to 5 looks sharing 
 | `weatherContext` | Stage 2: `{ source, observedAt, summary, bands }` or manual; never location |
 | `createdAt`, `updatedAt` | timestamps |
 
-**`outfitImages`** (local preview, 2026-10-22; user-owned, in `USER_OWNED_COLLECTIONS`): one AI outfit image per look, model `OutfitImage`. Fields `userId`, `outfitId` (unique index), `data` (the image bytes, never selected by default or logged), `contentType`, `bytes`, `provider`, `model`, `promptVersion` (`outfit-image-v2`), `expiresAt` (copied from the suggested look, TTL index; set to null when the look is saved, so a saved look keeps its image), `createdAt`. Deleted with the look and with the account.
+**`outfitImages`** (local preview, 2026-10-22; user-owned, in `USER_OWNED_COLLECTIONS`): one AI outfit image per look, model `OutfitImage`. Fields `userId`, `outfitId` (unique index), `data` (the image bytes, never selected by default or logged), `contentType`, `bytes`, `provider`, `model`, `promptVersion` (`outfit-image-v3`: adds the wear type and the designed garment's chosen features; older images keep `outfit-image-v2`), `expiresAt` (copied from the suggested look, TTL index; set to null when the look is saved, so a saved look keeps its image), `createdAt`. Deleted with the look and with the account.
 
 `slots[]` element:
 
@@ -623,6 +623,17 @@ Monk tone (1 – 10) → undertone (warm, cool, neutral, olive) → 100+ colours
 | `designs` | **user** | One design from a sketch, upload, description or look + change | `userId`; `source` (`sketch`, `upload`, `description`, `look`); `description`; `lookId`, `slotId` (look only); `sourceImage {data, contentType}` (the user's sketch, BSON binary, `select: false`); `image {data, contentType}` (the generated picture, `select: false`); `imageStatus` (`ready`, `failed`); `imageProvider` (`pollinations`, `cloudflare`); `imagePrompt` (Gemini's garment-only prompt, `select: false`, reused for redraws); `title`, `summary`, `tailorSpec` (Mixed, validated by `tailorSpecSchema`); `analysisModel`, `promptVersion`, `noticeVersion`; timestamps. Index `{userId, createdAt: -1}`. At most 50 per user |
 
 `designs` is in `USER_OWNED_COLLECTIONS`; deleting a design or the account deletes its sketch and picture with it. A look's `outfits` document is only read, never changed; deleting the look leaves designs made from it.
+
+## 4g. 3D Virtual Try-On (D-137)
+
+| Collection | Owner | Purpose | Key fields and indexes |
+|---|---|---|---|
+| `tryOnJobs` | **user** | One try-on of a look or a similar item on the user's try-on photo | `userId`; `outfitId`; `slotId` (one garment, else null for the whole look); `photoId` (the `userPhotos` body photo used); `cacheKey` (SHA-256 of photo ID, models and garment pictures; reused instead of a new paid try-on); `garments[] {slotId, category (tops, bottoms, one-pieces), store, title, price, link, imageUrl}` (listings the search returned); `stage` (`try_on`, `model_3d`, `done`, `failed`); `step` (garment being put on, from 0); `stageStartedAt`; `request {requestId, statusUrl, responseUrl}` (fal's queued request, null when none); `resultUrl` (fal's URL of the latest dressed picture, `select: false`, cleared when the try-on ends); `image {data, contentType}` (the dressed picture, BSON binary, `select: false`); `model3d {data, contentType: model/gltf-binary}` (GLB, `select: false`, ≤ 10 MB); `model3dStatus` (`pending`, `ready`, `failed`); `message`; `lockedUntil` (one poll advances it at a time); `provider`, `tryOnModel`, `model3dModel`, `noticeVersion`; `expiresAt`; timestamps. Indexes `{userId, createdAt: -1}`, `{userId, cacheKey}`, TTL on `expiresAt` (24 hours after creation) |
+
+| `tryOnAvatars` | system | The shared cartoon avatar per Clothing Preference (D-138), drawn once from a fixed prompt | `department` (unique: `women`, `men`); `image {data, contentType}` (`select: false`); `provider`, `model`, `promptVersion`; timestamps. Not user data |
+| `tryOnDrapes` | **user** | The cartoon avatar dressed in an outfit (D-138) | `userId`, `outfitId`, `department`, `cacheKey` (avatar, models, prompt version and garment pictures; reused instead of a new edit), `garments[]` (as in `tryOnJobs`), `image {data, contentType}` (the dressed front, `select: false`), `views {three_quarter, side, back}` (each `{data, contentType}` or null, `select: false`, D-139), `viewsReady[]` (views drawn, from `front`), `provider`, `model`, `promptVersion`, `expiresAt` (TTL, 24 h); timestamps. Indexes `{userId, cacheKey}`, TTL on `expiresAt` |
+
+`tryOnJobs` and `tryOnDrapes` are in `USER_OWNED_COLLECTIONS`. A try-on is deleted after 24 hours, when the user deletes it, when the user deletes the photo it was made from, or with the account. The look and the photo are only read.
 
 ---
 

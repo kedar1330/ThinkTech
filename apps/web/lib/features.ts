@@ -46,7 +46,9 @@ export const FEATURES: Feature[] = [
     slug: 'virtual-try-on',
     label: 'Virtual Try-On',
     icon: 'camera',
-    summary: 'Preview how a look could come together before you buy.',
+    // Opened from Shop My Look with a look or item (D-137); on its own it starts at Shop My Look.
+    href: '/try-on',
+    summary: 'Try a look or a similar item on your own photo, then turn it around in 3D before you buy.',
   },
   {
     slug: 'design-studio',
