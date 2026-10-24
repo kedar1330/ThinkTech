@@ -81,7 +81,7 @@ export function LookCard({ look, position, sizes }: { look: Look; position: numb
         </div>
 
         {/* Collapsible Details to keep card clean and uncluttered in 3-in-a-row grid */}
-        <details className="group mt-auto pt-2 border-t border-border/60 text-xs">
+        <details open className="group mt-auto pt-2 border-t border-border/60 text-xs">
           <summary className="flex cursor-pointer select-none items-center justify-between py-1.5 font-medium text-plum hover:underline">
             <span>Styling details &amp; garment specifications</span>
             <ChevronDown className="size-3.5 transition-transform group-open:rotate-180 text-muted-foreground" />
