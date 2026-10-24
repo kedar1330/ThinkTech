@@ -16,7 +16,7 @@ export interface DesignChoice {
 /** Saves a design in the Outfit Categories customizer: the first neckline offered, plus an occasion tag. */
 export async function saveDesign(
   page: Page,
-  { garment = 'kurta', outfit = 'indian', occasion }: DesignChoice = {},
+  { garment = 'kurti', outfit = 'indian', occasion }: DesignChoice = {},
 ): Promise<void> {
   // Design features need a department; passing one here leaves the profile without one.
   await page.goto(`/categories/design/${garment}?outfit=${outfit}&department=women`);

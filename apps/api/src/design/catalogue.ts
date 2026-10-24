@@ -20,7 +20,6 @@ export interface GarmentTypeSeed {
 /** Garment types. A garment can sit in more than one outfit category (a kurta is Indian and Indo-Western). */
 export const GARMENT_TYPES: GarmentTypeSeed[] = [
   // Women
-  { id: 'kurta', name: 'Kurta', kind: 'top', departments: B, outfitCategories: ['indian', 'fusion'] },
   { id: 'kurti', name: 'Kurti', kind: 'top', departments: W, outfitCategories: ['indian', 'fusion'] },
   { id: 'anarkali', name: 'Anarkali', kind: 'one_piece', departments: W, outfitCategories: ['indian'] },
   { id: 'saree_blouse', name: 'Saree blouse', kind: 'top', departments: W, outfitCategories: ['indian'] },
@@ -48,6 +47,7 @@ export const GARMENT_TYPES: GarmentTypeSeed[] = [
   { id: 'cape_jacket', name: 'Cape and jacket set', kind: 'layer', departments: W, outfitCategories: ['fusion'] },
   { id: 'dhoti_pants', name: 'Dhoti pants', kind: 'bottom', departments: B, outfitCategories: ['fusion'] },
   // Men
+  { id: 'kurta', name: 'Kurta', kind: 'top', departments: M, outfitCategories: ['indian', 'fusion'] },
   { id: 'sherwani', name: 'Sherwani', kind: 'layer', departments: M, outfitCategories: ['indian'] },
   { id: 'nehru_jacket', name: 'Nehru jacket', kind: 'layer', departments: M, outfitCategories: ['indian', 'fusion'] },
   { id: 'churidar', name: 'Churidar and pyjama', kind: 'bottom', departments: M, outfitCategories: ['indian'] },
