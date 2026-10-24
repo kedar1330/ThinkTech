@@ -209,7 +209,9 @@ export class DesignStudioService {
     if (doc.lookId) {
       await this.models.Outfit.deleteOne({ _id: doc.lookId, userId, combinationSignature: `design-${id}` });
       await this.models.OutfitImage.deleteOne({ outfitId: doc.lookId, userId });
-      const identityKey = createHash('sha256').update(`outfit|look|${String(doc.lookId)}`).digest('hex');
+      const identityKey = createHash('sha256')
+        .update(`outfit|look|${String(doc.lookId)}`)
+        .digest('hex');
       await this.models.SavedItem.deleteOne({ userId, identityKey });
     }
   }
@@ -329,7 +331,8 @@ export class DesignStudioService {
                 ? 't_shirt'
                 : 'shirt';
 
-    const textToScan = `${design.title} ${spec?.garment || ''} ${spec?.fabric?.primary || ''} ${spec?.embellishment?.join(' ') || ''} ${design.description || ''}`.toLowerCase();
+    const textToScan =
+      `${design.title} ${spec?.garment || ''} ${spec?.fabric?.primary || ''} ${spec?.embellishment?.join(' ') || ''} ${design.description || ''}`.toLowerCase();
     let colorId: ColorId = 'black';
     let colorFamily: ColorFamily = 'neutral';
     let colorHex = '#1A1A1A';
@@ -393,7 +396,9 @@ export class DesignStudioService {
     }
 
     const fabricMatch = (FABRIC_IDS as readonly string[]).find((f) => spec?.fabric?.primary?.toLowerCase().includes(f));
-    const silhouetteMatch = (SILHOUETTE_IDS as readonly string[]).find((s) => spec?.silhouette?.toLowerCase().includes(s));
+    const silhouetteMatch = (SILHOUETTE_IDS as readonly string[]).find((s) =>
+      spec?.silhouette?.toLowerCase().includes(s),
+    );
     const necklineMatch = (NECKLINE_IDS as readonly string[]).find((n) => spec?.neckline?.toLowerCase().includes(n));
     const sleeveMatch = (SLEEVE_LENGTH_IDS as readonly string[]).find((s) => spec?.sleeves?.toLowerCase().includes(s));
     const lengthMatch = (GARMENT_LENGTH_IDS as readonly string[]).find((l) => spec?.length?.toLowerCase().includes(l));
@@ -419,10 +424,14 @@ export class DesignStudioService {
         colorFamily,
         colorId,
         ...(fabricMatch ? { fabric: fabricMatch as Fabric } : {}),
-        ...(silhouetteMatch ? { silhouette: silhouetteMatch as Silhouette } : (isOnePiece ? { silhouette: 'a_line' as const } : {})),
+        ...(silhouetteMatch
+          ? { silhouette: silhouetteMatch as Silhouette }
+          : isOnePiece
+            ? { silhouette: 'a_line' as const }
+            : {}),
         ...(necklineMatch ? { neckline: necklineMatch as Neckline } : {}),
         ...(sleeveMatch ? { sleeve: sleeveMatch as SleeveLength } : {}),
-        ...(lengthMatch ? { length: lengthMatch as GarmentLength } : (isOnePiece ? { length: 'midi' as const } : {})),
+        ...(lengthMatch ? { length: lengthMatch as GarmentLength } : isOnePiece ? { length: 'midi' as const } : {}),
       },
       swatches: [{ colorId, name: colorName, hex: colorHex }],
       searchPhrase: primarySearchPhrase,
@@ -550,7 +559,9 @@ export class DesignStudioService {
       );
     }
 
-    const identityKey = createHash('sha256').update(`outfit|look|${String(outfit._id)}`).digest('hex');
+    const identityKey = createHash('sha256')
+      .update(`outfit|look|${String(outfit._id)}`)
+      .digest('hex');
     await this.models.SavedItem.updateOne(
       { userId, identityKey },
       {

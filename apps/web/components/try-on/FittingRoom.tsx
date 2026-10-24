@@ -301,12 +301,7 @@ export function FittingRoom({
           </div>
         )}
         {overview.drapeAvailable && view === 'model' ? (
-          <ModelViews
-            outfitId={look.id}
-            department={department}
-            items={aiItems}
-            loading={state.kind === 'loading'}
-          />
+          <ModelViews outfitId={look.id} department={department} items={aiItems} loading={state.kind === 'loading'} />
         ) : (
           <>
             <Mannequin3D department={department} proportions={proportions} outfit={dressed} label={description} />
