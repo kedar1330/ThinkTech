@@ -383,7 +383,13 @@ export class DesignService {
   /** The user's saved designs, newest first, with display names for the garment and each chosen feature. */
   async listSelections(userId: UserId): Promise<DesignSelectionItem[]> {
     const docs = await this.models.UserDesignSelection.find({ userId }).sort({ savedAt: -1 }).lean();
-    const items = docs.map((d) => this.selectionItem(d));
+    const allItems = docs.map((d) => this.selectionItem(d));
+    const seen = new Set<string>();
+    const items = allItems.filter((item) => {
+      if (seen.has(item.garmentType)) return false;
+      seen.add(item.garmentType);
+      return true;
+    });
     const ids = [...new Set(items.flatMap((i) => Object.values(i.selectedFeatures).filter(Boolean) as string[]))];
     const features = await this.models.DesignFeature.find({ featureId: { $in: ids } })
       .select('featureId featureCategory name')

@@ -12,6 +12,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!/^[a-f0-9]{24}$/.test(id)) return Response.json({ error: 'NOT_FOUND' }, { status: 404 });
   try {
     const matches = await apiRequest<LookProductMatches>(`/v1/outfits/${id}/products`, { token });
+    if (matches && Array.isArray(matches.slots)) {
+      for (const slot of matches.slots) {
+        if ((slot.slotId as string) === 'one_piece') {
+          (slot as { slotId: string }).slotId = 'one-piece';
+        }
+      }
+    }
     return Response.json(matches, { headers: { 'cache-control': 'private, no-store' } });
   } catch (err) {
     const status = err instanceof ApiError ? err.status : 503;

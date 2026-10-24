@@ -98,3 +98,100 @@ export const auditChangeSchema = z
 
 /** Aggregates with fewer members than this are shown as "fewer than 10" (D-125). */
 export const SMALL_GROUP_THRESHOLD = 10;
+
+// --- Admin API Contracts --------------------------------------------------------------------------------
+
+export interface AdminMeResponse {
+  id: string;
+  email: string;
+  name: string;
+  role: AdminRole;
+  status: 'active' | 'disabled';
+  permissions: readonly AdminPermission[];
+}
+
+export interface AdminDashboardStats {
+  totalUsers: number;
+  newUsersLast7Days: number;
+  activeUsers: number;
+  totalStyles: number;
+  totalCategories: number;
+  totalPalettes: number;
+  totalOutfitTemplates: number;
+  totalTryOnJobs: number;
+}
+
+export interface AdminDashboardAttention {
+  draftsAwaitingApproval: number;
+  missingIllustrations: number;
+  openProductReports: number;
+}
+
+export interface AdminDashboardResponse {
+  stats: AdminDashboardStats;
+  attention: AdminDashboardAttention;
+}
+
+export interface AdminUserItem {
+  id: string;
+  email: string;
+  name: string;
+  role: 'user' | 'admin';
+  isActive: boolean;
+  emailVerified: boolean;
+  city: string | null;
+  createdAt: string;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUserItem[];
+  total: number;
+}
+
+export const adminUpdateUserStatusSchema = z
+  .object({
+    isActive: z.boolean(),
+    reason: z.string().trim().max(200).optional(),
+  })
+  .strict();
+export type AdminUpdateUserStatusRequest = z.infer<typeof adminUpdateUserStatusSchema>;
+
+export const ADMIN_CATALOGUE_TYPES = ['category', 'style', 'palette', 'template'] as const;
+export const adminCatalogueTypeSchema = z.enum(ADMIN_CATALOGUE_TYPES);
+export type AdminCatalogueType = z.infer<typeof adminCatalogueTypeSchema>;
+
+export interface AdminCatalogueItem {
+  id: string;
+  type: AdminCatalogueType;
+  name: string;
+  status: 'draft' | 'published' | 'archived';
+  updatedAt: string;
+}
+
+export interface AdminCatalogueResponse {
+  items: AdminCatalogueItem[];
+  total: number;
+}
+
+export const adminUpdateCatalogueStatusSchema = z
+  .object({
+    status: z.enum(['draft', 'published', 'archived']),
+  })
+  .strict();
+export type AdminUpdateCatalogueStatusRequest = z.infer<typeof adminUpdateCatalogueStatusSchema>;
+
+export interface AdminAuditLogItem {
+  id: string;
+  adminId: string;
+  action: (typeof AUDIT_ACTIONS)[number];
+  targetType: (typeof AUDIT_TARGET_TYPES)[number];
+  targetId: string;
+  status: (typeof AUDIT_STATUSES)[number];
+  changes: Array<{ field: string; from?: string | number | boolean | null; to?: string | number | boolean | null }>;
+  at: string;
+}
+
+export interface AdminAuditLogsResponse {
+  logs: AdminAuditLogItem[];
+  total: number;
+}

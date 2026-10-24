@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { BodyType, Look } from '@styleme/contracts';
 import { lookTitle } from '@/lib/outfits/look-text';
 import { cn } from '@/lib/utils';
+import { DeleteSavedLookButton } from './DeleteSavedLookButton';
 import { TabPhoto } from './TabPhoto';
 import { TabPriceRange } from './TabPriceRange';
 import { TryOnButton } from './TryOnButton';
@@ -49,8 +50,11 @@ export function LookTabs({
                 {title}
               </Link>
               <TabPriceRange outfitId={look.id} />
-              <div className="mt-auto">
-                <TryOnButton outfitId={look.id} lookName={title} />
+              <div className="mt-auto flex items-center gap-2 pt-1">
+                <div className="flex-1">
+                  <TryOnButton outfitId={look.id} lookName={title} />
+                </div>
+                <DeleteSavedLookButton outfitId={look.id} lookName={title} isSelected={selected} />
               </div>
             </li>
           );

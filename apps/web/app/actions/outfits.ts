@@ -70,6 +70,7 @@ export async function removeOutfitAction(_prev: FormState, formData: FormData): 
     return errorState(err, { NOT_FOUND: GONE });
   }
   revalidatePath('/saved');
+  revalidatePath('/shop');
   if (str(formData, 'from') === 'detail') redirect('/saved');
   return { success: 'Look removed.' };
 }

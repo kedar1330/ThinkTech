@@ -29,16 +29,29 @@ export function LookShopper({
   items,
   sizes,
   focusSlotId,
+  excludeAccessories = false,
 }: {
   look: OutfitDetail;
   items: readonly UserShortlistItem[];
   sizes: ProfileSizes;
   /** From `/shop?outfitId=…&slotId=…`: the part to highlight. */
   focusSlotId?: string;
+  /** When true, excludes shoes and accessories to focus on clothing pieces only. */
+  excludeAccessories?: boolean;
 }) {
   const [values, setValues] = useState<ShopFilterValues>({ priceText: '' });
-  const options = filterOptions(look.slots);
-  const slots = filterSlots(look.slots, values);
+  // Exclude shoes and accessories when requested
+  const mainSlots = excludeAccessories
+    ? look.slots.filter(
+        (s) =>
+          s.lookSpec.category !== 'shoes' &&
+          s.lookSpec.category !== 'accessory' &&
+          s.slot !== 'footwear' &&
+          s.slot !== 'accessory',
+      )
+    : look.slots;
+  const options = filterOptions(mainSlots);
+  const slots = filterSlots(mainSlots, values);
   const offered = pickableItems(items, parseMaxPrice(values.priceText));
   const filtered = offered.length < pickableItems(items).length;
 

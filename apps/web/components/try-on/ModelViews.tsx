@@ -17,7 +17,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 
 /** Waits for clicks to settle before dressing, so quick changes cost one drape, not several. */
-const SETTLE_MS = 700;
+const SETTLE_MS = 250;
 const OTHER_VIEWS = DRAPE_VIEWS.filter((v): v is Exclude<DrapeView, 'front'> => v !== 'front');
 
 type Dressed = { kind: 'dressed'; id: string } | { kind: 'error'; message: string };
@@ -33,11 +33,13 @@ export function ModelViews({
   outfitId,
   department,
   items,
+  loading,
 }: {
   outfitId: string;
   department: AvatarDepartment;
   /** The outfit, layered from the body out; empty shows the undressed model. */
   items: readonly TryOnOutfitItem[];
+  loading?: boolean;
 }) {
   const [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState<DrapeView>('front');
@@ -170,7 +172,15 @@ export function ModelViews({
             alt={drapeId ? `Model wearing ${garments}, ${DRAPE_VIEW_LABELS[shown].toLowerCase()} view` : 'Try-on model'}
             className="size-full object-contain"
           />
-          {dressing && (
+          {loading && (
+            <p
+              role="status"
+              className="absolute inset-x-3 bottom-3 flex items-center justify-center gap-2 rounded-full bg-surface/90 px-3 py-2 text-sm shadow-sm"
+            >
+              <Spinner className="text-plum" /> Finding clothes and preparing virtual try-on…
+            </p>
+          )}
+          {!loading && dressing && (
             <p
               role="status"
               className="absolute inset-x-3 bottom-3 flex items-center justify-center gap-2 rounded-full bg-surface/90 px-3 py-2 text-sm shadow-sm"

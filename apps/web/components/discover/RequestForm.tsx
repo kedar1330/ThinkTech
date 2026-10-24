@@ -72,7 +72,13 @@ function DesignChoices({
   active: DesignSummary | null;
   onChoose: (garmentType: string) => void;
 }) {
-  const others = designs.filter((d) => d !== active);
+  const seen = new Set<string>();
+  const others = designs.filter((d) => {
+    if (d.garmentType === active?.garmentType) return false;
+    if (seen.has(d.garmentType)) return false;
+    seen.add(d.garmentType);
+    return true;
+  });
   if (others.length === 0) return null;
   return (
     <section aria-labelledby="design-choices-heading" className="space-y-2">
@@ -81,7 +87,7 @@ function DesignChoices({
       </h2>
       <ul className="grid gap-2 sm:grid-cols-2">
         {others.map((d) => (
-          <li key={d.garmentType}>
+          <li key={`${d.garmentType}-${d.outfitCategory}`}>
             <button
               type="button"
               onClick={() => onChoose(d.garmentType)}

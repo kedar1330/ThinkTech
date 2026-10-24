@@ -162,6 +162,33 @@ describe('Discover My Style opened from a design', () => {
     const list = savedDesigns([{ ...SELECTION, garmentName: 'Kurti', features: [NAMED('V-neck')] }], opened);
     expect(list).toEqual([opened]);
   });
+
+  it('deduplicates multiple entries for the same garment type, keeping newest first', () => {
+    const list = savedDesigns(
+      [
+        { ...SELECTION, garmentType: 'kurti', garmentName: 'Kurti (Newest)', features: [NAMED('V-neck')] },
+        { ...SELECTION, garmentType: 'kurti', garmentName: 'Kurti (Old)', features: [NAMED('Round neck')] },
+        { ...SELECTION, garmentType: 'shirt', garmentName: 'Shirt', features: [NAMED('Mandarin collar')] },
+      ],
+      null,
+    );
+    expect(list).toHaveLength(2);
+    expect(list[0]?.garmentName).toBe('Kurti (Newest)');
+    expect(list[1]?.garmentName).toBe('Shirt');
+  });
+
+  it('renders DesignChoices without duplicate key warnings when duplicate designs are provided', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const kurti1 = { ...designSummary(FEATURES)!, garmentType: 'kurti', garmentName: 'Kurti' };
+    const kurti2 = { ...designSummary(FEATURES)!, garmentType: 'kurti', garmentName: 'Kurti 2' };
+    const shirt = { ...designSummary(FEATURES)!, garmentType: 'shirt', garmentName: 'Shirt' };
+
+    render(<RequestForm sizes={SIZES} designs={[shirt, kurti1, kurti2]} initialDesign="shirt" />);
+    const buttons = screen.getAllByRole('button', { name: /Kurti/ });
+    expect(buttons).toHaveLength(1);
+    expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining('Encountered two children with the same key'));
+    errorSpy.mockRestore();
+  });
 });
 
 const SELECTION = FEATURES.selection!;

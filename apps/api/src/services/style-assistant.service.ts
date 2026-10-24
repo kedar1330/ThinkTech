@@ -365,11 +365,11 @@ export class StyleAssistantService {
           return await this.shop(userId, plan);
         case 'try_on':
           return {
-            facts: ['Virtual Try-On is not available in StyleMe yet.'],
+            facts: ['Virtual Try-On is available in StyleMe at /try-on with mannequin previews and photo drape.'],
             fixedText:
-              'Virtual Try-On isn’t available yet. Meanwhile I can suggest looks for your occasion or design a garment for your tailor.',
+              'You can try on outfits and see 3D mannequin previews in Virtual Try-On. Upload your photo or preview looks on our studio mannequin.',
             cards: [],
-            links: [{ label: 'About Virtual Try-On', href: '/features/virtual-try-on' }],
+            links: [{ label: 'Open Virtual Try-On', href: '/try-on' }],
           };
         case 'profile':
           return {
