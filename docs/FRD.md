@@ -415,7 +415,7 @@ These are approved parts of the long-term vision. Their stage is not decided, an
 - FR-APP-05: estimates are confirmed or corrected by the user (`PUT /v1/appearance/confirm`). Confirmation never changes the model's confidence, and unconfirmed estimates are never used ([DATABASE.md](DATABASE.md) §5).
 - FR-APP-06: photos are deleted after analysis unless the user chooses to keep them; where kept photos are stored and for how long is decided with this feature (D-11).
 
-**3D avatar (FR-AVT).** FR-AVT-01: a GLB/GLTF avatar with front, side and back views, rotate and zoom. FR-AVT-02: approximate proportions only, never used for sizing. FR-AVT-03: no photorealistic reconstruction. It is separate from try-on and from look generation.
+**3D avatar (FR-AVT).** FR-AVT-01: a GLB/GLTF avatar with front, side and back views, rotate and zoom. FR-AVT-02: approximate proportions only, never used for sizing. FR-AVT-03: no photorealistic reconstruction. It is separate from try-on and from look generation. **Try-on model (D-138, D-139):** Virtual Try-On has its own photorealistic *synthetic* model, an AI-generated person shared by all users. It is never a reconstruction or likeness of the user, so FR-AVT-03 still holds for the user's avatar. It shows front, three-quarter, side and back views drawn by AI, not a rotatable GLB.
 
 **Design Studio (FR-DES).** FR-DES-01: design a garment by choosing garment, colour, fabric, neck, sleeve, length, fit, pattern and embroidery. FR-DES-02: a preview. FR-DES-03: designs are saved to the user's account (`POST /v1/design`, `GET /v1/design/:id`).
 

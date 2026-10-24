@@ -94,6 +94,41 @@ const envSchema = z.object({
     .default('true')
     .transform((v) => v === 'true'),
   STYLE_ASSISTANT_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(15_000),
+  // 3D Virtual Try-On (D-137, approved 2026-10-23): live whenever FAL_KEY is set; set TRY_ON_ENABLED=false to
+  // switch it off. fal.ai receives the user's full-body try-on photo and the similar item's store thumbnail
+  // (FAL_TRY_ON_MODEL, FASHN), then the dressed picture (FAL_3D_MODEL, TRELLIS); nothing else about the user.
+  TRY_ON_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  FAL_KEY: optional,
+  TRIPOSR_URL: optional,
+  FAL_TRY_ON_MODEL: z.string().trim().min(1).default('fal-ai/fashn/tryon/v1.6'),
+  FAL_3D_MODEL: z.string().trim().min(1).default('fal-ai/trellis'),
+  /** One call to fal (submit, poll or download). */
+  TRY_ON_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
+  // Cartoon avatar drape (D-138): live whenever POLLINATIONS_API_KEY is set; DRAPE_ENABLED=false switches it off.
+  // The avatar is drawn once by the Design Studio image services; each item is put on it by Pollinations image
+  // editing, trying DRAPE_MODELS in order (comma-separated; only models Pollinations offers without paid Pollen).
+  DRAPE_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  DRAPE_MODELS: z
+    .string()
+    .trim()
+    .default('black-forest-labs/flux.2-klein-4b,openai/gpt-image-1-mini')
+    .transform((v) =>
+      v
+        .split(',')
+        .map((m) => m.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.string()).min(1)),
+  /** One image edit (one garment on the avatar). */
+  DRAPE_TIMEOUT_MS: z.coerce.number().int().min(5000).max(180_000).default(90_000),
+  /** One step of a try-on (a garment, or the 3D model) at fal, before it is given up. */
+  TRY_ON_STEP_TIMEOUT_MS: z.coerce.number().int().min(10_000).max(900_000).default(300_000),
 });
 
 const configSchema = envSchema.superRefine((env, ctx) => {

@@ -57,6 +57,14 @@ export interface AppRateLimits extends AuthRateLimits {
   designStudio?: Limits;
   /** Style Assistant messages: each may be two Gemini calls and a feature run (D-136). */
   assistant?: Limits;
+  /** New try-ons: each one is one or more paid fal.ai calls (D-137). */
+  tryOn?: Limits;
+  /** Try-on polls: the web app asks every few seconds while a try-on runs. */
+  tryOnPoll?: Limits;
+  /** Cartoon avatar drapes: each is one image edit per garment on Pollinations (D-138). */
+  drape?: Limits;
+  /** Extra angles of a dressed model: up to three per outfit, each one image edit (D-139). */
+  drapeView?: Limits;
 }
 
 export function createAuthRateLimits(): AuthRateLimits {
@@ -84,5 +92,9 @@ export function createRateLimits(): AppRateLimits {
     priceRange: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
     designStudio: [limiter(MINUTE, 5, byUser), limiter(HOUR, 30, byUser)],
     assistant: [limiter(MINUTE, 10, byUser), limiter(HOUR, 120, byUser)],
+    tryOn: [limiter(MINUTE, 3, byUser), limiter(HOUR, 20, byUser)],
+    tryOnPoll: [limiter(MINUTE, 60, byUser)],
+    drape: [limiter(MINUTE, 8, byUser), limiter(HOUR, 60, byUser)],
+    drapeView: [limiter(MINUTE, 24, byUser), limiter(HOUR, 180, byUser)],
   };
 }

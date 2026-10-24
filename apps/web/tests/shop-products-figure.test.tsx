@@ -213,14 +213,23 @@ describe('similar products to compare', () => {
     expect(within(options).queryByRole('link', { name: 'Google Shopping' })).toBeNull();
   });
 
-  it('#124 every item has a Virtual Try-On button that opens the Coming soon page until try-on exists', async () => {
+  it('#124 every item has a Virtual Try-On button that tries that item on (D-138)', async () => {
     replyWith(Response.json(matches));
     render(<ProductMatches look={look} budget={null} fallback={<p>Product data unavailable</p>} />);
     await screen.findByRole('heading', { name: 'Similar items to compare' });
-    for (const title of ['Synthetic kurta M', 'Synthetic kurta A', 'Synthetic trousers F']) {
-      const tryOn = screen.getByRole('link', { name: `Virtual Try-On: ${title} (coming soon)` });
-      expect(tryOn).toHaveAttribute('href', '/features/virtual-try-on');
-      expect(tryOn).toHaveTextContent('Soon');
+    for (const slot of matches.slots) {
+      for (const listing of slot.listings) {
+        const tryOn = screen.getByRole('link', { name: `Virtual Try-On: ${listing.title}` });
+        const href = new URL(tryOn.getAttribute('href')!, 'http://localhost');
+        expect(href.pathname).toBe('/try-on');
+        expect(Object.fromEntries(href.searchParams)).toEqual({
+          outfitId: look.id,
+          slotId: slot.slotId,
+          store: listing.store,
+          title: listing.title,
+          price: String(listing.price),
+        });
+      }
     }
   });
 
@@ -236,8 +245,8 @@ describe('similar products to compare', () => {
     expect(card).toHaveAttribute('aria-expanded', 'true');
     expect(within(options).getByRole('button', { name: 'Save to this look' })).toBeInTheDocument();
     expect(
-      within(options).getByRole('link', { name: 'Virtual Try-On: Synthetic kurta A (coming soon)' }),
-    ).toHaveAttribute('href', '/features/virtual-try-on');
+      within(options).getByRole('link', { name: 'Virtual Try-On: Synthetic kurta A' }).getAttribute('href'),
+    ).toMatch(/^\/try-on\?outfitId=.+&title=Synthetic\+kurta\+A&/);
     // Only one item's options are open at a time.
     await openOptions('Synthetic kurta M');
     expect(screen.queryByRole('group', { name: 'Options for Synthetic kurta A' })).toBeNull();

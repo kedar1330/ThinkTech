@@ -99,11 +99,15 @@ export class PhotoService {
     return { data, contentType: doc.contentType };
   }
 
-  /** Deletes one of the user's photos (results already derived from it stay until changed). */
+  /**
+   * Deletes one of the user's photos. Analysis results already derived from it stay until changed; try-on
+   * pictures and 3D models made from it (D-137) are deleted with it.
+   */
   async remove(userId: Types.ObjectId, photoId: string): Promise<void> {
     if (!Types.ObjectId.isValid(photoId)) throw new AppError('NOT_FOUND');
     const result = await this.models.UserPhoto.deleteOne({ _id: photoId, userId });
     if (result.deletedCount === 0) throw new AppError('NOT_FOUND');
+    await this.models.TryOnJob.deleteMany({ userId, photoId });
   }
 
   /** Stores a full-body photo for 3D Virtual Try-On without running AI analysis on it. */

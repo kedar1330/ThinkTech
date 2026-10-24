@@ -97,12 +97,21 @@ test('Shop this look saves a Discover look as a Shop My Look tab; a suggested lo
     await expect(page.getByRole('list', { name: 'Parts of this look' })).toBeVisible();
   });
 
-  await test.step('each tab’s Virtual Try-On button opens the honest Coming soon page', async () => {
+  await test.step('each tab’s Virtual Try-On button opens the fitting room for that look (D-138)', async () => {
     const tabs = page.getByRole('navigation', { name: 'Your looks from Discover My Style' });
-    const tryOn = tabs.getByRole('link', { name: /^Virtual Try-On: .+ \(coming soon\)$/ });
+    const tryOn = tabs.getByRole('link', { name: /^Virtual Try-On: / });
     // One per tab: both saved looks have one.
     await expect(tryOn).toHaveCount(2);
     await tryOn.first().click();
-    await expect(page).toHaveURL(/\/features\/virtual-try-on$/);
+    await expect(page).toHaveURL(/\/try-on\?outfitId=[a-f0-9]{24}$/);
+    // The fitting room: the look's parts, the mannequin and the outfit.
+    await expect(page.getByRole('heading', { name: 'Clothes from Shop My Look' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Kurta' })).toBeVisible();
+    await expect(page.getByRole('img', { name: /3D mannequin/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your outfit' })).toBeVisible();
+    // With a store search key the look's items are listed; without one (as in CI) the page says so plainly.
+    await expect(
+      page.getByRole('list', { name: 'Kurta items' }).or(page.getByText(/clothes for this look couldn’t be loaded/)),
+    ).toBeVisible();
   });
 });

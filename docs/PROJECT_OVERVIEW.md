@@ -38,7 +38,7 @@ StyleMe is a personal styling web app for users in India. It suggests complete l
 Landing → Sign up (email + 6-digit code, or Google) → Style profile setup  ──or──  Skip for now
         → Home (Personalized home + "Complete your profile")
         → Discover My Style → My Colour Palette → Outfit Categories
-        → a selected look → Save it · Shop for it · (later) Try it on · Change it in Design Studio (D-134)
+        → a selected look → Save it · Shop for it · Try it on (from Shop My Look, D-137) · Change it in Design Studio (D-134)
 ```
 
 All nine sections are reachable from the top navigation (PR #26): Home, Discover My Style, My Colour Palette, Outfit Categories, Shop My Look, Virtual Try-On, Design Studio, Style Assistant, Saved Outfits. Sections that are not built show an honest "Coming soon" page and never a mock-up ([FRD.md](FRD.md) FR-UI-03, FR-DATA-02).
@@ -242,15 +242,33 @@ All nine sections are reachable from the top navigation (PR #26): Home, Discover
 
 ---
 
-## 13. Virtual Try-On (PDF p18) — 2D version specified (D-119); photo-based ⛔ Future (D-48)
+## 13. Virtual Try-On (PDF p18) — ✅ 3D try-on on the user's photo built (D-137); 2D version specified (D-119); other photo-based ⛔ Future (D-48)
+
+**Updated by D-139 (2026-10-24):** the avatar is now a photorealistic *synthetic* model, an AI-generated person who is neither a real person nor the user. A strip beside the large view shows it from the front, three-quarter, side and back; the extra angles are AI-drawn from the dressed front.
+
+**Built and approved (D-138, 2026-10-23, #106): the fitting room with a free cartoon avatar.** `/try-on`, opened from Shop My Look, has three panels:
+- **Left:** the look's similar items, by part of the look.
+- **Middle:** a Bitmoji-style cartoon avatar dressed in the real items by Pollinations image editing. It uses free models, puts on one garment at a time and takes about 10–20 seconds each. A **3D mannequin** tab shows a code-built, rotatable 360° figure that copies each item's type and colour.
+- **Right:** the outfit, with prices and Google Shopping links.
+
+The item clicked goes on first, and clicking another item swaps it for the same part. No personal data is sent.
+
+**Built and approved (D-137, 2026-10-23, #106): 3D Virtual Try-On on the user's photo** (now "Make it realistic with AI" in the fitting room; needs fal.ai credit).
+- **Where it opens:** `/try-on`, from Shop My Look. **Virtual Try-On** on a look tab tries the whole look on: one-piece or bottom, then top, then layer, at most 3 garments. On a similar item, it tries that item on.
+- **How it works:** after the user agrees to the try-on notice, fal.ai receives the full-body try-on photo saved in My Profile and the item's store thumbnail. FASHN dresses the photo, and TRELLIS turns the result into a 3D model.
+- **Result screen:** a **Try-on picture** tab and a **360° 3D view** tab (`@google/model-viewer`: drag or swipe to turn, pinch to zoom, auto-rotate, studio light), each with its AI label.
+- **Buy link:** each item links to its Google Shopping page.
+- **Storage:** results are kept for 24 hours, and the user can delete them sooner.
+- **Dummy model:** no try-on yet. A user who chose it is asked to choose their photo instead.
+- **Availability:** live whenever the API has `FAL_KEY`. In practice it runs locally only for now, because it uses the Serper.dev store search (D-77).
+- **Open risks:** privacy review (D-74), fal/FASHN retention terms, and retailer permission for AI processing of images (D-47).
+- **Not used:** Ready Player Me, from the original #106 design, shut down on 2026-01-31.
 
 **Specified and approved (FR-VTO, D-119): a 2D illustrative try-on.** A fashion-brand workspace with a large central preview: a clothed default model (plain white shirt and plain white pants) → Start Styling → garment cards by tab (Tops, Bottoms, Dresses, Outerwear, Accessories) layered as SVG on the model in a fixed order with compatibility rules → recolour with a palette colour or any supported colour → change, remove, undo, reset, zoom → save the configuration to Saved Outfits and reopen it. A few body-shape model variants and skin-tone shades, chosen from the profile; no photos, no camera, no AI; always labelled "illustrative 2D preview". Opens from Discover My Style, Outfit Categories, Design Studio (compatible designs) and Shop My Look (eligible products only).
 
 **Photo-based or generative try-on — intended when approved.** Explain image use and obtain consent → personalised model from permitted photos, a measurement-based approximate avatar, or a photo estimate → avatar in a neutral outfit → choose an outfit → preview with fit and rendering limitations → try another · save preview · delete photo or preview.
 
-**Today, as the PDF requires when the feature is not approved:** explain that it is not yet available (the "Coming soon" page does this). Offering outfit images or a moodboard instead depends on M3.
-
-**Status.** 2D version: not built; models and contracts declared; layer assets needed (TODO TD-FS-VTO-01, TD-FS-CAT-06). Photo-based: not built or approved (D-48, AI rule 16, privacy review). Issue #58 holds the decision proposal; issue #65 (2D try-on with a self-hosted model on a serverless GPU) is superseded for the first version by D-119 — the issue itself was not changed. **Owner:** Kedar.
+**Status.** 3D try-on on the user's photo: built (D-137, above). 2D version: not built; models and contracts declared; layer assets needed (TODO TD-FS-VTO-01, TD-FS-CAT-06). Other photo-based or generative try-on: not built or approved (D-48, AI rule 16, privacy review). Issue #58 holds the decision proposal; issue #65 (2D try-on with a self-hosted model on a serverless GPU) is superseded for the first version by D-119 — the issue itself was not changed. **Owner:** Kedar.
 
 ---
 

@@ -19,3 +19,4 @@ export * from './admin';
 export * from './manual';
 export * from './design';
 export * from './chat';
+export * from './try-on';
