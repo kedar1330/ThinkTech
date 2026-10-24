@@ -11,7 +11,7 @@ import type { ColourPreferencesResponse } from '@styleme/contracts';
 // outfits are created using balanced, harmonious colours suited for the garment, occasion, and profile.
 
 export function PaletteColours({
-  colours,
+  colours: _colours,
   customColors = [],
   customColorHexes = [],
   garment = null,
@@ -120,11 +120,13 @@ export function PaletteColours({
             <span className="text-xs text-muted-foreground">Separate from palette likes</span>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Outfits are curated using balanced, harmonious colours suited for your design and occasion.
-            Colours you like in <strong className="font-medium text-foreground">My Colour Palette</strong> remain independent and are not used as filters here.
+            Outfits are curated using balanced, harmonious colours suited for your design and occasion. Colours you like
+            in <strong className="font-medium text-foreground">My Colour Palette</strong> remain independent and are not
+            used as filters here.
           </p>
           <p className="text-xs text-muted-foreground">
-            To generate looks around a specific colour, click <strong className="font-medium text-foreground">Choose specific colours in Colour Palette</strong> above.
+            To generate looks around a specific colour, click{' '}
+            <strong className="font-medium text-foreground">Choose specific colours in Colour Palette</strong> above.
           </p>
         </div>
       )}

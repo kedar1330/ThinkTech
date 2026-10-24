@@ -10,7 +10,7 @@ import { DESIGN_FEATURES, type DesignFeatureSeed } from './catalogue';
 type Pt = readonly [number, number];
 
 const SKIN = '#efdcc9';
-const SKIN_LINE = '#cfae92';
+const _SKIN_LINE = '#cfae92';
 const CLOTH = '#fbf6ec';
 const LINE = '#8a6a42';
 const GOLD = '#e2c07a';

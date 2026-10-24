@@ -23,13 +23,20 @@ export async function requestLooksAction(_prev: LooksState, formData: FormData):
     occasion: str(formData, 'occasion'),
     style: str(formData, 'style'),
     wearType: formData.getAll('wearType').filter((v): v is string => typeof v === 'string'),
-    paletteMode: (str(formData, 'customColors') || str(formData, 'customColorHexes')) ? 'explore' : str(formData, 'paletteMode'),
+    paletteMode:
+      str(formData, 'customColors') || str(formData, 'customColorHexes') ? 'explore' : str(formData, 'paletteMode'),
     designGarment: str(formData, 'designGarment'),
     designOutfit: str(formData, 'designOutfit'),
     customColors: str(formData, 'customColorHexes')
-      ? str(formData, 'customColorHexes')!.split(',').map((s) => s.trim()).filter(Boolean)
+      ? str(formData, 'customColorHexes')!
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
       : str(formData, 'customColors')
-        ? str(formData, 'customColors')!.split(',').map((s) => s.trim()).filter(Boolean)
+        ? str(formData, 'customColors')!
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
         : undefined,
     chosenColours: formData.getAll('chosenColours').filter((v): v is string => typeof v === 'string'),
   });

@@ -4,7 +4,6 @@ import {
   type ColorId,
   type DesignMatch,
   type LookSlot,
-  type ProfileResponse,
   type RecommendationRequest,
   type WarningCode,
 } from '@styleme/contracts';
@@ -13,7 +12,13 @@ import { wearsContrast } from './contrast';
 import { designRank, matchDesign, type EngineDesign } from './design';
 import { explain, type Explanation } from './explain';
 import { templateWearType, type StyleLibrary } from './library';
-import { resolvePreferences, type EngineSignals, type PreferenceConflict, type Preferences, type ProfileWithMeasurements } from './preferences';
+import {
+  resolvePreferences,
+  type EngineSignals,
+  type PreferenceConflict,
+  type Preferences,
+  type ProfileWithMeasurements,
+} from './preferences';
 import { applicableRules, ruleEffects, type ApplicableRule } from './rules';
 import { ZERO, add, compareScores, round, type FeedbackSignals, type Score } from './score';
 import { MIN_ALTERNATIVES, fillSlot, type Choice, type Constraint, type FilledSlot, type Match } from './slots';

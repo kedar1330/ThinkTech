@@ -102,7 +102,8 @@ export class OutfitImageService {
       return combs.colours.filter((c) => c.preference !== 'avoided').map((c) => ({ name: c.name, hex: c.hex }));
     }
 
-    const { avoided } = await this.colours.getPreferences(userId);
+    const { liked, avoided } = await this.colours.getPreferences(userId);
+    if (liked.length > 0) return liked;
     const mine = await this.colours.mine(userId);
     const skip = new Set(avoided.map((c) => c.colourId));
     return mine.colours.filter((c) => !skip.has(c.colourId)).slice(0, TOP_PALETTE_COLOURS);

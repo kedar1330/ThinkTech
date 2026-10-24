@@ -136,9 +136,7 @@ function RequestSummary({
           {customColors.length > 0 ? (
             <span className="space-y-0.5">
               <span className="font-medium text-plum">{customColors.join(', ')}</span>
-              <span className="block text-xs text-muted-foreground">
-                (Your chosen colours for this style)
-              </span>
+              <span className="block text-xs text-muted-foreground">(Your chosen colours for this style)</span>
             </span>
           ) : (
             <span className="space-y-0.5">
@@ -427,9 +425,7 @@ export function RequestForm({
           <input type="hidden" name="occasion" value={request.occasion} />
           <input type="hidden" name="wearType" value={request.wearType} />
           <input type="hidden" name="paletteMode" value="suggested" />
-          {customColors.length > 0 && (
-            <input type="hidden" name="customColors" value={customColors.join(',')} />
-          )}
+          {customColors.length > 0 && <input type="hidden" name="customColors" value={customColors.join(',')} />}
           {customColorHexes.length > 0 && (
             <input type="hidden" name="customColorHexes" value={customColorHexes.join(',')} />
           )}

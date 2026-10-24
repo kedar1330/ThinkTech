@@ -34,7 +34,7 @@ export function geminiDesignProvider(
       const parts: object[] = [];
       if (image) parts.push({ inlineData: { mimeType: image.contentType, data: image.bytes.toString('base64') } });
       parts.push({ text: buildDesignPrompt(brief, image !== null) });
-      
+
       const tryCall = async (targetModel: string) => {
         return await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(targetModel)}:generateContent`, {
           method: 'POST',

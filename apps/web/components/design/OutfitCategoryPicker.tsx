@@ -85,7 +85,10 @@ export function OutfitCategoryPicker({ taxonomy, outfit }: OutfitCategoryPickerP
   };
 
   return (
-    <section aria-labelledby="design-steps" className="space-y-6 rounded-2xl border border-border bg-surface p-5 sm:p-7 shadow-sm">
+    <section
+      aria-labelledby="design-steps"
+      className="space-y-6 rounded-2xl border border-border bg-surface p-5 sm:p-7 shadow-sm"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-5">
         <div>
           <h2 id="design-steps" className="font-display text-2xl text-primary">
@@ -108,7 +111,9 @@ export function OutfitCategoryPicker({ taxonomy, outfit }: OutfitCategoryPickerP
                 aria-current={department === c.id ? 'true' : undefined}
                 className={cn(
                   'rounded-full px-3 py-1.5 transition',
-                  department === c.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                  department === c.id
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {c.label}
@@ -203,7 +208,12 @@ export function OutfitCategoryPicker({ taxonomy, outfit }: OutfitCategoryPickerP
                         >
                           <div>
                             <div className="flex items-center justify-between gap-2">
-                              <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wide', kindMeta.badge)}>
+                              <span
+                                className={cn(
+                                  'rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wide',
+                                  kindMeta.badge,
+                                )}
+                              >
                                 {kindMeta.label}
                               </span>
                               <ArrowRight className="size-3.5 text-muted-foreground/60 transition group-hover:translate-x-0.5 group-hover:text-primary" />

@@ -87,11 +87,13 @@ export function sizeNote(
     case 'freeSize':
       return 'Free size';
     case 'tops':
-      if (sizes.tops) return `Your saved size: ${sizes.tops.letter}${sizes.tops.collarIn ? `, collar ${sizes.tops.collarIn} in` : ''}`;
+      if (sizes.tops)
+        return `Your saved size: ${sizes.tops.letter}${sizes.tops.collarIn ? `, collar ${sizes.tops.collarIn} in` : ''}`;
       if (hasMeasurements) return 'Tailored to your measurements';
       return prompt;
     case 'bottoms':
-      if (sizes.bottoms) return `Your saved waist: ${sizes.bottoms.waistIn} in${sizes.bottoms.lengthIn ? `, length ${sizes.bottoms.lengthIn} in` : ''}`;
+      if (sizes.bottoms)
+        return `Your saved waist: ${sizes.bottoms.waistIn} in${sizes.bottoms.lengthIn ? `, length ${sizes.bottoms.lengthIn} in` : ''}`;
       if (hasMeasurements) return 'Tailored to your measurements';
       return prompt;
     case 'ethnicTops': {

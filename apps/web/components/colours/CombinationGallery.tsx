@@ -21,7 +21,11 @@ export interface CombinationGalleryProps {
  * Curated combinations (#105): two- and three-colour outfits built only from the user's own colours, best first,
  * filterable by harmony and by colours the user likes.
  */
-export function CombinationGallery({ combinations, harmonies, garment = null }: CombinationGalleryProps & { garment?: string | null }) {
+export function CombinationGallery({
+  combinations,
+  harmonies,
+  garment = null,
+}: CombinationGalleryProps & { garment?: string | null }) {
   const [harmony, setHarmony] = useState<CombinationHarmony | 'all'>('all');
   const [likedOnly, setLikedOnly] = useState(false);
   const [limit, setLimit] = useState(PAGE_SIZE);

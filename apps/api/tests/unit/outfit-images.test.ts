@@ -1,6 +1,6 @@
 import { buildOutfitImagePrompt } from '../../src/integrations/ai/prompts/outfit-image-v3';
 import { describe, expect, it } from 'vitest';
-import type { LookSpec } from '@styleme/contracts';
+import type { LookSlot, LookSpec } from '@styleme/contracts';
 import { ImageProviderError, pollinationsImageProvider } from '../../src/integrations/ai/image-client';
 import {
   AVOIDED_MAX_DISTANCE,
@@ -117,12 +117,25 @@ describe('design matching', () => {
 });
 
 describe('buildOutfitImagePrompt with garment & custom colors', () => {
-
   it('generates an anarkali prompt instead of kurti when anarkali design is selected', () => {
     const prompt = buildOutfitImagePrompt({
       slots: [
-        { slotId: 'slot-1', slot: 'top', searchPhrase: 'coral cotton knee-length regular a-line v-neck kurti', lookSpec: { category: 'kurti' }, swatches: [{ colorId: 'coral', hex: '#FF7F50', name: 'Coral' }], alternatives: [] } as any,
-        { slotId: 'slot-2', slot: 'bottom', searchPhrase: 'white silk regular straight trousers', lookSpec: { category: 'trousers' }, swatches: [{ colorId: 'white', hex: '#FFFFFF', name: 'White' }], alternatives: [] } as any,
+        {
+          slotId: 'slot-1',
+          slot: 'top',
+          searchPhrase: 'coral cotton knee-length regular a-line v-neck kurti',
+          lookSpec: { category: 'kurti' },
+          swatches: [{ colorId: 'coral', hex: '#FF7F50', name: 'Coral' }],
+          alternatives: [],
+        } as unknown as LookSlot,
+        {
+          slotId: 'slot-2',
+          slot: 'bottom',
+          searchPhrase: 'white silk regular straight trousers',
+          lookSpec: { category: 'trousers' },
+          swatches: [{ colorId: 'white', hex: '#FFFFFF', name: 'White' }],
+          alternatives: [],
+        } as unknown as LookSlot,
       ],
       occasion: 'festive',
       style: null,
@@ -135,17 +148,32 @@ describe('buildOutfitImagePrompt with garment & custom colors', () => {
   });
 
   it('uses custom selected colors for pieces when provided', () => {
-    const colours = new Map([['slot-1', 'Emerald'], ['slot-2', 'Gold']]);
+    const colours = new Map([
+      ['slot-1', 'Emerald'],
+      ['slot-2', 'Gold'],
+    ]);
     const prompt = buildOutfitImagePrompt({
       slots: [
-        { slotId: 'slot-1', slot: 'top', searchPhrase: 'coral cotton kurti', swatches: [{ colorId: 'coral', hex: '#FF7F50', name: 'Coral' }], alternatives: [] } as any,
-        { slotId: 'slot-2', slot: 'bottom', searchPhrase: 'white trousers', swatches: [{ colorId: 'white', hex: '#FFFFFF', name: 'White' }], alternatives: [] } as any,
+        {
+          slotId: 'slot-1',
+          slot: 'top',
+          searchPhrase: 'coral cotton kurti',
+          swatches: [{ colorId: 'coral', hex: '#FF7F50', name: 'Coral' }],
+          alternatives: [],
+        } as unknown as LookSlot,
+        {
+          slotId: 'slot-2',
+          slot: 'bottom',
+          searchPhrase: 'white trousers',
+          swatches: [{ colorId: 'white', hex: '#FFFFFF', name: 'White' }],
+          alternatives: [],
+        } as unknown as LookSlot,
       ],
       occasion: 'wedding',
       style: null,
       department: 'women',
       colours,
-          });
+    });
     expect(prompt.toLowerCase()).toContain('emerald');
     expect(prompt.toLowerCase()).toContain('gold');
   });

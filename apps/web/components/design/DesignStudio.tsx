@@ -227,8 +227,7 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
         if (fit && fit.features.length > 0)
           list.push({ title: 'Fit & Silhouette', categoryResult: fit, compact: true });
         const length = category('length');
-        if (length && length.features.length > 0)
-          list.push({ title: 'Length', categoryResult: length, compact: true });
+        if (length && length.features.length > 0) list.push({ title: 'Length', categoryResult: length, compact: true });
         const pleats = category('pleats');
         if (pleats && pleats.features.length > 0)
           list.push({ title: 'Pleats & Creases', categoryResult: pleats, compact: true });
@@ -241,8 +240,7 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
       if (sleeves && sleeves.features.length > 0)
         list.push({ title: sleeves.label, categoryResult: sleeves, compact: true });
       const fit = category('fit');
-      if (fit && fit.features.length > 0)
-        list.push({ title: 'Fit & Bodice', categoryResult: fit, compact: true });
+      if (fit && fit.features.length > 0) list.push({ title: 'Fit & Bodice', categoryResult: fit, compact: true });
     } else if (isDrape) {
       const draping = category('draping');
       if (draping && draping.features.length > 0)
@@ -253,8 +251,7 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
       if (sleeves && sleeves.features.length > 0)
         list.push({ title: sleeves.label, categoryResult: sleeves, compact: true });
       const fit = category('fit');
-      if (fit && fit.features.length > 0)
-        list.push({ title: 'Fit & Silhouette', categoryResult: fit, compact: true });
+      if (fit && fit.features.length > 0) list.push({ title: 'Fit & Silhouette', categoryResult: fit, compact: true });
     }
 
     return list;
@@ -536,20 +533,12 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
             {isLehenga ? (
               // Lehenga Multi-Piece Ensemble (Blouse + Skirt + Dupatta, matching Images 2, 3, 4)
               <div aria-label="Your selected combination">
-                <LehengaEnsembleMannequin
-                  selected={selected}
-                  department={department}
-                  view={lehengaView}
-                />
+                <LehengaEnsembleMannequin selected={selected} department={department} view={lehengaView} />
               </div>
             ) : isBottom ? (
               // Lower Body Customer Try-On Mannequin (Trousers, Jeans, Palazzo, Skirt)
               <div aria-label="Your selected combination">
-                <LowerBodyMannequin
-                  selected={selected}
-                  department={department}
-                  garmentId={data.garmentType.id}
-                />
+                <LowerBodyMannequin selected={selected} department={department} garmentId={data.garmentType.id} />
               </div>
             ) : isBlouse && blouseView === 'back' ? (
               // Blouse Back View Mannequin (Backless dori, deep U back, keyhole)
@@ -682,10 +671,10 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
               {isLehenga
                 ? 'Pick a choli neckline, lehenga flare and draping style.'
                 : isBottom
-                ? 'Pick a trouser cut, rise, length and fit.'
-                : isDrape
-                ? 'Pick a drape style and fabric.'
-                : 'Pick a neckline, a sleeve and any tags.'}
+                  ? 'Pick a trouser cut, rise, length and fit.'
+                  : isDrape
+                    ? 'Pick a drape style and fabric.'
+                    : 'Pick a neckline, a sleeve and any tags.'}
             </p>
           )}
 
@@ -713,12 +702,12 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
             {hasSelection
               ? 'Saves this design, then finds looks that match it.'
               : isLehenga
-              ? 'Pick a choli neckline or lehenga silhouette first.'
-              : isBottom
-              ? 'Pick a trouser cut or waistline first.'
-              : isDrape
-              ? 'Pick a drape style first.'
-              : 'Pick a neckline or sleeve first.'}
+                ? 'Pick a choli neckline or lehenga silhouette first.'
+                : isBottom
+                  ? 'Pick a trouser cut or waistline first.'
+                  : isDrape
+                    ? 'Pick a drape style first.'
+                    : 'Pick a neckline or sleeve first.'}
           </p>
 
           <p

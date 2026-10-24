@@ -12,7 +12,15 @@ type OwnColour = MyColourCombinationsResponse['colours'][number];
  * Coordinating colours (#105): choose one of your colours to see the colours from your own palette that go well
  * with it, best first. Liked colours are listed first in the picker; avoided colours are never offered.
  */
-export function CoordinatingColours({ colours, coordinating, garment = null }: { colours: OwnColour[]; coordinating: Coordinating[]; garment?: string | null }) {
+export function CoordinatingColours({
+  colours,
+  coordinating,
+  garment = null,
+}: {
+  colours: OwnColour[];
+  coordinating: Coordinating[];
+  garment?: string | null;
+}) {
   const ordered = [
     ...colours.filter((c) => c.preference === 'liked'),
     ...colours.filter((c) => c.preference !== 'liked'),

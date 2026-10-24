@@ -41,7 +41,7 @@ export default async function DiscoverLooksPage({
 
   // What the user chose elsewhere: designs saved in Outfit Categories, colours from My Colour Palette and the
   // appearance signals from My Profile (D-129). Each section loads on its own, so one failure never blocks the page.
-  const [profile, appearance, selections, designPreferences, colours, combinations, designData] = await Promise.all([
+  const [profile, appearance, selections, designPreferences, _colours, combinations, designData] = await Promise.all([
     apiRequest<ProfileResponse>('/v1/profile', { token: accessToken }),
     apiRequest<AppearanceResponse>('/v1/appearance', { token: accessToken }).catch(() => null),
     apiRequest<DesignSelectionItem[]>('/v1/design/selections', { token: accessToken }).catch(() => []),

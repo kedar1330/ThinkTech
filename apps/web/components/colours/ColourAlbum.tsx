@@ -30,7 +30,17 @@ const PREFERENCE_FILTERS: Array<{ id: PreferenceFilter; label: string }> = [
  * save them as liked or to avoid, or clear them. With one colour selected, its reasons are shown. In `saved`
  * mode, cleared colours leave the list.
  */
-export function ColourAlbum({ colours, mode = 'category', fromDiscover = false, garment = null }: { colours: AlbumColour[]; mode?: 'category' | 'saved'; fromDiscover?: boolean; garment?: string | null }) {
+export function ColourAlbum({
+  colours,
+  mode = 'category',
+  fromDiscover = false,
+  garment = null,
+}: {
+  colours: AlbumColour[];
+  mode?: 'category' | 'saved';
+  fromDiscover?: boolean;
+  garment?: string | null;
+}) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [overrides, setOverrides] = useState<Map<string, ColourPreference | null>>(new Map());
   const [family, setFamily] = useState<ColourFamily | 'all'>('all');
@@ -108,7 +118,8 @@ export function ColourAlbum({ colours, mode = 'category', fromDiscover = false, 
           <div className="flex items-center gap-2">
             <Sparkles className="size-4 text-plum shrink-0" />
             <span>
-              <strong>Choose outfit colours:</strong> Tap any colours below to select them for your Discover My Style look, then click <strong>"Use in Discover My Style"</strong>.
+              <strong>Choose outfit colours:</strong> Tap any colours below to select them for your Discover My Style
+              look, then click <strong>"Use in Discover My Style"</strong>.
             </span>
           </div>
           <a

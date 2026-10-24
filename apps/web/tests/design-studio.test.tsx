@@ -337,10 +337,7 @@ describe('DesignStudio', () => {
           label: 'Fit & Silhouette',
           presentation: 'tags',
           personalised: true,
-          features: [
-            feature('fit_slim', 'Slim fit', 'fit'),
-            feature('fit_flared', 'Flared fit', 'fit'),
-          ],
+          features: [feature('fit_slim', 'Slim fit', 'fit'), feature('fit_flared', 'Flared fit', 'fit')],
         },
         {
           id: 'waistline',
@@ -405,10 +402,7 @@ describe('DesignStudio', () => {
           label: 'Fit & Silhouette',
           presentation: 'tags',
           personalised: true,
-          features: [
-            feature('fit_flared', 'Flared fit', 'fit'),
-            feature('fit_slim', 'Slim fit', 'fit'),
-          ],
+          features: [feature('fit_flared', 'Flared fit', 'fit'), feature('fit_slim', 'Slim fit', 'fit')],
         },
         {
           id: 'pockets',
@@ -454,10 +448,7 @@ describe('DesignStudio', () => {
           label: 'Skirt Silhouette & Flare',
           presentation: 'tags',
           personalised: true,
-          features: [
-            feature('fit_a_line', 'A-Line', 'fit'),
-            feature('fit_flared', 'Flared', 'fit'),
-          ],
+          features: [feature('fit_a_line', 'A-Line', 'fit'), feature('fit_flared', 'Flared', 'fit')],
         },
         {
           id: 'waistline',
@@ -538,4 +529,3 @@ describe('DesignStudio', () => {
     expect(mannequin.innerHTML).toContain('M 64 52 C 48 48 46 68 54 78');
   });
 });
-

@@ -39,45 +39,38 @@ export function FeatureThumbnailSvg({
 
   // 1. TROUSER LEG SHAPES & CUTS
   if (cat === 'leg_shape' || fid.startsWith('leg_shape_')) {
-    let legPath = '';
-    let description = '';
+    let legPath: string;
 
     if (fid.includes('straight')) {
       // Parallel straight cut from hip to hem
       legPath = `
         M 48 35 L 48 160 L 76 160 L 78 85 L 80 85 L 82 85 L 84 160 L 112 160 L 112 35 Z
       `;
-      description = 'Straight leg';
     } else if (fid.includes('wide')) {
       // Dramatic wide palazzo flare
       legPath = `
         M 54 35 L 34 160 L 78 160 L 80 85 L 82 160 L 126 160 L 106 35 Z
       `;
-      description = 'Wide palazzo leg';
     } else if (fid.includes('flared')) {
       // Fitted at knee, widening to bell hem
       legPath = `
         M 52 35 Q 56 75 62 105 Q 58 135 42 160 L 76 160 Q 72 135 73 105 L 80 85 L 87 105 Q 88 135 84 160 L 118 160 Q 102 135 98 105 Q 104 75 108 35 Z
       `;
-      description = 'Flared leg';
     } else if (fid.includes('skinny')) {
       // Snug tapered skinny leg
       legPath = `
         M 50 35 Q 56 85 64 120 L 66 160 L 76 160 L 75 120 L 80 85 L 85 120 L 84 160 L 94 160 L 96 120 Q 104 85 110 35 Z
       `;
-      description = 'Skinny leg';
     } else if (fid.includes('tapered')) {
       // Roomy hip tapering crisply to narrow ankle
       legPath = `
         M 44 35 Q 46 80 58 120 L 62 160 L 77 160 L 76 115 L 80 85 L 84 115 L 83 160 L 98 160 L 102 120 Q 114 80 116 35 Z
       `;
-      description = 'Tapered leg';
     } else {
       // Slim cut (default)
       legPath = `
         M 49 35 Q 52 85 60 120 L 63 160 L 77 160 L 76 120 L 80 85 L 84 120 L 83 160 L 97 160 L 100 120 Q 108 85 111 35 Z
       `;
-      description = 'Slim leg';
     }
 
     return (
@@ -166,12 +159,7 @@ export function FeatureThumbnailSvg({
   }
 
   // 3. BLOUSE BACK NECK DESIGNS
-  if (
-    fid.includes('back') ||
-    fid.includes('backless') ||
-    fid.includes('keyhole') ||
-    fid.includes('sheer_illusion')
-  ) {
+  if (fid.includes('back') || fid.includes('backless') || fid.includes('keyhole') || fid.includes('sheer_illusion')) {
     const isDeepU = fid.includes('deep_u') || fid.includes('deep_u_back');
     const isBackless = fid.includes('backless') || fid.includes('dori');
     const isKeyhole = fid.includes('keyhole');
@@ -179,7 +167,7 @@ export function FeatureThumbnailSvg({
     const isSquare = fid.includes('square');
     const isInvertedV = fid.includes('inverted_v');
 
-    let cutPath = '';
+    let cutPath: string;
     if (isDeepU) {
       cutPath = 'M 60 50 Q 80 125 100 50';
     } else if (isBackless) {
@@ -204,12 +192,7 @@ export function FeatureThumbnailSvg({
           strokeDasharray="3 3"
         />
         {/* Blouse bodice back */}
-        <path
-          d="M 46 55 L 56 46 L 104 46 L 114 55 L 112 125 L 48 125 Z"
-          fill={CLOTH}
-          stroke={LINE}
-          strokeWidth="1.3"
-        />
+        <path d="M 46 55 L 56 46 L 104 46 L 114 55 L 112 125 L 48 125 Z" fill={CLOTH} stroke={LINE} strokeWidth="1.3" />
         {/* Back cut-out */}
         <path d={cutPath} fill={isSheer ? '#f5eee3' : '#faf6ef'} stroke={LINE} strokeWidth="1.3" />
 
@@ -224,9 +207,7 @@ export function FeatureThumbnailSvg({
           </g>
         )}
 
-        {isKeyhole && (
-          <circle cx="80" cy="54" r="1.5" fill={LINE} />
-        )}
+        {isKeyhole && <circle cx="80" cy="54" r="1.5" fill={LINE} />}
 
         {isSheer && (
           <g stroke={LINE_MUTED} strokeWidth="0.5" strokeDasharray="1.5 1.5">
@@ -257,7 +238,12 @@ export function FeatureThumbnailSvg({
         {isMandarin ? (
           // Standing Nehru / Mandarin band
           <g>
-            <path d="M 68 50 Q 80 54 92 50 L 92 40 Q 80 44 68 40 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.2" />
+            <path
+              d="M 68 50 Q 80 54 92 50 L 92 40 Q 80 44 68 40 Z"
+              fill={CLOTH_SHADOW}
+              stroke={LINE}
+              strokeWidth="1.2"
+            />
             <line x1="80" y1="52" x2="80" y2="120" stroke={LINE} strokeWidth="1" />
             <circle cx="80" cy="62" r="1.5" fill={LINE} />
             <circle cx="80" cy="76" r="1.5" fill={LINE} />
@@ -266,15 +252,35 @@ export function FeatureThumbnailSvg({
         ) : isPeterPan ? (
           // Rounded Peter Pan collars
           <g>
-            <path d="M 80 52 C 70 52 60 56 60 66 C 60 76 74 74 79 56 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.2" />
-            <path d="M 80 52 C 90 52 100 56 100 66 C 100 76 86 74 81 56 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.2" />
+            <path
+              d="M 80 52 C 70 52 60 56 60 66 C 60 76 74 74 79 56 Z"
+              fill={CLOTH_SHADOW}
+              stroke={LINE}
+              strokeWidth="1.2"
+            />
+            <path
+              d="M 80 52 C 90 52 100 56 100 66 C 100 76 86 74 81 56 Z"
+              fill={CLOTH_SHADOW}
+              stroke={LINE}
+              strokeWidth="1.2"
+            />
             <line x1="80" y1="56" x2="80" y2="120" stroke={LINE} strokeWidth="1" />
           </g>
         ) : isNotched ? (
           // Notched lapel
           <g>
-            <path d="M 66 48 L 56 72 L 68 76 L 62 100 L 80 100 L 80 52 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.2" />
-            <path d="M 94 48 L 104 72 L 92 76 L 98 100 L 80 100 L 80 52 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.2" />
+            <path
+              d="M 66 48 L 56 72 L 68 76 L 62 100 L 80 100 L 80 52 Z"
+              fill={CLOTH_SHADOW}
+              stroke={LINE}
+              strokeWidth="1.2"
+            />
+            <path
+              d="M 94 48 L 104 72 L 92 76 L 98 100 L 80 100 L 80 52 Z"
+              fill={CLOTH_SHADOW}
+              stroke={LINE}
+              strokeWidth="1.2"
+            />
             <line x1="80" y1="100" x2="80" y2="125" stroke={LINE} strokeWidth="1" />
           </g>
         ) : (
@@ -302,31 +308,47 @@ export function FeatureThumbnailSvg({
   }
 
   // 5. FIT & SILHOUETTE (Context-aware for bottoms, lehengas, and tops)
-  if (cat === 'fit' || fid.startsWith('fit_') || ((cat === 'silhouette' || fid.startsWith('silhouette_')) && isLehenga)) {
+  if (
+    cat === 'fit' ||
+    fid.startsWith('fit_') ||
+    ((cat === 'silhouette' || fid.startsWith('silhouette_')) && isLehenga)
+  ) {
     if (isBottom) {
       // Trouser thumbnail representation (matching Image 1 & 5)
       const isFlared = fid.includes('flared') || fid.includes('a_line');
       const isWide = fid.includes('relaxed') || fid.includes('oversized') || fid.includes('wide');
       const isSkinny = fid.includes('slim') || fid.includes('skinny') || fid.includes('bodycon');
 
-      let tPath = '';
+      let tPath: string;
       if (isFlared) {
         // Bell-bottom flared hem
-        tPath = 'M 54 35 Q 58 75 62 105 Q 58 135 42 160 L 74 160 Q 72 135 73 105 L 80 85 L 87 105 Q 88 135 86 160 L 118 160 Q 102 135 98 105 Q 102 75 106 35 Z';
+        tPath =
+          'M 54 35 Q 58 75 62 105 Q 58 135 42 160 L 74 160 Q 72 135 73 105 L 80 85 L 87 105 Q 88 135 86 160 L 118 160 Q 102 135 98 105 Q 102 75 106 35 Z';
       } else if (isWide) {
         // Wide palazzo leg
         tPath = 'M 54 35 L 36 160 L 76 160 L 80 85 L 84 160 L 124 160 L 106 35 Z';
       } else if (isSkinny) {
         // Tapered skinny leg
-        tPath = 'M 52 35 Q 58 85 64 120 L 66 160 L 76 160 L 76 120 L 80 85 L 84 120 L 84 160 L 94 160 L 96 120 Q 102 85 108 35 Z';
+        tPath =
+          'M 52 35 Q 58 85 64 120 L 66 160 L 76 160 L 76 120 L 80 85 L 84 120 L 84 160 L 94 160 L 96 120 Q 102 85 108 35 Z';
       } else {
         // Straight / Tailored / Regular
         tPath = 'M 50 35 L 50 160 L 74 160 L 77 85 L 80 85 L 83 85 L 86 160 L 110 160 L 110 35 Z';
       }
 
       return (
-        <svg viewBox={viewBox} className={`w-auto ${hClass} transition-transform hover:scale-105`} aria-hidden="true" fill="none">
-          <path d="M 44 26 Q 80 29 116 26 M 80 22 L 80 40" stroke={MANNEQUIN_DASH} strokeWidth="1" strokeDasharray="2 2" />
+        <svg
+          viewBox={viewBox}
+          className={`w-auto ${hClass} transition-transform hover:scale-105`}
+          aria-hidden="true"
+          fill="none"
+        >
+          <path
+            d="M 44 26 Q 80 29 116 26 M 80 22 L 80 40"
+            stroke={MANNEQUIN_DASH}
+            strokeWidth="1"
+            strokeDasharray="2 2"
+          />
           <path d={tPath} fill={CLOTH} stroke={LINE} strokeWidth="1.3" strokeLinejoin="round" />
           <path d="M 50 45 Q 80 47 110 45" stroke={LINE} strokeWidth="1" />
           <line x1="80" y1="45" x2="80" y2="70" stroke={LINE_MUTED} strokeWidth="0.9" />
@@ -344,7 +366,7 @@ export function FeatureThumbnailSvg({
       const isRelaxed = fid.includes('relaxed');
       const isOversized = fid.includes('oversized') || fid.includes('flared') || fid.includes('umbrella');
 
-      let sPath = '';
+      let sPath: string;
       if (isSlim) {
         // Option A: Mermaid / Fish-cut (hugs hips, flares at knee)
         sPath = 'M 62 38 Q 80 41 98 38 Q 96 80 92 110 Q 104 135 120 160 L 40 160 Q 56 135 68 110 Q 64 80 62 38 Z';
@@ -360,7 +382,12 @@ export function FeatureThumbnailSvg({
       }
 
       return (
-        <svg viewBox={viewBox} className={`w-auto ${hClass} transition-transform hover:scale-105`} aria-hidden="true" fill="none">
+        <svg
+          viewBox={viewBox}
+          className={`w-auto ${hClass} transition-transform hover:scale-105`}
+          aria-hidden="true"
+          fill="none"
+        >
           <path d="M 54 30 Q 80 33 106 30" stroke={MANNEQUIN_DASH} strokeWidth="1" strokeDasharray="2 2" />
           <path d={sPath} fill={CLOTH} stroke={LINE} strokeWidth="1.3" strokeLinejoin="round" />
           <path d="M 62 46 Q 80 49 98 46" stroke={LINE} strokeWidth="1.2" fill={CLOTH_SHADOW} />
@@ -369,7 +396,12 @@ export function FeatureThumbnailSvg({
           <line x1="80" y1="46" x2="80" y2="160" stroke={LINE_MUTED} strokeWidth="0.8" />
           <line x1="88" y1="46" x2="98" y2="158" stroke={LINE_MUTED} strokeWidth="0.8" />
           {/* Zari hem border */}
-          <path d="M 38 153 Q 80 157 122 153 L 124 160 Q 80 164 36 160 Z" fill={ACCENT} stroke={LINE} strokeWidth="0.8" />
+          <path
+            d="M 38 153 Q 80 157 122 153 L 124 160 Q 80 164 36 160 Z"
+            fill={ACCENT}
+            stroke={LINE}
+            strokeWidth="0.8"
+          />
         </svg>
       );
     }
@@ -384,7 +416,12 @@ export function FeatureThumbnailSvg({
     const hemW = isALine ? 48 : isRelaxed ? 40 : isSlim ? 26 : 32;
 
     return (
-      <svg viewBox={viewBox} className={`w-auto ${hClass} transition-transform hover:scale-105`} aria-hidden="true" fill="none">
+      <svg
+        viewBox={viewBox}
+        className={`w-auto ${hClass} transition-transform hover:scale-105`}
+        aria-hidden="true"
+        fill="none"
+      >
         {/* Mannequin guide */}
         <path
           d="M 52 35 Q 80 38 108 35 M 80 32 L 80 145"
@@ -434,12 +471,7 @@ export function FeatureThumbnailSvg({
         <line x1="50" y1="155" x2="110" y2="155" stroke={MANNEQUIN_DASH} strokeWidth="1.2" />
 
         {/* Garment silhouette */}
-        <path
-          d={`M 54 35 L 56 ${hemY} L 104 ${hemY} L 106 35 Z`}
-          fill={CLOTH}
-          stroke={LINE}
-          strokeWidth="1.3"
-        />
+        <path d={`M 54 35 L 56 ${hemY} L 104 ${hemY} L 106 35 Z`} fill={CLOTH} stroke={LINE} strokeWidth="1.3" />
         {/* Hem indicator marker */}
         <line x1="48" y1={hemY} x2="112" y2={hemY} stroke={ACCENT} strokeWidth="2" />
         <polygon points={`48,${hemY} 44,${hemY - 3} 44,${hemY + 3}`} fill={ACCENT} />
@@ -473,9 +505,7 @@ export function FeatureThumbnailSvg({
             <line x1="100" y1="54" x2="100" y2="135" />
           </g>
         )}
-        {isCuffed && (
-          <rect x="47" y="132" width="66" height="13" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.1" />
-        )}
+        {isCuffed && <rect x="47" y="132" width="66" height="13" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.1" />}
       </svg>
     );
   }
@@ -492,12 +522,7 @@ export function FeatureThumbnailSvg({
         <path d="M 68 55 L 92 55 L 90 85 L 70 85 Z" stroke={MANNEQUIN_DASH} strokeWidth="1" strokeDasharray="2 2" />
 
         {/* Saree drape & pleats */}
-        <path
-          d="M 60 85 Q 80 82 100 85 L 105 155 Q 80 158 55 155 Z"
-          fill={CLOTH}
-          stroke={LINE}
-          strokeWidth="1.3"
-        />
+        <path d="M 60 85 Q 80 82 100 85 L 105 155 Q 80 158 55 155 Z" fill={CLOTH} stroke={LINE} strokeWidth="1.3" />
         {/* Accordion front pleats */}
         <line x1="76" y1="85" x2="76" y2="155" stroke={LINE_MUTED} strokeWidth="0.9" />
         <line x1="80" y1="85" x2="80" y2="155" stroke={LINE_MUTED} strokeWidth="0.9" />
@@ -568,36 +593,19 @@ export function LowerBodyMannequin({ selected, garmentId }: LowerBodyMannequinPr
   const isSkirt = garmentId === 'skirt';
 
   // Fit and silhouette classification
-  const isFlared =
-    legShape.includes('flared') ||
-    fit.includes('flared') ||
-    fit.includes('a_line');
+  const isFlared = legShape.includes('flared') || fit.includes('flared') || fit.includes('a_line');
 
   const isWide =
-    legShape.includes('wide') ||
-    legShape.includes('palazzo') ||
-    fit.includes('relaxed') ||
-    fit.includes('oversized');
+    legShape.includes('wide') || legShape.includes('palazzo') || fit.includes('relaxed') || fit.includes('oversized');
 
   const isSkinny =
-    legShape.includes('skinny') ||
-    fit.includes('skinny') ||
-    fit.includes('bodycon') ||
-    fit.includes('slim');
+    legShape.includes('skinny') || fit.includes('skinny') || fit.includes('bodycon') || fit.includes('slim');
 
-  const isTapered =
-    legShape.includes('tapered') ||
-    fit.includes('tapered');
+  const isTapered = legShape.includes('tapered') || fit.includes('tapered');
 
-  const isCargo =
-    pockets.includes('cargo') ||
-    fit.includes('cargo') ||
-    pockets.includes('patch');
+  const isCargo = pockets.includes('cargo') || fit.includes('cargo') || pockets.includes('patch');
 
-  const isCropped =
-    length.includes('cropped') ||
-    length.includes('above_ankle') ||
-    length.includes('midi');
+  const isCropped = length.includes('cropped') || length.includes('above_ankle') || length.includes('midi');
 
   // 1. Calculate Waistline Y
   let waistY = 38;
@@ -616,7 +624,7 @@ export function LowerBodyMannequin({ selected, garmentId }: LowerBodyMannequinPr
   }
 
   // 3. Build Trouser Silhouette Path
-  let trouserPath = '';
+  let trouserPath: string;
   const crotchY = 96;
 
   if (isFlared) {
@@ -699,7 +707,7 @@ export function LowerBodyMannequin({ selected, garmentId }: LowerBodyMannequinPr
   }
 
   // 4. Build Skirt Silhouette Path
-  let skirtPath = '';
+  let skirtPath: string;
   if (isSkinny) {
     // Pencil / Slim silhouette
     skirtPath = `
@@ -787,7 +795,11 @@ export function LowerBodyMannequin({ selected, garmentId }: LowerBodyMannequinPr
             <circle cx="100" cy={waistY + 4} r="1.5" fill={LINE} />
 
             {/* Pleats & Gathers */}
-            {(pleats.includes('pleated') || pleats.includes('box') || pleats.includes('knife') || pleats.includes('single') || pleats.includes('double')) && (
+            {(pleats.includes('pleated') ||
+              pleats.includes('box') ||
+              pleats.includes('knife') ||
+              pleats.includes('single') ||
+              pleats.includes('double')) && (
               <g stroke={LINE_MUTED} strokeWidth="0.85">
                 <line x1="82" y1={waistY + 8} x2="65" y2={hemY} />
                 <line x1="90" y1={waistY + 8} x2="82" y2={hemY + 3} />
@@ -798,9 +810,7 @@ export function LowerBodyMannequin({ selected, garmentId }: LowerBodyMannequinPr
             )}
 
             {/* Pencil Skirt Back Vent / Slit */}
-            {isSkinny && (
-              <line x1="100" y1={hemY - 24} x2="100" y2={hemY + 3} stroke={LINE} strokeWidth="1.2" />
-            )}
+            {isSkinny && <line x1="100" y1={hemY - 24} x2="100" y2={hemY + 3} stroke={LINE} strokeWidth="1.2" />}
 
             {/* Side pockets */}
             {pockets.includes('side') && (
@@ -816,8 +826,8 @@ export function LowerBodyMannequin({ selected, garmentId }: LowerBodyMannequinPr
                 isSkinny
                   ? `M 72 ${hemY} Q 100 ${hemY + 4} 128 ${hemY}`
                   : isFlared || isWide
-                  ? `M 30 ${hemY} Q 100 ${hemY + 10} 170 ${hemY}`
-                  : `M 46 ${hemY} Q 100 ${hemY + 6} 154 ${hemY}`
+                    ? `M 30 ${hemY} Q 100 ${hemY + 10} 170 ${hemY}`
+                    : `M 46 ${hemY} Q 100 ${hemY + 6} 154 ${hemY}`
               }
               stroke={ACCENT}
               strokeWidth="1.6"
@@ -908,7 +918,7 @@ export function LowerBodyMannequin({ selected, garmentId }: LowerBodyMannequinPr
               )}
 
               {/* Pattern: Stripes on Trousers */}
-              {(selected.pattern ?? '').includes('striped') && (
+              {pattern.includes('striped') && (
                 <g stroke={LINE} strokeWidth="0.5" opacity="0.25">
                   <line x1="72" y1={waistY + 12} x2="72" y2={hemY - 4} />
                   <line x1="82" y1={waistY + 12} x2="82" y2={hemY - 4} />
@@ -928,20 +938,14 @@ export function LowerBodyMannequin({ selected, garmentId }: LowerBodyMannequinPr
           <span className="font-serif text-xs font-medium tracking-wide text-[#7a5a36]">
             Pick your skirt silhouette
           </span>
-          <span className="mt-0.5 text-[10px] text-muted-foreground">
-            A-line, flared, pencil, or pleated
-          </span>
+          <span className="mt-0.5 text-[10px] text-muted-foreground">A-line, flared, pencil, or pleated</span>
         </div>
       )}
       {!isSkirt && !hasTrouserCut && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
           <span className="mb-1 text-2xl font-light leading-none text-[#8a6a42]">+</span>
-          <span className="font-serif text-xs font-medium tracking-wide text-[#7a5a36]">
-            Pick your trouser cut
-          </span>
-          <span className="mt-0.5 text-[10px] text-muted-foreground">
-            Straight, wide leg, flared or slim
-          </span>
+          <span className="font-serif text-xs font-medium tracking-wide text-[#7a5a36]">Pick your trouser cut</span>
+          <span className="mt-0.5 text-[10px] text-muted-foreground">Straight, wide leg, flared or slim</span>
         </div>
       )}
     </div>
@@ -990,12 +994,7 @@ export function BlouseBackMannequin({ selected }: BlouseBackMannequinProps) {
         </g>
 
         {/* Blouse Bodice Back */}
-        <path
-          d="M 60 76 L 72 56 L 128 56 L 140 76 L 132 152 L 68 152 Z"
-          fill={CLOTH}
-          stroke={LINE}
-          strokeWidth="1.3"
-        />
+        <path d="M 60 76 L 72 56 L 128 56 L 140 76 L 132 152 L 68 152 Z" fill={CLOTH} stroke={LINE} strokeWidth="1.3" />
 
         {/* Back cut-out */}
         <path d={cutPath} fill={isSheer ? '#f5eee3' : '#faf6ef'} stroke={LINE} strokeWidth="1.3" />
@@ -1058,7 +1057,8 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
 
   // Fit & flare classification for the lehenga skirt
   const isMermaid = fitId.includes('slim') || silId.includes('mermaid') || silId.includes('sheath');
-  const isUmbrella = fitId.includes('oversized') || silId.includes('flared') || fitId.includes('flared') || silId.includes('umbrella');
+  const isUmbrella =
+    fitId.includes('oversized') || silId.includes('flared') || fitId.includes('flared') || silId.includes('umbrella');
   const isRelaxed = fitId.includes('relaxed') || silId.includes('layered') || silId.includes('draped');
 
   // Choli fit classification
@@ -1067,7 +1067,7 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
   const isCholiRelaxed = fitId.includes('relaxed');
 
   // Skirt path for Full Ensemble view (y: 116 to 232)
-  let ensembleSkirtPath = '';
+  let ensembleSkirtPath: string;
   if (isMermaid) {
     // Option A: Mermaid / Fish-cut (hugs hips down to knee, flares out to hem)
     ensembleSkirtPath = `
@@ -1109,7 +1109,7 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
   }
 
   // Skirt path for Skirt Zoomed view (y: 42 to 228)
-  let skirtZoomedPath = '';
+  let skirtZoomedPath: string;
   if (isMermaid) {
     skirtZoomedPath = `
       M 64 48
@@ -1174,8 +1174,8 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
                   isCholiSlim
                     ? 'M 64 52 L 72 98 Q 100 101 128 98 L 136 52 Q 100 58 64 52 Z'
                     : isCholiOversized
-                    ? 'M 64 52 Q 58 75 60 98 Q 100 105 140 98 Q 142 75 136 52 Z'
-                    : 'M 64 52 L 70 98 Q 100 102 130 98 L 136 52 Q 100 58 64 52 Z'
+                      ? 'M 64 52 Q 58 75 60 98 Q 100 105 140 98 Q 142 75 136 52 Z'
+                      : 'M 64 52 L 70 98 Q 100 102 130 98 L 136 52 Q 100 58 64 52 Z'
                 }
                 fill={CLOTH}
                 stroke={LINE}
@@ -1229,7 +1229,12 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
                 </g>
               ) : neckId.includes('mandarin') || neckId.includes('high_neck') ? (
                 <g>
-                  <path d="M 92 44 L 92 52 Q 100 54 108 52 L 108 44 Q 100 42 92 44 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.2" />
+                  <path
+                    d="M 92 44 L 92 52 Q 100 54 108 52 L 108 44 Q 100 42 92 44 Z"
+                    fill={CLOTH_SHADOW}
+                    stroke={LINE}
+                    strokeWidth="1.2"
+                  />
                   <line x1="100" y1="44" x2="100" y2="60" stroke={LINE} strokeWidth="1" />
                   <path d="M 92 44 Q 100 42 108 44" stroke={ACCENT} strokeWidth="1.4" fill="none" />
                 </g>
@@ -1250,10 +1255,20 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
               ) : sleeveId.includes('puff') ? (
                 <g fill={CLOTH} stroke={LINE} strokeWidth="1.2">
                   <path d="M 64 52 C 48 48 46 68 54 78 L 68 76 C 62 65 64 55 64 52 Z" />
-                  <path d="M 58 56 Q 54 66 60 76 M 62 54 Q 60 66 64 76" stroke={LINE_MUTED} strokeWidth="0.75" fill="none" />
+                  <path
+                    d="M 58 56 Q 54 66 60 76 M 62 54 Q 60 66 64 76"
+                    stroke={LINE_MUTED}
+                    strokeWidth="0.75"
+                    fill="none"
+                  />
                   <line x1="54" y1="78" x2="68" y2="76" stroke={ACCENT} strokeWidth="1.6" />
                   <path d="M 136 52 C 152 48 154 68 146 78 L 132 76 C 138 65 136 55 136 52 Z" />
-                  <path d="M 142 56 Q 146 66 140 76 M 138 54 Q 140 66 136 76" stroke={LINE_MUTED} strokeWidth="0.75" fill="none" />
+                  <path
+                    d="M 142 56 Q 146 66 140 76 M 138 54 Q 140 66 136 76"
+                    stroke={LINE_MUTED}
+                    strokeWidth="0.75"
+                    fill="none"
+                  />
                   <line x1="146" y1="78" x2="132" y2="76" stroke={ACCENT} strokeWidth="1.6" />
                 </g>
               ) : sleeveId.includes('leg_of_mutton') ? (
@@ -1283,8 +1298,18 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
                 <g fill={CLOTH} stroke={LINE} strokeWidth="1.2">
                   <path d="M 64 52 L 54 100 L 52 146 L 60 146 L 67 100 Z" />
                   <path d="M 136 52 L 146 100 L 148 146 L 140 146 L 133 100 Z" />
-                  <path d="M 53 125 Q 56 127 59 125 M 52 135 Q 56 137 60 135" stroke={LINE_MUTED} strokeWidth="0.8" fill="none" />
-                  <path d="M 147 125 Q 144 127 141 125 M 148 135 Q 144 137 140 135" stroke={LINE_MUTED} strokeWidth="0.8" fill="none" />
+                  <path
+                    d="M 53 125 Q 56 127 59 125 M 52 135 Q 56 137 60 135"
+                    stroke={LINE_MUTED}
+                    strokeWidth="0.8"
+                    fill="none"
+                  />
+                  <path
+                    d="M 147 125 Q 144 127 141 125 M 148 135 Q 144 137 140 135"
+                    stroke={LINE_MUTED}
+                    strokeWidth="0.8"
+                    fill="none"
+                  />
                   <line x1="52" y1="146" x2="60" y2="146" stroke={ACCENT} strokeWidth="1.8" />
                   <line x1="148" y1="146" x2="140" y2="146" stroke={ACCENT} strokeWidth="1.8" />
                 </g>
@@ -1459,7 +1484,12 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
                 <path d="M 64 52 Q 96 82 128 110" stroke={ACCENT} strokeWidth="1.6" />
                 <path d="M 62 58 Q 94 92 126 116" stroke={LINE_MUTED} strokeWidth="0.8" />
                 <path d="M 60 66 Q 90 102 122 122" stroke={LINE_MUTED} strokeWidth="0.8" />
-                <path d="M 124 116 Q 132 145 130 175 L 138 172 Q 138 140 128 112 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1" />
+                <path
+                  d="M 124 116 Q 132 145 130 175 L 138 172 Q 138 140 128 112 Z"
+                  fill={CLOTH_SHADOW}
+                  stroke={LINE}
+                  strokeWidth="1"
+                />
                 <path d="M 130 175 L 138 172" stroke={ACCENT} strokeWidth="1.6" />
               </g>
             ) : drapeId.includes('wrap') || drapeId.includes('front_pallu') ? (
@@ -1491,20 +1521,42 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
                 <path d="M 72 52 Q 70 82 82 120" stroke={LINE_MUTED} strokeWidth="0.75" />
                 <path d="M 64 52 Q 62 82 74 120" stroke={ACCENT} strokeWidth="1.4" />
                 {/* Embellished Kamarbandh / Waist Belt cinching the dupatta firmly */}
-                <path d="M 68 118 Q 100 123 132 118 L 132 124 Q 100 129 68 124 Z" fill={ACCENT} stroke={LINE} strokeWidth="1.3" />
+                <path
+                  d="M 68 118 Q 100 123 132 118 L 132 124 Q 100 129 68 124 Z"
+                  fill={ACCENT}
+                  stroke={LINE}
+                  strokeWidth="1.3"
+                />
                 <circle cx="100" cy="121" r="2.2" fill={LINE} />
                 <circle cx="94" cy="121" r="1.2" fill="#fff" />
                 <circle cx="106" cy="121" r="1.2" fill="#fff" />
-                <path d="M 74 124 Q 72 150 70 175 L 82 172 Q 82 148 84 124 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1" />
+                <path
+                  d="M 74 124 Q 72 150 70 175 L 82 172 Q 82 148 84 124 Z"
+                  fill={CLOTH_SHADOW}
+                  stroke={LINE}
+                  strokeWidth="1"
+                />
                 <path d="M 70 175 L 82 172" stroke={ACCENT} strokeWidth="1.6" />
               </g>
             ) : drapeId.includes('cape') ? (
               // Royal Cape Drape
               <g>
-                <path d="M 64 52 Q 46 80 44 140 L 56 138 Q 58 85 70 52 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.1" opacity="0.9" />
+                <path
+                  d="M 64 52 Q 46 80 44 140 L 56 138 Q 58 85 70 52 Z"
+                  fill={CLOTH_SHADOW}
+                  stroke={LINE}
+                  strokeWidth="1.1"
+                  opacity="0.9"
+                />
                 <path d="M 44 140 L 56 138" stroke={ACCENT} strokeWidth="1.8" />
                 <path d="M 44 140 Q 46 80 64 52" stroke={ACCENT} strokeWidth="1.6" />
-                <path d="M 136 52 Q 154 80 156 140 L 144 138 Q 142 85 130 52 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.1" opacity="0.9" />
+                <path
+                  d="M 136 52 Q 154 80 156 140 L 144 138 Q 142 85 130 52 Z"
+                  fill={CLOTH_SHADOW}
+                  stroke={LINE}
+                  strokeWidth="1.1"
+                  opacity="0.9"
+                />
                 <path d="M 156 140 L 144 138" stroke={ACCENT} strokeWidth="1.8" />
                 <path d="M 156 140 Q 154 80 136 52" stroke={ACCENT} strokeWidth="1.6" />
                 <path d="M 68 52 Q 100 58 132 52" stroke={ACCENT} strokeWidth="1.5" fill="none" />
@@ -1531,7 +1583,13 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
         {view === 'skirt' && (
           <g>
             {/* Mannequin Hip Guide */}
-            <path d="M 60 38 Q 100 42 140 38" stroke={MANNEQUIN_DASH} strokeWidth="1.1" strokeDasharray="3 3" fill="none" />
+            <path
+              d="M 60 38 Q 100 42 140 38"
+              stroke={MANNEQUIN_DASH}
+              strokeWidth="1.1"
+              strokeDasharray="3 3"
+              fill="none"
+            />
             <circle cx="100" cy="36" r="1.5" fill={MANNEQUIN_DASH} />
 
             {/* Skirt Body */}
@@ -1609,7 +1667,16 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
         {view === 'choli' && (
           <g transform="translate(0, 10)">
             {/* Torso & Neck Skeleton */}
-            <ellipse cx="100" cy="30" rx="14" ry="17" stroke={MANNEQUIN_DASH} strokeWidth="1.2" strokeDasharray="3 3" fill="none" />
+            <ellipse
+              cx="100"
+              cy="30"
+              rx="14"
+              ry="17"
+              stroke={MANNEQUIN_DASH}
+              strokeWidth="1.2"
+              strokeDasharray="3 3"
+              fill="none"
+            />
             <path d="M 92 45 L 92 60 M 108 45 L 108 60" stroke={MANNEQUIN_DASH} strokeWidth="1" strokeDasharray="3 3" />
 
             {/* Choli Bodice Main */}
@@ -1672,7 +1739,12 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
               </g>
             ) : neckId.includes('mandarin') || neckId.includes('high_neck') ? (
               <g>
-                <path d="M 88 52 L 88 64 Q 100 67 112 64 L 112 52 Q 100 49 88 52 Z" fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.4" />
+                <path
+                  d="M 88 52 L 88 64 Q 100 67 112 64 L 112 52 Q 100 49 88 52 Z"
+                  fill={CLOTH_SHADOW}
+                  stroke={LINE}
+                  strokeWidth="1.4"
+                />
                 <line x1="100" y1="52" x2="100" y2="76" stroke={LINE} strokeWidth="1.1" />
                 <path d="M 88 52 Q 100 49 112 52" stroke={ACCENT} strokeWidth="1.5" />
               </g>
@@ -1693,10 +1765,20 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
             ) : sleeveId.includes('puff') ? (
               <g fill={CLOTH} stroke={LINE} strokeWidth="1.3">
                 <path d="M 54 62 C 30 56 26 86 38 108 L 60 104 C 50 88 52 72 54 62 Z" />
-                <path d="M 44 68 Q 38 85 48 105 M 50 65 Q 46 85 54 104" stroke={LINE_MUTED} strokeWidth="0.9" fill="none" />
+                <path
+                  d="M 44 68 Q 38 85 48 105 M 50 65 Q 46 85 54 104"
+                  stroke={LINE_MUTED}
+                  strokeWidth="0.9"
+                  fill="none"
+                />
                 <line x1="38" y1="108" x2="60" y2="104" stroke={ACCENT} strokeWidth="2.2" />
                 <path d="M 146 62 C 170 56 174 86 162 108 L 140 104 C 150 88 148 72 146 62 Z" />
-                <path d="M 156 68 Q 162 85 152 105 M 150 65 Q 154 85 146 104" stroke={LINE_MUTED} strokeWidth="0.9" fill="none" />
+                <path
+                  d="M 156 68 Q 162 85 152 105 M 150 65 Q 154 85 146 104"
+                  stroke={LINE_MUTED}
+                  strokeWidth="0.9"
+                  fill="none"
+                />
                 <line x1="162" y1="108" x2="140" y2="104" stroke={ACCENT} strokeWidth="2.2" />
               </g>
             ) : sleeveId.includes('leg_of_mutton') ? (
@@ -1724,8 +1806,18 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
               <g fill={CLOTH} stroke={LINE} strokeWidth="1.3">
                 <path d="M 54 62 L 40 125 L 36 195 L 48 195 L 60 125 Z" />
                 <path d="M 146 62 L 160 125 L 164 195 L 152 195 L 140 125 Z" />
-                <path d="M 37 165 Q 43 167 47 165 M 36 178 Q 42 180 47 178" stroke={LINE_MUTED} strokeWidth="0.9" fill="none" />
-                <path d="M 163 165 Q 157 167 153 165 M 164 178 Q 158 180 153 178" stroke={LINE_MUTED} strokeWidth="0.9" fill="none" />
+                <path
+                  d="M 37 165 Q 43 167 47 165 M 36 178 Q 42 180 47 178"
+                  stroke={LINE_MUTED}
+                  strokeWidth="0.9"
+                  fill="none"
+                />
+                <path
+                  d="M 163 165 Q 157 167 153 165 M 164 178 Q 158 180 153 178"
+                  stroke={LINE_MUTED}
+                  strokeWidth="0.9"
+                  fill="none"
+                />
                 <line x1="36" y1="195" x2="48" y2="195" stroke={ACCENT} strokeWidth="2.4" />
                 <line x1="164" y1="195" x2="152" y2="195" stroke={ACCENT} strokeWidth="2.4" />
               </g>
@@ -1761,7 +1853,12 @@ export function LehengaEnsembleMannequin({ selected, view = 'ensemble' }: Leheng
             {/* Princess Seams and Golden Embroidery */}
             <path d="M 82 92 Q 86 118 86 148" stroke={LINE_MUTED} strokeWidth="1" />
             <path d="M 118 92 Q 114 118 114 148" stroke={LINE_MUTED} strokeWidth="1" />
-            <path d="M 64 142 Q 100 147 136 142 L 134 148 Q 100 153 66 148 Z" fill={ACCENT} stroke={LINE} strokeWidth="1" />
+            <path
+              d="M 64 142 Q 100 147 136 142 L 134 148 Q 100 153 66 148 Z"
+              fill={ACCENT}
+              stroke={LINE}
+              strokeWidth="1"
+            />
           </g>
         )}
       </svg>
@@ -2083,12 +2180,7 @@ export function UpperBodyOverlay({ selected }: UpperBodyOverlayProps) {
       {isNotched && (
         <g>
           {/* Left notched lapel */}
-          <path
-            d="M 92 62 L 78 72 L 82 77 L 76 88 L 100 116 L 100 64 Z"
-            fill={CLOTH}
-            stroke={LINE}
-            strokeWidth="1.2"
-          />
+          <path d="M 92 62 L 78 72 L 82 77 L 76 88 L 100 116 L 100 64 Z" fill={CLOTH} stroke={LINE} strokeWidth="1.2" />
           {/* Right notched lapel */}
           <path
             d="M 108 62 L 122 72 L 118 77 L 124 88 L 100 116 L 100 64 Z"
@@ -2101,4 +2193,3 @@ export function UpperBodyOverlay({ selected }: UpperBodyOverlayProps) {
     </svg>
   );
 }
-

@@ -4,7 +4,6 @@ import {
   heightBand,
   COLOR_IDS,
   type ColorId,
-  FIT_IDS,
   SILHOUETTE_IDS,
   type AppearanceResponse,
   type Look,
@@ -123,10 +122,7 @@ export class RecommendationsService {
     }
 
     if (!this.colours) return profile;
-    const [{ avoided }, mine] = await Promise.all([
-      this.colours.getPreferences(userId),
-      this.colours.mine(userId),
-    ]);
+    const [{ avoided }, mine] = await Promise.all([this.colours.getPreferences(userId), this.colours.mine(userId)]);
     const disliked = [
       ...new Set([
         ...profile.dislikedColors,
@@ -139,17 +135,12 @@ export class RecommendationsService {
     // When custom colors are not chosen, outfits are generated strictly from the user's seasonal colour palette
     const sourceHexes = mine.colours.map((c) => c.hex);
 
-    let paletteVocab =
-      sourceHexes.length > 0
-        ? vocabularyColours(sourceHexes, LIKED_MAX_DISTANCE)
-        : [];
+    let paletteVocab = sourceHexes.length > 0 ? vocabularyColours(sourceHexes, LIKED_MAX_DISTANCE) : [];
     if (paletteVocab.length === 0 && sourceHexes.length > 0) {
       paletteVocab = [...new Set(sourceHexes.map((h) => nearestColour(h).colorId))];
     }
 
-    const likedColors = (
-      paletteVocab.length > 0 ? paletteVocab : profile.likedColors
-    ).filter((c) => !disliked.includes(c));
+    const likedColors = [...new Set([...profile.likedColors, ...paletteVocab])];
     return { ...profile, likedColors: likedColors as ProfileResponse['likedColors'], dislikedColors: disliked };
   }
 
@@ -159,7 +150,9 @@ export class RecommendationsService {
     if (!prefs || !prefs.stylingGoals || prefs.stylingGoals.length === 0) return profile;
 
     const extraSilhouettes: string[] = [];
-    const updatedFits = { ...(profile.fitPreferences ?? { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null }) };
+    const updatedFits = {
+      ...(profile.fitPreferences ?? { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null }),
+    };
 
     for (const goal of prefs.stylingGoals) {
       if (goal === 'define_waist') {
@@ -177,8 +170,8 @@ export class RecommendationsService {
       }
     }
 
-    const silhouettePreferences = [...new Set([...(profile.silhouettePreferences ?? []), ...extraSilhouettes])].filter((s) =>
-      (SILHOUETTE_IDS as readonly string[]).includes(s),
+    const silhouettePreferences = [...new Set([...(profile.silhouettePreferences ?? []), ...extraSilhouettes])].filter(
+      (s) => (SILHOUETTE_IDS as readonly string[]).includes(s),
     );
 
     return {
@@ -196,9 +189,13 @@ export class RecommendationsService {
       garmentType: request.design.garmentType,
       outfitCategory: request.design.outfitCategory,
     }).lean();
-    return selection
-      ? toEngineDesign(selection.garmentType, selection.selectedFeatures ?? {})
-      : toEngineDesign(request.design.garmentType, {});
+    if (selection) {
+      return toEngineDesign(selection.garmentType, selection.selectedFeatures ?? {});
+    }
+    if (request.design.garmentType === 'anarkali') {
+      return toEngineDesign('anarkali', {});
+    }
+    return null;
   }
 
   async recommend(userId: Types.ObjectId, request: RecommendationRequest): Promise<RecommendationResult> {
