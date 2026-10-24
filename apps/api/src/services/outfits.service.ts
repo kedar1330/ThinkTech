@@ -39,12 +39,33 @@ type StoredOutfit = OutfitDoc & { _id: Types.ObjectId };
 type StoredItem = ShortlistItemDoc & { _id: Types.ObjectId };
 
 function toLook(doc: StoredOutfit): Look {
+  const cleanSlots = (doc.slots ?? []).map((s) => ({
+    ...s,
+    slotId: s.slotId === 'one_piece' ? 'one-piece' : s.slotId,
+    lookSpec: {
+      ...s.lookSpec,
+      category:
+        s.lookSpec?.category === 'dresses'
+          ? 'dress'
+          : s.lookSpec?.category === 'bottoms'
+            ? 'trousers'
+            : s.lookSpec?.category === 'tops'
+              ? 'shirt'
+              : s.lookSpec?.category,
+      colorId:
+        s.lookSpec?.colorId === 'neutral-black'
+          ? 'black'
+          : s.lookSpec?.colorId === 'neutral-white'
+            ? 'white'
+            : s.lookSpec?.colorId,
+    },
+  }));
   return {
     id: String(doc._id),
     status: doc.status as OutfitStatus,
     templateId: doc.templateId,
     paletteId: doc.paletteId,
-    slots: doc.slots,
+    slots: cleanSlots as LookSlot[],
     explanation: doc.explanation,
     explanationRefs: doc.explanationRefs,
     combinationSignature: doc.combinationSignature,

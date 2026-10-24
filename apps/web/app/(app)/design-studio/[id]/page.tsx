@@ -41,7 +41,11 @@ export default async function DesignPage({ params }: { params: Promise<{ id: str
         <p className="max-w-2xl text-sm text-muted-foreground">{design.summary}</p>
       </header>
 
-      <DesignActions designId={design.id} pictureFailed={design.imageStatus === 'failed'} />
+      <DesignActions
+        designId={design.id}
+        pictureFailed={design.imageStatus === 'failed'}
+        lookId={design.lookId ?? undefined}
+      />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] print:grid-cols-2">
         <div className="space-y-4">

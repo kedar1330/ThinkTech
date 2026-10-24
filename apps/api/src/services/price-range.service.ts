@@ -223,7 +223,8 @@ export class PriceRangeService {
           .sort((a, b) => a.price - b.price)
           .slice(0, ALTERNATIVES_PER_STORE),
       ).sort((a, b) => a.price - b.price);
-      return { slotId: slot.slotId, listings: matches, alternatives: others, stats };
+      const cleanSlotId = slot.slotId === 'one_piece' ? 'one-piece' : slot.slotId;
+      return { slotId: cleanSlotId, listings: matches, alternatives: others, stats };
     });
     return {
       currency: 'INR',

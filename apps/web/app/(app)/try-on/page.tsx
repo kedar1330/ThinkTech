@@ -6,8 +6,10 @@ import {
   slotIdSchema,
   tryOnItemSchema,
   type AppearanceResponse,
+  type Design,
   type LookPicksResponse,
   type OutfitDetail,
+  type OutfitListResponse,
   type ProfileResponse,
   type TryOnOverview,
 } from '@styleme/contracts';
@@ -19,20 +21,42 @@ import { lookTitle } from '@/lib/outfits/look-text';
 export const metadata: Metadata = { title: 'Virtual Try-On' };
 
 /**
- * 3D Virtual Try-On (#106, D-137), opened from Shop My Look: `?outfitId=` dresses the mannequin in the whole
- * look; with `&slotId=` in one part of it; with `&store=&title=&price=` in the similar item the user clicked.
- * The clothes come from that look's Shop My Look items; the API checks that the look is the user's.
+ * 3D Virtual Try-On (#106, D-137), opened from Shop My Look, Design Studio, or Discover My Style:
+ * `?outfitId=` dresses the mannequin in the whole look; with `&slotId=` in one part of it;
+ * with `&designId=` it resolves the design's look.
  */
 export default async function TryOnPage({
   searchParams,
 }: {
-  searchParams: Promise<{ outfitId?: string; slotId?: string; store?: string; title?: string; price?: string }>;
+  searchParams: Promise<{
+    outfitId?: string;
+    slotId?: string;
+    store?: string;
+    title?: string;
+    price?: string;
+    designId?: string;
+  }>;
 }) {
   const { accessToken: token } = await requireOnboarded();
   const params = await searchParams;
-  // Opened from the dashboard: looks and items are picked in Shop My Look.
-  if (params.outfitId === undefined) redirect('/shop');
-  const outfitId = objectIdSchema.safeParse(params.outfitId);
+  let targetOutfitId = params.outfitId;
+  if (!targetOutfitId && params.designId) {
+    const dId = objectIdSchema.safeParse(params.designId);
+    if (dId.success) {
+      const design = await apiRequest<Design>(`/v1/design-studio/designs/${dId.data}`, { token }).catch(() => null);
+      if (design?.lookId) targetOutfitId = design.lookId;
+    }
+  }
+  if (!targetOutfitId) {
+    const list = await apiRequest<OutfitListResponse>('/v1/outfits?status=saved&limit=1', { token }).catch(() => null);
+    if (list?.looks[0]?.id) {
+      targetOutfitId = list.looks[0].id;
+    } else {
+      redirect('/shop');
+    }
+  }
+
+  const outfitId = objectIdSchema.safeParse(targetOutfitId);
   if (!outfitId.success) notFound();
   const slot = params.slotId === undefined ? null : slotIdSchema.safeParse(params.slotId);
   if (slot && !slot.success) notFound();

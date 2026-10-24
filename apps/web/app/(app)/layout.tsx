@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
   const profileIncomplete = profile && appearance ? !profileCompleteness(profile, user, appearance).complete : false;
   return (
-    <AppShell userName={user.name} userEmail={user.email} profileIncomplete={profileIncomplete}>
+    <AppShell userName={user.name} userEmail={user.email} userRole={user.role} profileIncomplete={profileIncomplete}>
       {children}
     </AppShell>
   );

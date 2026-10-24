@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronDown } from 'lucide-react';
+import { Camera, ChevronDown } from 'lucide-react';
 import type { Look, ProfileSizes } from '@styleme/contracts';
 import { shopHref } from '@/lib/shop/look-shopper';
 import { Card } from '@/components/ui/card';
@@ -78,6 +78,14 @@ export function LookCard({ look, position, sizes }: { look: Look; position: numb
           ) : (
             <ShopLookButton outfitId={look.id} />
           )}
+          <Link
+            href={`/try-on?outfitId=${look.id}`}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-plum/30 bg-surface px-3 py-1.5 text-xs font-semibold text-plum hover:bg-plum/10 transition-colors"
+            aria-label={`Virtual Try-On for Look ${position}`}
+          >
+            <Camera className="size-3.5" />
+            Virtual Try-On
+          </Link>
         </div>
 
         {/* Collapsible Details to keep card clean and uncluttered in 3-in-a-row grid */}

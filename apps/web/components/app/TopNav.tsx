@@ -16,6 +16,7 @@ import {
   Palette,
   PencilRuler,
   Settings,
+  ShieldAlert,
   Shirt,
   ShoppingBag,
   Sparkles,
@@ -150,10 +151,12 @@ const INLINE_ITEM =
 export function TopNav({
   userName,
   userEmail,
+  userRole,
   profileIncomplete = false,
 }: {
   userName: string;
   userEmail: string;
+  userRole?: string;
   /** Adds a dot on the avatar and a "Complete your profile" item to the account menus. */
   profileIncomplete?: boolean;
 }) {
@@ -424,6 +427,16 @@ export function TopNav({
                       </Link>
                     </li>
                   )}
+                  {userRole === 'admin' && (
+                    <li>
+                      <Link
+                        href="/admin"
+                        className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-plum transition-colors hover:bg-surface-muted"
+                      >
+                        <ShieldAlert aria-hidden className="size-[18px]" /> Admin Panel
+                      </Link>
+                    </li>
+                  )}
                   <li>
                     <Link
                       href="/settings"
@@ -510,6 +523,14 @@ export function TopNav({
                   className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-accent hover:bg-primary-foreground/8"
                 >
                   <ListChecks aria-hidden className="size-[18px]" /> Complete your profile
+                </Link>
+              )}
+              {userRole === 'admin' && (
+                <Link
+                  href="/admin"
+                  className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-accent hover:bg-primary-foreground/8"
+                >
+                  <ShieldAlert aria-hidden className="size-[18px]" /> Admin Panel
                 </Link>
               )}
               <Link

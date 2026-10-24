@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Camera, ShoppingBag } from 'lucide-react';
 import type { Look } from '@styleme/contracts';
 import { Card } from '@/components/ui/card';
 import { garmentSlots, lookTitle, slotLabel } from '@/lib/outfits/look-text';
@@ -30,7 +31,21 @@ export function SavedLookCard({ look }: { look: Look }) {
         ))}
       </ul>
       <p className="line-clamp-3 text-sm text-muted-foreground">{look.explanation}</p>
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
+        <Link
+          href={`/shop?outfitId=${look.id}`}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-plum/10 px-3 py-1 text-xs font-semibold text-plum hover:bg-plum/20 transition-colors"
+        >
+          <ShoppingBag className="size-3.5" />
+          Shop
+        </Link>
+        <Link
+          href={`/try-on?outfitId=${look.id}`}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-plum/30 bg-surface px-3 py-1 text-xs font-semibold text-plum hover:bg-plum/10 transition-colors"
+        >
+          <Camera className="size-3.5" />
+          Try-On
+        </Link>
         <RemoveLookButton outfitId={look.id} lookName={title} from="list" />
       </div>
     </Card>

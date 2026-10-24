@@ -6,6 +6,7 @@ import {
   SHORTLIST_LIMITS,
   objectIdSchema,
   type AppearanceResponse,
+  type Design,
   type LookPicksResponse,
   slotIdSchema,
   type Look,
@@ -17,7 +18,6 @@ import {
 } from '@styleme/contracts';
 import { OutfitImage } from '@/components/outfits/OutfitImage';
 import { SaveLookButton } from '@/components/outfits/SaveLookButton';
-import { BodyTypeFigure } from '@/components/shop/BodyTypeFigure';
 import { LookShopper } from '@/components/shop/LookShopper';
 import { LookTabs } from '@/components/shop/LookTabs';
 import { ProductMatches } from '@/components/shop/ProductMatches';
@@ -86,7 +86,7 @@ function ProductDataUnavailable() {
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ outfitId?: string; slotId?: string }>;
+  searchParams: Promise<{ outfitId?: string; slotId?: string; designId?: string }>;
 }) {
   const { accessToken: token } = await requireOnboarded();
   const params = await searchParams;
@@ -95,6 +95,14 @@ export default async function ShopPage({
     const id = objectIdSchema.safeParse(params.outfitId);
     if (!id.success) notFound();
     selectedId = id.data;
+  } else if (params.designId !== undefined) {
+    const dId = objectIdSchema.safeParse(params.designId);
+    if (dId.success) {
+      const design = await apiRequest<Design>(`/v1/design-studio/designs/${dId.data}`, { token }).catch(() => null);
+      if (design?.lookId) {
+        selectedId = design.lookId;
+      }
+    }
   }
 
   const looks = await discoverLooks(token);
@@ -141,6 +149,9 @@ export default async function ShopPage({
     if (err instanceof ApiError && err.code === 'NOT_FOUND') notFound();
     throw err;
   }
+  if (!looks.some((l) => l.id === look.id)) {
+    looks.unshift(look);
+  }
   const slot = slotIdSchema.safeParse(params.slotId);
 
   return (
@@ -161,14 +172,11 @@ export default async function ShopPage({
         <h2 id="your-outfit" className="font-display text-2xl text-primary">
           Your outfit
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {look.image && <OutfitImage outfitId={look.id} ready={look.image === 'ready'} />}
-          <BodyTypeFigure
-            look={look}
-            department={figureDepartment(look.inputsUsed.department ?? profile.department)}
-            bodyType={appearance?.bodyType?.value ?? null}
-          />
-        </div>
+        {look.image && (
+          <div className="max-w-md overflow-hidden rounded-2xl border border-border/70 bg-surface shadow-xs">
+            <OutfitImage outfitId={look.id} ready={look.image === 'ready'} />
+          </div>
+        )}
       </section>
       <ProductMatches
         // Starts afresh for each tab; the key differs from LookShopper's, as sibling keys must be unique.
@@ -185,6 +193,7 @@ export default async function ShopPage({
           items={items}
           sizes={profile.sizes}
           focusSlotId={slot.success ? slot.data : undefined}
+          excludeAccessories
         />
       ) : (
         <Card className="space-y-3 p-4 sm:p-6">

@@ -81,9 +81,18 @@ export function designFromSelection(item: DesignSelectionItem): DesignSummary | 
 /**
  * The user's saved designs, newest first. The one opened from the visual customizer (`opened`, with its
  * drawings) replaces its plain entry, or is added first if the list doesn't have it.
+ * Each garment type appears at most once (newest first).
  */
 export function savedDesigns(items: readonly DesignSelectionItem[], opened: DesignSummary | null): DesignSummary[] {
-  const designs = items.map(designFromSelection).filter((d): d is DesignSummary => d !== null);
+  const seen = new Set<string>();
+  const designs: DesignSummary[] = [];
+  for (const item of items) {
+    const d = designFromSelection(item);
+    if (d && !seen.has(d.garmentType)) {
+      seen.add(d.garmentType);
+      designs.push(d);
+    }
+  }
   if (!opened) return designs;
   const at = designs.findIndex((d) => d.garmentType === opened.garmentType);
   return at === -1 ? [opened, ...designs] : designs.map((d, i) => (i === at ? opened : d));

@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Check, EyeOff, Heart, RotateCcw, Sparkles } from 'lucide-react';
+import { ArrowRight, Bookmark, Check, EyeOff, Heart, Sparkles, Trash2 } from 'lucide-react';
 import {
   STYLING_GOALS,
   type DesignFeatureCategory,
@@ -679,11 +679,29 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
           )}
 
           <div className="mt-4 flex gap-2">
-            <Button type="button" variant="accent" size="sm" className="flex-1" onClick={save} disabled={pending}>
-              Save preferences
+            <Button
+              type="button"
+              variant="accent"
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={save}
+              disabled={pending}
+              aria-label="Save preferences"
+              title="Save this dress to your profile"
+            >
+              <Bookmark className="size-3.5" /> Save dress
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={reset} disabled={pending} aria-label="Reset">
-              <RotateCcw /> Reset
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+              onClick={reset}
+              disabled={pending}
+              aria-label="Delete or reset this dress"
+              title="Delete or reset selected options for this dress"
+            >
+              <Trash2 className="size-3.5" /> Delete dress
             </Button>
           </div>
 
