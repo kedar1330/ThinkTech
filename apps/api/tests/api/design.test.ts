@@ -47,13 +47,19 @@ describe('design catalogue', () => {
     const m = env.db.models;
     expect(await m.OutfitCategory.countDocuments({ level: 'department' })).toBe(2);
     expect(await m.OutfitCategory.countDocuments({ level: 'outfit_category' })).toBe(3);
+    const kurti = await m.OutfitCategory.findOne({ key: 'garment-kurti' }).lean();
+    expect(kurti).toMatchObject({
+      garmentKind: 'top',
+      departments: ['women'],
+      outfitCategories: ['indian', 'fusion'],
+    });
     const kurta = await m.OutfitCategory.findOne({ key: 'garment-kurta' }).lean();
     expect(kurta).toMatchObject({
       garmentKind: 'top',
-      departments: ['women', 'men'],
+      departments: ['men'],
       outfitCategories: ['indian', 'fusion'],
     });
-    expect(kurta?.featureCategoryIds).toEqual(expect.arrayContaining(['neckline', 'sleeve', 'fit']));
+    expect(kurti?.featureCategoryIds).toEqual(expect.arrayContaining(['neckline', 'sleeve', 'fit']));
     expect(await m.DesignFeature.countDocuments()).toBe(DESIGN_FEATURES.length);
     // Shared records: one V-neck for both, with a picture on each figure.
     const vNeck = await m.DesignFeature.findOne({ featureId: 'neckline_v_neck' }).lean();
@@ -99,12 +105,13 @@ describe('GET /v1/design/taxonomy and /v1/design/features', () => {
     expect(tax.body.data.canSwitchDepartment).toBe(false);
     const indian = tax.body.data.outfitCategories.find((c: { id: string }) => c.id === 'indian');
     const garments = indian.garmentTypes.map((g: { id: string }) => g.id);
-    expect(garments).toEqual(expect.arrayContaining(['kurta', 'anarkali', 'saree_blouse']));
+    expect(garments).toEqual(expect.arrayContaining(['kurti', 'anarkali', 'saree_blouse']));
     expect(garments).not.toContain('sherwani');
+    expect(garments).not.toContain('kurta');
 
     // Asking for men's is ignored: the profile decides.
     const res = await request(app)
-      .get('/v1/design/features?garmentType=kurta&department=men&view=all')
+      .get('/v1/design/features?garmentType=kurti&department=men&view=all')
       .set(bearer(token));
     expect(res.status).toBe(200);
     expect(res.body.data.department).toBe('women');
@@ -125,7 +132,7 @@ describe('GET /v1/design/taxonomy and /v1/design/features', () => {
 
   it('shows only what suits the user, from body type and height band, with reasons', async () => {
     const { app, token } = await signedIn('bea@example.com', { department: 'women', heightCm: 152 }, 'pear');
-    const res = await request(app).get('/v1/design/features?garmentType=kurta').set(bearer(token));
+    const res = await request(app).get('/v1/design/features?garmentType=kurti').set(bearer(token));
     expect(res.status).toBe(200);
     const data = res.body.data as DesignFeaturesResponse;
     expect(data.basis).toEqual({ bodyType: true, heightBand: 'petite', stylingGoals: 0 });
@@ -149,7 +156,7 @@ describe('GET /v1/design/taxonomy and /v1/design/features', () => {
     expect(fit.features.length).toBeGreaterThan(5);
 
     // "Show all" keeps everything, with the less preferred options last.
-    const all = await request(app).get('/v1/design/features?garmentType=kurta&view=all').set(bearer(token));
+    const all = await request(app).get('/v1/design/features?garmentType=kurti&view=all').set(bearer(token));
     const allNecklines = ids(all.body.data, 'neckline');
     expect(allNecklines[0]).toBe('neckline_v_neck');
     expect(allNecklines.at(-1)).toBe('neckline_boat_neck');
@@ -157,11 +164,11 @@ describe('GET /v1/design/taxonomy and /v1/design/features', () => {
 
   it('stores the personalised result in the user’s design preferences, without the height or body type', async () => {
     const { app, token } = await signedIn('cy@example.com', { department: 'women', heightCm: 152 }, 'pear');
-    await request(app).get('/v1/design/features?garmentType=kurta').set(bearer(token));
+    await request(app).get('/v1/design/features?garmentType=kurti').set(bearer(token));
     const doc = await env.db.models.UserDesignPreference.findOne().lean();
     expect(doc?.personalised).toHaveLength(1);
     const snap = doc!.personalised[0]!;
-    expect(snap).toMatchObject({ garmentType: 'kurta', department: 'women' });
+    expect(snap).toMatchObject({ garmentType: 'kurti', department: 'women' });
     expect(snap.features.find((f) => f.featureId === 'neckline_boat_neck')).toMatchObject({
       result: 'not_preferred',
       ruleIds: ['FSR-903'],
@@ -174,13 +181,13 @@ describe('GET /v1/design/taxonomy and /v1/design/features', () => {
 
     // Unchanged inputs: not rewritten. A new goal: recomputed.
     const before = snap.computedAt;
-    await request(app).get('/v1/design/features?garmentType=kurta').set(bearer(token));
+    await request(app).get('/v1/design/features?garmentType=kurti').set(bearer(token));
     expect((await env.db.models.UserDesignPreference.findOne().lean())!.personalised[0]!.computedAt).toEqual(before);
     await request(app)
       .put('/v1/design/preferences')
       .set(bearer(token))
       .send({ stylingGoals: ['add_structure'] });
-    const res = await request(app).get('/v1/design/features?garmentType=kurta').set(bearer(token));
+    const res = await request(app).get('/v1/design/features?garmentType=kurti').set(bearer(token));
     // The goal rule (priority 1) outranks the height rule for the bishop sleeve.
     expect(ids(res.body.data, 'sleeve')).toEqual(['sleeve_three_quarter', 'sleeve_bishop']);
   });
@@ -188,7 +195,7 @@ describe('GET /v1/design/taxonomy and /v1/design/features', () => {
   it('ignores the body type when appearance signals are turned off', async () => {
     const { app, token } = await signedIn('di@example.com', { department: 'women' }, 'pear');
     await request(app).put('/v1/appearance').set(bearer(token)).send({ useInRecommendations: false });
-    const res = await request(app).get('/v1/design/features?garmentType=kurta').set(bearer(token));
+    const res = await request(app).get('/v1/design/features?garmentType=kurti').set(bearer(token));
     expect(res.body.data.basis.bodyType).toBe(false);
     expect(res.body.data.categories.find((c: { id: string }) => c.id === 'neckline').personalised).toBe(false);
   });
@@ -205,7 +212,7 @@ describe('GET /v1/design/taxonomy and /v1/design/features', () => {
 
   it('asks for a choice when the profile has no Clothing Preference', async () => {
     const { app, token } = await signedIn('fi@example.com');
-    const res = await request(app).get('/v1/design/features?garmentType=kurta').set(bearer(token));
+    const res = await request(app).get('/v1/design/features?garmentType=kurti').set(bearer(token));
     expect(res.status).toBe(400);
     const ok = await request(app).get('/v1/design/features?garmentType=kurta&department=men').set(bearer(token));
     expect(ok.status).toBe(200);
@@ -214,7 +221,7 @@ describe('GET /v1/design/taxonomy and /v1/design/features', () => {
 
   it('requires authentication', async () => {
     const { app } = env.makeApp();
-    expect((await request(app).get('/v1/design/features?garmentType=kurta')).status).toBe(401);
+    expect((await request(app).get('/v1/design/features?garmentType=kurti')).status).toBe(401);
   });
 });
 
@@ -234,7 +241,7 @@ describe('preferences and selections', () => {
     expect(put.body.data.featurePreferences).toEqual(
       expect.arrayContaining([{ featureId: 'neckline_halter', featureCategory: 'neckline', preference: 'liked' }]),
     );
-    const res = await request(app).get('/v1/design/features?garmentType=kurta').set(bearer(token));
+    const res = await request(app).get('/v1/design/features?garmentType=kurti').set(bearer(token));
     expect(ids(res.body.data, 'neckline')).toEqual(['neckline_square_neck', 'neckline_halter']);
 
     await request(app)
@@ -259,7 +266,7 @@ describe('preferences and selections', () => {
   it('saves the customizer selection (Square Neck + Full-length sleeve) and rebuilds it', async () => {
     const { app, token } = await signedIn('ha@example.com', { department: 'women' });
     const body = {
-      garmentType: 'kurta',
+      garmentType: 'kurti',
       outfitCategory: 'indian',
       selectedFeatures: { neckline: 'neckline_square_neck', sleeve: 'sleeve_full_length', fit: 'fit_a_line' },
       customization: { necklineDepth: 'medium', sleeveLength: 'full' },
@@ -267,12 +274,12 @@ describe('preferences and selections', () => {
     const put = await request(app).put('/v1/design/selections').set(bearer(token)).send(body);
     expect(put.status).toBe(200);
     expect(put.body.data).toMatchObject({
-      garmentType: 'kurta',
+      garmentType: 'kurti',
       department: 'women',
       selectedFeatures: body.selectedFeatures,
     });
 
-    const res = await request(app).get('/v1/design/features?garmentType=kurta').set(bearer(token));
+    const res = await request(app).get('/v1/design/features?garmentType=kurti').set(bearer(token));
     expect(res.body.data.selection.selectedFeatures).toEqual(body.selectedFeatures);
     expect((await request(app).get('/v1/design/selections').set(bearer(token))).body.data).toHaveLength(1);
 
@@ -283,7 +290,7 @@ describe('preferences and selections', () => {
       .send({ ...body, selectedFeatures: { neckline: 'neckline_v_neck' } });
     expect(await env.db.models.UserDesignSelection.countDocuments()).toBe(1);
 
-    expect((await request(app).delete('/v1/design/selections/kurta').set(bearer(token))).status).toBe(200);
+    expect((await request(app).delete('/v1/design/selections/kurti').set(bearer(token))).status).toBe(200);
     expect(await env.db.models.UserDesignSelection.countDocuments()).toBe(0);
   });
 
@@ -293,13 +300,13 @@ describe('preferences and selections', () => {
       request(app)
         .put('/v1/design/selections')
         .set(bearer(token))
-        .send({ garmentType: 'kurta', outfitCategory: 'indian', selectedFeatures, ...extra });
+        .send({ garmentType: 'kurti', outfitCategory: 'indian', selectedFeatures, ...extra });
     expect((await send({ neckline: 'neckline_strapless', sleeve: 'sleeve_full_length' })).status).toBe(400);
     expect((await send({ neckline: 'sleeve_bishop' })).status).toBe(400); // wrong category
     expect((await send({ neckline: 'neckline_spread_collar' })).status).toBe(400); // men's only
     expect((await send({ neckline: 'neckline_not_applicable' })).status).toBe(400); // not selectable
     expect((await send({ neckline: 'neckline_v_neck' }, { outfitCategory: 'western' })).status).toBe(400);
-    expect((await send({ leg_shape: 'leg_shape_slim' })).status).toBe(400); // not on a kurta
+    expect((await send({ leg_shape: 'leg_shape_slim' })).status).toBe(400); // not on a kurti
   });
 
   it('logs no feature choices or profile values', async () => {
@@ -307,8 +314,8 @@ describe('preferences and selections', () => {
     await request(app)
       .put('/v1/design/selections')
       .set(bearer(token))
-      .send({ garmentType: 'kurta', outfitCategory: 'indian', selectedFeatures: { neckline: 'neckline_sweetheart' } });
-    await request(app).get('/v1/design/features?garmentType=kurta').set(bearer(token));
+      .send({ garmentType: 'kurti', outfitCategory: 'indian', selectedFeatures: { neckline: 'neckline_sweetheart' } });
+    await request(app).get('/v1/design/features?garmentType=kurti').set(bearer(token));
     const logs = logTextForPrivacyChecks(env.logLines);
     expect(logs).not.toContain('neckline_sweetheart');
     expect(logs).not.toMatch(/\bpear\b/);

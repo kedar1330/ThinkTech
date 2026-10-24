@@ -23,13 +23,22 @@ export interface OutfitImagePromptInput {
   department?: string | null;
   /** Slot ID → the palette colour name to show that piece in, replacing the look's colour word. */
   colours?: ReadonlyMap<string, string>;
+  designGarment?: string | null;
+  customColors?: readonly string[] | null;
 }
 
 /** The slot's phrase with its leading colour word replaced by `colour`, when the phrase starts with it. */
 function inColour(slot: LookSlot, colour: string | undefined): string {
+  if (!colour) return slot.searchPhrase;
   const current = slot.swatches[0]?.name.toLowerCase();
-  if (!colour || !current || !slot.searchPhrase.startsWith(current)) return slot.searchPhrase;
-  return `${colour.toLowerCase()}${slot.searchPhrase.slice(current.length)}`;
+  if (current && slot.searchPhrase.toLowerCase().startsWith(current)) {
+    return `${colour.toLowerCase()}${slot.searchPhrase.slice(current.length)}`;
+  }
+  const firstSpace = slot.searchPhrase.indexOf(' ');
+  if (firstSpace > 0) {
+    return `${colour.toLowerCase()} ${slot.searchPhrase.slice(firstSpace + 1).trim()}`;
+  }
+  return `${colour.toLowerCase()} ${slot.searchPhrase}`;
 }
 
 export function buildOutfitImagePrompt({
@@ -38,15 +47,39 @@ export function buildOutfitImagePrompt({
   style,
   department,
   colours,
+  designGarment,
+  customColors,
 }: OutfitImagePromptInput): string {
   const figure = department === 'women' ? 'a woman' : department === 'men' ? 'a man' : 'a fashion model';
-  const pieces = slots
+  let pieces = slots
     .filter((s) => SLOT_ORDER.includes(s.slot))
     .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot))
     .map((s) => inColour(s, colours?.get(s.slotId)));
-  const kind = [occasionLabel(occasion).toLowerCase(), style ? styleLabel(style).toLowerCase() : null]
+
+  const isAnarkali =
+    designGarment === 'anarkali' ||
+    slots.some((s) => s.searchPhrase.toLowerCase().includes('anarkali'));
+
+  if (isAnarkali) {
+    pieces = pieces.map((p) => {
+      if (/\b(kurti|kurta)\b/i.test(p)) {
+        return p.replace(/\b(kurti|kurta)\b/gi, 'flared anarkali suit with voluminous kalidar umbrella flare');
+      }
+      return p;
+    });
+    if (!pieces.some((p) => p.toLowerCase().includes('anarkali'))) {
+      pieces.unshift('flared kalidar anarkali suit');
+    }
+  }
+
+  const kind = [
+    occasionLabel(occasion).toLowerCase(),
+    style ? styleLabel(style).toLowerCase() : null,
+    isAnarkali ? 'anarkali' : null,
+  ]
     .filter(Boolean)
     .join(' ');
+
   return [
     `Full-length fashion lookbook photograph of ${figure} wearing a ${kind} outfit: ${joinList(pieces)}.`,
     'Standing upright facing the camera, whole body visible from head to shoes, natural relaxed pose.',

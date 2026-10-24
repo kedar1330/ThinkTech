@@ -14,13 +14,25 @@ import {
   type OutfitCategory,
   type SelectedFeatures,
 } from '@styleme/contracts';
-import { resetDesignAction, saveDesignAction, setFeaturePreferenceAction } from '@/app/actions/design';
+import {
+  resetDesignAction,
+  saveDesignAction,
+  saveStylingGoalsAction,
+  setFeaturePreferenceAction,
+} from '@/app/actions/design';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  BlouseBackMannequin,
+  FeatureThumbnailSvg,
+  LehengaEnsembleMannequin,
+  LowerBodyMannequin,
+  UpperBodyOverlay,
+} from './DesignVisualAssets';
 
 // Outfit Categories → design features (D-132), laid out like the founder's mock-up: (1) illustrated neckline
-// cards, (2) a compact sleeve grid, (3) filter tags for every other category, (4) the visual customizer that
-// stacks the chosen neckline and sleeve on the dress form. Choices stay in the browser until Save Preferences.
+// cards, (2) a compact sleeve grid, (3) visual dummy cards for trouser cuts, waist rises, collars, drape styles,
+// (4) filter tags for surface and fabric, (5) upper and lower body visual customer try-on mannequins.
 
 interface DesignStudioProps {
   data: DesignFeaturesResponse;
@@ -114,7 +126,15 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
   const [goals, setGoals] = useState<string[]>(stylingGoals);
   const [message, setMessage] = useState<{ error?: string; success?: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [blouseView, setBlouseView] = useState<'front' | 'back'>('front');
   const router = useRouter();
+
+  const isBottom = data.garmentType.kind === 'bottom';
+  const isSkirt = data.garmentType.id === 'skirt';
+  const isBlouse = data.garmentType.id === 'saree_blouse' || data.garmentType.id === 'blouse';
+  const isDrape = data.garmentType.kind === 'drape';
+  const isLehenga = data.garmentType.id === 'lehenga';
+  const [lehengaView, setLehengaView] = useState<'ensemble' | 'choli' | 'skirt'>('ensemble');
 
   const byId = useMemo(() => {
     const map = new Map<string, DesignFeatureItem>();
@@ -124,7 +144,138 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
   const category = (id: DesignFeatureCategory) => data.categories.find((c) => c.id === id);
   const necklines = category('neckline');
   const sleeves = category('sleeve');
-  const tagCategories = data.categories.filter((c) => c.presentation === 'tags');
+
+  // For Blouse: cleanly split front necklines and back neck designs
+  const blouseFrontNecklines = useMemo(() => {
+    if (!necklines) return undefined;
+    const features = necklines.features.filter(
+      (f) =>
+        !f.featureId.includes('back') &&
+        !f.featureId.includes('backless') &&
+        !f.featureId.includes('keyhole') &&
+        !f.featureId.includes('sheer_illusion'),
+    );
+    return { ...necklines, label: 'Front Necklines', features };
+  }, [necklines]);
+
+  const blouseBackNecklines = useMemo(() => {
+    if (!necklines) return undefined;
+    const features = necklines.features.filter(
+      (f) =>
+        f.featureId.includes('back') ||
+        f.featureId.includes('backless') ||
+        f.featureId.includes('keyhole') ||
+        f.featureId.includes('sheer_illusion'),
+    );
+    return {
+      id: 'neckline' as DesignFeatureCategory,
+      label: 'Back Neck Designs',
+      features,
+      presentation: 'grid' as const,
+      sortOrder: 2,
+      personalised: necklines.personalised ?? false,
+    };
+  }, [necklines]);
+
+  /** Primary visual cards categories based on garment anatomy */
+  const primaryPanels = useMemo(() => {
+    const list: Array<{ title: string; categoryResult: DesignFeatureCategoryResult; compact: boolean }> = [];
+
+    if (isLehenga) {
+      // Indian Multi-Piece Ensemble Anatomy: Choli + Lehenga Skirt + Dupatta
+      if (necklines && necklines.features.length > 0)
+        list.push({ title: 'Choli / Blouse: Necklines & Bodice', categoryResult: necklines, compact: false });
+      if (sleeves && sleeves.features.length > 0)
+        list.push({ title: 'Choli / Blouse: Sleeves', categoryResult: sleeves, compact: true });
+      const fit = category('fit');
+      const silhouette = category('silhouette');
+      const skirtCategory = fit && fit.features.length > 0 ? fit : silhouette;
+      if (skirtCategory && skirtCategory.features.length > 0)
+        list.push({ title: 'Lehenga / Skirt: Fit & Silhouette', categoryResult: skirtCategory, compact: false });
+      const waistline = category('waistline');
+      const waistband = category('waistband');
+      const waistCategory = waistline && waistline.features.length > 0 ? waistline : waistband;
+      if (waistCategory && waistCategory.features.length > 0)
+        list.push({ title: 'Lehenga / Skirt: Waist & Closure', categoryResult: waistCategory, compact: true });
+      const draping = category('draping');
+      if (draping && draping.features.length > 0)
+        list.push({ title: 'Dupatta: Style & Drape', categoryResult: draping, compact: false });
+    } else if (isBottom) {
+      if (isSkirt) {
+        const fit = category('fit');
+        if (fit && fit.features.length > 0)
+          list.push({ title: 'Skirt Silhouette & Flare', categoryResult: fit, compact: false });
+        const waistline = category('waistline');
+        const waistband = category('waistband');
+        const waistCategory = waistline && waistline.features.length > 0 ? waistline : waistband;
+        if (waistCategory && waistCategory.features.length > 0)
+          list.push({ title: 'Waist Rise & Waistband', categoryResult: waistCategory, compact: true });
+        const length = category('length');
+        if (length && length.features.length > 0)
+          list.push({ title: 'Skirt Length', categoryResult: length, compact: true });
+        const pleats = category('pleats');
+        if (pleats && pleats.features.length > 0)
+          list.push({ title: 'Pleats & Gathers', categoryResult: pleats, compact: true });
+      } else {
+        const legShape = category('leg_shape');
+        if (legShape && legShape.features.length > 0)
+          list.push({ title: 'Trouser Types & Leg Cuts', categoryResult: legShape, compact: false });
+        const waistline = category('waistline');
+        if (waistline && waistline.features.length > 0)
+          list.push({ title: 'Waist Rise & Waistband', categoryResult: waistline, compact: true });
+        const fit = category('fit');
+        if (fit && fit.features.length > 0)
+          list.push({ title: 'Fit & Silhouette', categoryResult: fit, compact: true });
+        const length = category('length');
+        if (length && length.features.length > 0)
+          list.push({ title: 'Length', categoryResult: length, compact: true });
+        const pleats = category('pleats');
+        if (pleats && pleats.features.length > 0)
+          list.push({ title: 'Pleats & Creases', categoryResult: pleats, compact: true });
+      }
+    } else if (isBlouse) {
+      if (blouseFrontNecklines && blouseFrontNecklines.features.length > 0)
+        list.push({ title: 'Front Necklines & Bodice', categoryResult: blouseFrontNecklines, compact: false });
+      if (blouseBackNecklines && blouseBackNecklines.features.length > 0)
+        list.push({ title: 'Back Neck Designs', categoryResult: blouseBackNecklines, compact: false });
+      if (sleeves && sleeves.features.length > 0)
+        list.push({ title: sleeves.label, categoryResult: sleeves, compact: true });
+      const fit = category('fit');
+      if (fit && fit.features.length > 0)
+        list.push({ title: 'Fit & Bodice', categoryResult: fit, compact: true });
+    } else if (isDrape) {
+      const draping = category('draping');
+      if (draping && draping.features.length > 0)
+        list.push({ title: 'Draping Styles', categoryResult: draping, compact: false });
+    } else {
+      if (necklines && necklines.features.length > 0)
+        list.push({ title: necklines.label, categoryResult: necklines, compact: false });
+      if (sleeves && sleeves.features.length > 0)
+        list.push({ title: sleeves.label, categoryResult: sleeves, compact: true });
+      const fit = category('fit');
+      if (fit && fit.features.length > 0)
+        list.push({ title: 'Fit & Silhouette', categoryResult: fit, compact: true });
+    }
+
+    return list;
+  }, [
+    isLehenga,
+    isBottom,
+    isSkirt,
+    isBlouse,
+    isDrape,
+    data.categories,
+    necklines,
+    sleeves,
+    blouseFrontNecklines,
+    blouseBackNecklines,
+  ]);
+
+  const renderedCategoryIds = new Set(primaryPanels.map((p) => p.categoryResult.id));
+  if (isBlouse) renderedCategoryIds.add('neckline');
+  // Necklines already include collars ("Necklines and collars"). Exclude collar from filter tags.
+  renderedCategoryIds.add('collar');
+  const activeTagCategories = data.categories.filter((c) => !renderedCategoryIds.has(c.id));
 
   /** Why a feature cannot be picked with the current choices, if it can't. */
   const blockedBy = (feature: DesignFeatureItem): string | null => {
@@ -151,6 +302,15 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
       const result = await setFeaturePreferenceAction(feature.featureId, preference);
       if (result?.error) setMessage({ error: result.error });
     });
+
+  const toggleGoal = (goalId: string) => {
+    const nextGoals = goals.includes(goalId) ? goals.filter((x) => x !== goalId) : [...goals, goalId];
+    setGoals(nextGoals);
+    startTransition(async () => {
+      const res = await saveStylingGoalsAction(nextGoals);
+      if (res?.error) setMessage({ error: res.error });
+    });
+  };
 
   const saveSelection = () =>
     saveDesignAction({
@@ -214,7 +374,7 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
           <span
             aria-hidden
             className={cn(
-              'absolute right-2 top-2 flex size-5 items-center justify-center rounded border',
+              'absolute right-2 top-2 flex size-5 items-center justify-center rounded border z-10',
               isSelected ? 'border-accent bg-accent text-accent-foreground' : 'border-border bg-surface',
             )}
           >
@@ -230,9 +390,13 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
               className={cn('w-auto', compact ? 'h-24' : 'h-36 sm:h-40')}
             />
           ) : (
-            <span className={cn('flex items-center text-xs text-muted-foreground', compact ? 'h-24' : 'h-36')}>
-              No picture yet
-            </span>
+            <FeatureThumbnailSvg
+              feature={feature}
+              compact={compact}
+              isBottom={isBottom}
+              isLehenga={isLehenga}
+              isSkirt={isSkirt}
+            />
           )}
           <span className="mt-1 w-full text-center text-sm font-medium text-foreground">{feature.name}</span>
           <span
@@ -257,7 +421,7 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
       <ul
         className={cn(
           'grid gap-3',
-          compact ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4',
+          compact ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3',
         )}
       >
         {c.features.map((f) => card(f, compact))}
@@ -272,9 +436,13 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
 
   return (
     <div className="space-y-6">
+      {/* What would you like your outfit to do? (Styling Goals) */}
       <section aria-label="Styling goals" className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
         <h2 className="font-display text-lg text-primary">What would you like your outfit to do?</h2>
-        <p className="mb-3 text-xs text-muted-foreground">Optional. Goals change what is suggested once you save.</p>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Saved directly to your preferences. Styling goals prioritize the cuts and silhouettes recommended for you in
+          Discover My Style.
+        </p>
         <ul className="flex flex-wrap gap-2">
           {STYLING_GOALS.map((g) => {
             const on = goals.includes(g.id);
@@ -283,11 +451,11 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
                 <button
                   type="button"
                   aria-pressed={on}
-                  onClick={() => setGoals((list) => (on ? list.filter((x) => x !== g.id) : [...list, g.id]))}
+                  onClick={() => toggleGoal(g.id)}
                   className={cn(
-                    'rounded-full border px-3 py-1 text-xs transition',
+                    'rounded-full border px-3 py-1 text-xs font-medium transition',
                     on
-                      ? 'border-accent bg-accent/20 text-foreground'
+                      ? 'border-accent bg-accent/20 text-foreground shadow-sm'
                       : 'border-border text-muted-foreground hover:border-accent/60',
                   )}
                 >
@@ -299,93 +467,210 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
         </ul>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_280px]">
+      {/* Main Studio 3-Column / Adaptive Layout */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_320px]">
+        {/* Column 1: Primary Feature Dummy Cards */}
         <div className="space-y-6">
-          {necklines && (
-            <Panel step={1} title={necklines.label}>
-              {cardGrid(necklines, false)}
+          {primaryPanels.map((panel, idx) => (
+            <Panel key={panel.title} step={idx + 1} title={panel.title}>
+              {cardGrid(panel.categoryResult, panel.compact)}
             </Panel>
-          )}
-          {sleeves && (
-            <Panel step={2} title={sleeves.label}>
-              {cardGrid(sleeves, true)}
-            </Panel>
-          )}
+          ))}
         </div>
 
-        <Panel step={necklines ? 3 : 1} title="Filter tags" className="self-start">
+        {/* Column 2: Filter Tags & Secondary Choices */}
+        <Panel step={primaryPanels.length + 1} title="Filter tags" className="self-start">
           <div className="space-y-5">
-            {tagCategories.map((c) => (
-              <div key={c.id}>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-plum">{c.label}</h3>
-                {c.features.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Nothing matches your profile here.</p>
-                ) : (
-                  <ul className="flex flex-wrap gap-2">
-                    {c.features.map((f) => {
-                      const on = selected[f.category] === f.featureId;
-                      const blocked = blockedBy(f);
-                      return (
-                        <li key={f.featureId}>
-                          <button
-                            type="button"
-                            aria-pressed={on}
-                            disabled={blocked !== null}
-                            onClick={() => toggle(f)}
-                            title={f.suitability?.reasons[0] ?? f.description}
-                            className={cn(
-                              'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition',
-                              on
-                                ? 'border-accent bg-accent text-accent-foreground'
-                                : 'border-border bg-[#fbf6ec] text-foreground hover:border-accent/60',
-                              f.suitability?.result === 'recommended' && !on && 'border-accent/70',
-                              blocked && 'opacity-40',
-                            )}
-                          >
-                            {on && <Check className="size-3" />}
-                            {f.name}
-                            {f.suitability?.result === 'recommended' && <span className="sr-only"> (suits you)</span>}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            ))}
+            {activeTagCategories.length === 0 ? (
+              <p className="text-xs text-muted-foreground">All primary styling choices are displayed on the left.</p>
+            ) : (
+              activeTagCategories.map((c) => (
+                <div key={c.id}>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-plum">{c.label}</h3>
+                  {c.features.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nothing matches your profile here.</p>
+                  ) : (
+                    <ul className="flex flex-wrap gap-2">
+                      {c.features.map((f) => {
+                        const on = selected[f.category] === f.featureId;
+                        const blocked = blockedBy(f);
+                        return (
+                          <li key={f.featureId}>
+                            <button
+                              type="button"
+                              aria-pressed={on}
+                              disabled={blocked !== null}
+                              onClick={() => toggle(f)}
+                              title={f.suitability?.reasons[0] ?? f.description}
+                              className={cn(
+                                'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition',
+                                on
+                                  ? 'border-accent bg-accent text-accent-foreground shadow-sm'
+                                  : 'border-border bg-[#fbf6ec] text-foreground hover:border-accent/60',
+                                f.suitability?.result === 'recommended' && !on && 'border-accent/70',
+                                blocked && 'opacity-40',
+                              )}
+                            >
+                              {on && <Check className="size-3" />}
+                              {f.name}
+                              {f.suitability?.result === 'recommended' && <span className="sr-only"> (suits you)</span>}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </Panel>
 
+        {/* Column 3: Visual Customizer (Upper Body or Lower Body try-on mannequin) */}
         <Panel
-          step={necklines ? 4 : 2}
+          step={primaryPanels.length + 2}
           title="Visual customizer"
-          className="self-start lg:col-span-2 xl:sticky xl:top-20 xl:col-span-1"
+          className="self-start lg:col-span-2 xl:col-span-1 xl:sticky xl:top-20"
         >
-          <div className="mx-auto w-full max-w-[240px]">
-            <div
-              className="relative aspect-[200/240] w-full rounded-xl bg-[#fbf6ec]"
-              aria-label="Your selected combination"
-            >
-              {data.baseFigure && (
-                <Image
-                  src={data.baseFigure.url}
-                  alt={data.baseFigure.alt}
-                  fill
-                  unoptimized
-                  className="object-contain"
+          <div className="mx-auto w-full max-w-[260px]">
+            {isLehenga ? (
+              // Lehenga Multi-Piece Ensemble (Blouse + Skirt + Dupatta, matching Images 2, 3, 4)
+              <div aria-label="Your selected combination">
+                <LehengaEnsembleMannequin
+                  selected={selected}
+                  department={department}
+                  view={lehengaView}
                 />
-              )}
-              {necklineLayer && (
-                <Image src={necklineLayer.url} alt={necklineLayer.alt} fill unoptimized className="object-contain" />
-              )}
-              {sleeveLayer && (
-                <Image src={sleeveLayer.url} alt={sleeveLayer.alt} fill unoptimized className="object-contain" />
-              )}
-            </div>
-            <p className="mt-2 text-center text-xs text-muted-foreground">Your selected combo</p>
+              </div>
+            ) : isBottom ? (
+              // Lower Body Customer Try-On Mannequin (Trousers, Jeans, Palazzo, Skirt)
+              <div aria-label="Your selected combination">
+                <LowerBodyMannequin
+                  selected={selected}
+                  department={department}
+                  garmentId={data.garmentType.id}
+                />
+              </div>
+            ) : isBlouse && blouseView === 'back' ? (
+              // Blouse Back View Mannequin (Backless dori, deep U back, keyhole)
+              <div aria-label="Your selected combination">
+                <BlouseBackMannequin selected={selected} department={department} />
+              </div>
+            ) : (
+              // Upper Body Customer Mannequin (Tops, Bodices, Kurti, One-Piece Dresses)
+              <div
+                className="relative aspect-[200/240] w-full rounded-2xl bg-[#faf6ef] border border-[#ecdac7] shadow-inner overflow-hidden"
+                aria-label="Your selected combination"
+              >
+                {data.baseFigure && (
+                  <Image
+                    src={data.baseFigure.url}
+                    alt={data.baseFigure.alt}
+                    fill
+                    unoptimized
+                    className="object-contain"
+                  />
+                )}
+                {necklineLayer && (
+                  <Image src={necklineLayer.url} alt={necklineLayer.alt} fill unoptimized className="object-contain" />
+                )}
+                {sleeveLayer && (
+                  <Image src={sleeveLayer.url} alt={sleeveLayer.alt} fill unoptimized className="object-contain" />
+                )}
+
+                {/* Dynamic Upper Body Overlay: Fit, Length, Hemline, Closure, Pockets, Patterns */}
+                <UpperBodyOverlay selected={selected} department={department} />
+
+                {/* Atelier Sketch Outline Central Status Prompt */}
+                {!selected.neckline && !selected.sleeve && (
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                    <span className="mb-1 text-2xl font-light leading-none text-[#8a6a42]">+</span>
+                    <span className="font-serif text-xs font-medium tracking-wide text-[#7a5a36]">
+                      Pick your first piece
+                    </span>
+                    <span className="mt-0.5 text-[10px] text-muted-foreground">Neckline or sleeve</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Front View / Back View Toggle for Blouses */}
+            {isBlouse && (
+              <div className="mt-3 flex justify-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setBlouseView('front')}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-medium transition',
+                    blouseView === 'front'
+                      ? 'bg-plum text-white shadow-sm'
+                      : 'border border-border bg-surface text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  Front View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBlouseView('back')}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-medium transition',
+                    blouseView === 'back'
+                      ? 'bg-plum text-white shadow-sm'
+                      : 'border border-border bg-surface text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  Back View
+                </button>
+              </div>
+            )}
+
+            {/* View Toggles for Lehenga Ensemble */}
+            {isLehenga && (
+              <div className="mt-3 flex justify-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setLehengaView('ensemble')}
+                  className={cn(
+                    'rounded-full px-2.5 py-1 text-xs font-medium transition',
+                    lehengaView === 'ensemble'
+                      ? 'bg-plum text-white shadow-sm'
+                      : 'border border-border bg-surface text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  Full Ensemble
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLehengaView('choli')}
+                  className={cn(
+                    'rounded-full px-2.5 py-1 text-xs font-medium transition',
+                    lehengaView === 'choli'
+                      ? 'bg-plum text-white shadow-sm'
+                      : 'border border-border bg-surface text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  Choli / Blouse
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLehengaView('skirt')}
+                  className={cn(
+                    'rounded-full px-2.5 py-1 text-xs font-medium transition',
+                    lehengaView === 'skirt'
+                      ? 'bg-plum text-white shadow-sm'
+                      : 'border border-border bg-surface text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  Lehenga Skirt
+                </button>
+              </div>
+            )}
+
+            <p className="mt-2.5 text-center text-xs font-semibold text-foreground">Your selected combo</p>
           </div>
+
           {chosen.length > 0 ? (
-            <ul className="mt-3 flex flex-wrap justify-center gap-1.5">
+            <ul className="mt-2.5 flex flex-wrap justify-center gap-1.5">
               {chosen.map((f) => (
                 <li key={f.featureId} className="rounded-full bg-accent/20 px-2.5 py-0.5 text-xs text-foreground">
                   {f.name}
@@ -393,8 +678,17 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-center text-xs text-muted-foreground">Pick a neckline, a sleeve and any tags.</p>
+            <p className="mt-2.5 text-center text-xs text-muted-foreground">
+              {isLehenga
+                ? 'Pick a choli neckline, lehenga flare and draping style.'
+                : isBottom
+                ? 'Pick a trouser cut, rise, length and fit.'
+                : isDrape
+                ? 'Pick a drape style and fabric.'
+                : 'Pick a neckline, a sleeve and any tags.'}
+            </p>
           )}
+
           <div className="mt-4 flex gap-2">
             <Button type="button" variant="accent" size="sm" className="flex-1" onClick={save} disabled={pending}>
               Save preferences
@@ -403,6 +697,7 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
               <RotateCcw /> Reset
             </Button>
           </div>
+
           <Button
             type="button"
             size="full"
@@ -413,15 +708,26 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
           >
             <Sparkles aria-hidden /> Discover my style <ArrowRight aria-hidden />
           </Button>
+
           <p id="discover-hint" className="mt-1 text-center text-[11px] text-muted-foreground">
-            {hasSelection ? 'Saves this design, then finds looks that match it.' : 'Pick a neckline or sleeve first.'}
+            {hasSelection
+              ? 'Saves this design, then finds looks that match it.'
+              : isLehenga
+              ? 'Pick a choli neckline or lehenga silhouette first.'
+              : isBottom
+              ? 'Pick a trouser cut or waistline first.'
+              : isDrape
+              ? 'Pick a drape style first.'
+              : 'Pick a neckline or sleeve first.'}
           </p>
+
           <p
             role="status"
             className={cn('mt-2 min-h-5 text-center text-xs', message?.error ? 'text-destructive' : 'text-success')}
           >
             {message?.error ?? message?.success ?? ''}
           </p>
+
           <p className="text-center text-[11px] text-muted-foreground">
             Change Women’s or Men’s Wear in{' '}
             <Link href="/profile#basics" className="underline">

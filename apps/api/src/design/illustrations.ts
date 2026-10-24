@@ -99,8 +99,8 @@ function arm(f: Figure): string {
     smooth([[f.wrist[0] + h - 1, f.wrist[1]], [f.elbow[0] + h, f.elbow[1]], f.underarm]) +
     ' Z';
   return (
-    `<path d="${d}" fill="${SKIN}" stroke="${SKIN_LINE}" stroke-width="1"/>` +
-    `<ellipse cx="${f.wrist[0]}" cy="${f.wrist[1] + 8}" rx="${h}" ry="9" fill="${SKIN}" stroke="${SKIN_LINE}" stroke-width="1"/>`
+    `<path d="${d}" fill="none" stroke="#c4b5a5" stroke-width="1.2" stroke-dasharray="3.5 3.5"/>` +
+    `<ellipse cx="${f.wrist[0]}" cy="${f.wrist[1] + 8}" rx="${h}" ry="9" fill="none" stroke="#c4b5a5" stroke-width="1.2" stroke-dasharray="3.5 3.5"/>`
   );
 }
 
@@ -108,7 +108,7 @@ function sideDown(f: Figure): Pt[] {
   return [f.underarm, f.bust, f.waist, f.hip, f.bottom];
 }
 
-/** Faceless dress form: head, neck, arms and torso, in skin tone with fine lines. */
+/** Faceless dress form: head, neck, arms and torso, as an atelier sketch dashed outline (Option A). */
 export function baseFigureSvg(department: ClothingPreference): string {
   const f = FIGURES[department];
   const nh = f.neckHalf;
@@ -124,10 +124,10 @@ export function baseFigureSvg(department: ClothingPreference): string {
     [
       arm(f),
       `<g transform="${MIRROR}">${arm(f)}</g>`,
-      `<path d="${torso}" fill="${SKIN}" stroke="${SKIN_LINE}" stroke-width="1"/>`,
-      `<rect x="${100 - nh}" y="38" width="${2 * nh}" height="26" rx="3" fill="${SKIN}" stroke="${SKIN_LINE}" stroke-width="1"/>`,
-      `<ellipse cx="100" cy="27" rx="14" ry="17" fill="${SKIN}" stroke="${SKIN_LINE}" stroke-width="1"/>`,
-      `<path d="M ${100 - nh} 63 Q 100 68 ${100 + nh} 63" fill="none" stroke="${SKIN_LINE}" stroke-width="0.8"/>`,
+      `<path d="${torso}" fill="none" stroke="#c4b5a5" stroke-width="1.2" stroke-dasharray="3.5 3.5"/>`,
+      `<rect x="${100 - nh}" y="38" width="${2 * nh}" height="26" rx="3" fill="none" stroke="#c4b5a5" stroke-width="1.2" stroke-dasharray="3.5 3.5"/>`,
+      `<ellipse cx="100" cy="27" rx="14" ry="17" fill="none" stroke="#c4b5a5" stroke-width="1.2" stroke-dasharray="3.5 3.5"/>`,
+      `<path d="M ${100 - nh} 63 Q 100 68 ${100 + nh} 63" fill="none" stroke="#c4b5a5" stroke-width="0.8" stroke-dasharray="3.5 3.5"/>`,
     ].join(''),
   );
 }

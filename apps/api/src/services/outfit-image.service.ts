@@ -47,24 +47,45 @@ export class OutfitImageService {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  /** The colours to dress the image in: liked ones, else the top of the user's own palette less avoided ones. */
-  private async palette(userId: Types.ObjectId): Promise<Array<{ name: string; hex: string }>> {
+  /** The colours to dress the image in: custom colours if selected, else liked ones, else the top of the user's own palette less avoided ones. */
+  private async palette(
+    userId: Types.ObjectId,
+    customColors?: readonly string[],
+  ): Promise<Array<{ name: string; hex: string }>> {
+    if (customColors && customColors.length > 0) {
+      if (this.colours) {
+        const mine = await this.colours.mine(userId);
+        const nameMap = new Map(mine.colours.map((c) => [c.name.toLowerCase(), c.hex]));
+        return customColors.map((c) => ({
+          name: c,
+          hex: nameMap.get(c.toLowerCase()) || (c.startsWith('#') ? c : '#A8432A'),
+        }));
+      }
+      return customColors.map((c) => ({
+        name: c,
+        hex: c.startsWith('#') ? c : '#A8432A',
+      }));
+    }
     if (!this.colours) return [];
-    const { liked, avoided } = await this.colours.getPreferences(userId);
-    if (liked.length > 0) return liked;
+    const { avoided } = await this.colours.getPreferences(userId);
     const mine = await this.colours.mine(userId);
     const skip = new Set(avoided.map((c) => c.colourId));
     return mine.colours.filter((c) => !skip.has(c.colourId)).slice(0, TOP_PALETTE_COLOURS);
   }
 
   /** Slot ID → the palette colour closest to the slot's colour (none when the user has no palette). */
-  private async slotColours(userId: Types.ObjectId, slots: readonly LookSlot[]): Promise<Map<string, string>> {
-    const palette = await this.palette(userId);
+  private async slotColours(
+    userId: Types.ObjectId,
+    slots: readonly LookSlot[],
+    customColors?: readonly string[],
+  ): Promise<Map<string, string>> {
+    const palette = await this.palette(userId, customColors);
     const colours = new Map<string, string>();
     for (const slot of slots) {
       const hex = slot.swatches[0]?.hex;
       const match = hex ? closestOf(hex, palette) : null;
       if (match) colours.set(slot.slotId, match.name);
+      else if (palette.length > 0) colours.set(slot.slotId, palette[0]!.name);
     }
     return colours;
   }
@@ -106,7 +127,9 @@ export class OutfitImageService {
       occasion: look.request.occasion,
       style: look.request.style ?? null,
       department: look.inputsUsed?.department ?? null,
-      colours: await this.slotColours(userId, look.slots),
+      colours: await this.slotColours(userId, look.slots, look.request.customColors),
+      designGarment: look.request.design?.garmentType ?? null,
+      customColors: look.request.customColors ?? null,
     });
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);

@@ -45,7 +45,7 @@ const swatch = (colourId: string, name: string, hex: string) => ({
 });
 
 describe('colours from My Colour Palette in Discover My Style', () => {
-  it('prefers looks in the liked colours and leaves out near-identical avoided ones', async () => {
+  it('does not use liked palette colours for Discover My Style suggestions, keeping them decoupled', async () => {
     const { app, token, userId } = await signedIn('palette@example.com');
     const before = await request(app).post('/v1/recommendations').set(bearer(token)).send({ occasion: 'everyday' });
     expect(before.body.data.defaultsApplied).toContain('colors');
@@ -64,13 +64,12 @@ describe('colours from My Colour Palette in Discover My Style', () => {
 
     const res = await request(app).post('/v1/recommendations').set(bearer(token)).send({ occasion: 'everyday' });
     expect(res.status).toBe(200);
-    expect(res.body.data.defaultsApplied).not.toContain('colors');
     const looks = res.body.data.looks as Look[];
     expect(looks.length).toBeGreaterThan(0);
     expect(looks.flatMap((l) => l.slots.flatMap((s) => s.swatches.map((w) => w.colorId)))).not.toContain('white');
 
     const detail = (await request(app).get(`/v1/outfits/${looks[0]!.id}`).set(bearer(token))).body.data as OutfitDetail;
-    expect(detail.inputsUsed.likedColors).toContain('navy');
+    expect(detail.inputsUsed.likedColors).not.toContain('navy');
     expect(detail.inputsUsed.dislikedColors).toContain('white');
   });
 });
@@ -134,5 +133,29 @@ describe('saved designs listed for Discover My Style', () => {
       garmentName: 'Kurti',
       features: [{ category: 'neckline', featureId: 'neckline_v_neck', name: 'V-neck' }],
     });
+  });
+
+  it('generates looks successfully when styling goals and customColors are used together', async () => {
+    const { app, token, userId } = await signedIn('styling-goals-custom@example.com');
+    await env.db.models.UserDesignPreference.create({
+      userId,
+      clothingPreference: 'women',
+      stylingGoals: ['taller_silhouette'],
+      featurePreferences: [],
+      fitPreferences: [],
+      occasionPreferences: [],
+    });
+
+    const res = await request(app)
+      .post('/v1/recommendations')
+      .set(bearer(token))
+      .send({
+        occasion: 'everyday',
+        wearType: ['indian'],
+        customColors: ['Dusty Rose', 'Sea'],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.looks.length).toBeGreaterThan(0);
   });
 });

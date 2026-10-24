@@ -2,22 +2,23 @@
 
 import { startTransition, useActionState, useRef, useState } from 'react';
 import Link from 'next/link';
-import type { ProfileSizes, RecommendationResponse } from '@styleme/contracts';
+import { STYLING_GOALS, type ProfileSizes, type RecommendationResponse } from '@styleme/contracts';
 import { requestLooksAction, type LooksState } from '@/app/actions/discover';
 import type { FormState } from '@/lib/actions';
 import { requestFromDesign, type DesignRequest, type DesignSummary } from '@/lib/discover/design-summary';
 import { uniqueLooks } from '@/lib/discover/results';
-import { DesignSummaryCard } from '@/components/discover/DesignSummaryCard';
-import { LookCard } from '@/components/outfits/LookCard';
-import { RegenerateButton } from '@/components/outfits/RegenerateButton';
-import { ResultFlags } from '@/components/outfits/ResultFlags';
+import { DesignSummaryCard } from './DesignSummaryCard';
+import { LookCard } from '../outfits/LookCard';
+import { RegenerateButton } from '../outfits/RegenerateButton';
+import { ResultFlags } from '../outfits/ResultFlags';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 
 // Discover My Style look request (FR-LOOK-01), built from Outfit Categories (D-132): the chosen saved design
 // gives the garment to build around, the occasion (its occasion tag, else the occasion preferences, else
-// Everyday) and the wear type (its outfit category). Colours come from My Colour Palette on the API side.
+// Everyday) and the wear type (its outfit category). Colours come from My Colour Palette on the API side,
+// or custom colours selected by user for this style.
 
 function Status({ state }: { state: FormState }) {
   if (state?.error) return <Alert tone="error">{state.error}</Alert>;
@@ -25,21 +26,28 @@ function Status({ state }: { state: FormState }) {
   return null;
 }
 
-/** The looks of one request, in engine order (FR-LOOK-13), with the result flags first. */
+/** The looks of one request, in engine order (FR-LOOK-13), shown cleanly 3 in a row. */
 function Results({ result, sizes }: { result: RecommendationResponse; sizes: ProfileSizes }) {
   const looks = uniqueLooks(result.looks);
   return (
-    <section aria-labelledby="results-heading" className="space-y-4">
-      <h2 id="results-heading" className="font-display text-2xl text-primary">
-        Your looks
-      </h2>
+    <section aria-labelledby="results-heading" className="space-y-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border/60 pb-3">
+        <h2 id="results-heading" className="font-display text-2xl text-primary">
+          Your looks
+        </h2>
+        <span className="text-xs text-muted-foreground">
+          {looks.length} outfit{looks.length === 1 ? '' : 's'} curated for you
+        </span>
+      </div>
       {looks.length > 0 ? (
         // A new request starts a new regenerate state.
         <RegenerateButton key={result.recommendationId} outfitId={looks[0]!.id} sizes={sizes}>
           <ResultFlags result={result} />
-          {looks.map((look, i) => (
-            <LookCard key={look.id} look={look} position={i + 1} sizes={sizes} />
-          ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+            {looks.map((look, i) => (
+              <LookCard key={look.id} look={look} position={i + 1} sizes={sizes} />
+            ))}
+          </div>
         </RegenerateButton>
       ) : (
         <ResultFlags result={result} />
@@ -92,7 +100,17 @@ const OCCASION_NOTE: Record<DesignRequest['occasionSource'], string | null> = {
 };
 
 /** What the request will use, all taken from Outfit Categories and My Colour Palette. */
-function RequestSummary({ request, design }: { request: DesignRequest; design: DesignSummary }) {
+function RequestSummary({
+  request,
+  design,
+  stylingGoals = [],
+  customColors = [],
+}: {
+  request: DesignRequest;
+  design: DesignSummary;
+  stylingGoals?: readonly string[];
+  customColors?: readonly string[];
+}) {
   const note = OCCASION_NOTE[request.occasionSource];
   return (
     <section aria-labelledby="request-summary-heading" className="space-y-3 rounded-2xl border border-border p-4">
@@ -108,7 +126,43 @@ function RequestSummary({ request, design }: { request: DesignRequest; design: D
         <dt className="text-muted-foreground">Wear type</dt>
         <dd>{request.wearTypeLabel}</dd>
         <dt className="text-muted-foreground">Colours</dt>
-        <dd>From My Colour Palette</dd>
+        <dd>
+          {customColors.length > 0 ? (
+            <span className="space-y-0.5">
+              <span className="font-medium text-plum">{customColors.join(', ')}</span>
+              <span className="block text-xs text-muted-foreground">
+                (Your chosen colours for this style)
+              </span>
+            </span>
+          ) : (
+            <span className="space-y-0.5">
+              <span>All harmonious colours</span>
+              <span className="block text-xs text-muted-foreground">
+                Harmonious shades &amp; combinations logically selected for this dress and occasion.
+              </span>
+            </span>
+          )}
+        </dd>
+        {stylingGoals.length > 0 && (
+          <>
+            <dt className="text-muted-foreground">Styling goals</dt>
+            <dd>
+              <span className="flex flex-wrap gap-1.5 pt-0.5">
+                {stylingGoals.map((id) => {
+                  const goal = STYLING_GOALS.find((g) => g.id === id);
+                  return (
+                    <span
+                      key={id}
+                      className="inline-flex items-center rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-medium text-foreground"
+                    >
+                      {goal?.label ?? id}
+                    </span>
+                  );
+                })}
+              </span>
+            </dd>
+          </>
+        )}
       </dl>
       <Link
         href={`/categories/design/${design.garmentType}?outfit=${design.outfitCategory}`}
@@ -125,6 +179,9 @@ export function RequestForm({
   designs = [],
   initialDesign = null,
   occasionPreferences = [],
+  stylingGoals = [],
+  customColors = [],
+  customColorHexes = [],
 }: {
   sizes: ProfileSizes;
   /** The user's saved Outfit Categories designs, newest first. */
@@ -133,6 +190,11 @@ export function RequestForm({
   initialDesign?: string | null;
   /** Occasion feature IDs from the Outfit Categories preferences, used when a design has no occasion tag. */
   occasionPreferences?: readonly string[];
+  /** Styling goals saved in Outfit Categories / Design Preferences. */
+  stylingGoals?: readonly string[];
+  /** Custom colours selected specifically for this request. */
+  customColors?: string[];
+  customColorHexes?: string[];
 }) {
   // The last request, so Retry can send it again.
   const lastRequest = useRef<FormData | null>(null);
@@ -182,7 +244,18 @@ export function RequestForm({
           <input type="hidden" name="occasion" value={request.occasion} />
           <input type="hidden" name="wearType" value={request.wearType} />
           <input type="hidden" name="paletteMode" value="suggested" />
-          <RequestSummary request={request} design={activeDesign} />
+          {customColors.length > 0 && (
+            <input type="hidden" name="customColors" value={customColors.join(',')} />
+          )}
+          {customColorHexes.length > 0 && (
+            <input type="hidden" name="customColorHexes" value={customColorHexes.join(',')} />
+          )}
+          <RequestSummary
+            request={request}
+            design={activeDesign}
+            stylingGoals={stylingGoals}
+            customColors={customColors}
+          />
           <Status state={state} />
           {state?.error && !state.fieldErrors && (
             <Button type="button" variant="outline" size="full" onClick={retry} disabled={pending}>

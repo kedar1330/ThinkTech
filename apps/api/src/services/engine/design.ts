@@ -35,7 +35,15 @@ const VOCABULARY: Record<DesignMatchAttribute, readonly string[]> = {
 
 /** The engine's view of a saved design selection, or null when its garment isn't a look category. */
 export function toEngineDesign(garmentType: string, selected: Record<string, unknown>): EngineDesign | null {
-  if (!(CATEGORY_IDS as readonly string[]).includes(garmentType)) return null;
+  let mappedCategory = garmentType;
+  if (!(CATEGORY_IDS as readonly string[]).includes(mappedCategory)) {
+    // Map known garments from Outfit Categories that are variants of core look categories
+    if (garmentType === 'anarkali') mappedCategory = 'kurti';
+    else if (garmentType === 'saree_blouse') mappedCategory = 'kurti';
+    else if (garmentType === 'palazzo') mappedCategory = 'trousers';
+    else if (garmentType === 'blouse' || garmentType === 'tunic') mappedCategory = 'shirt';
+    else return null;
+  }
   const features: EngineDesign['features'] = {};
   for (const attribute of DESIGN_MATCH_ATTRIBUTES) {
     const featureId = selected[attribute];
@@ -43,12 +51,24 @@ export function toEngineDesign(garmentType: string, selected: Record<string, unk
     const value = featureId.slice(attribute.length + 1);
     if (VOCABULARY[attribute].includes(value)) features[attribute] = value;
   }
-  return { category: garmentType as Category, features };
+  if (garmentType === 'anarkali' && !features.silhouette) {
+    features.silhouette = 'a_line';
+  }
+  return { category: mappedCategory as Category, features };
 }
+
+export const COMPATIBLE_CATEGORIES: Record<string, readonly Category[]> = {
+  kurti: ['kurti', 'kurta'],
+  kurta: ['kurta', 'kurti'],
+  shirt: ['shirt', 't_shirt'],
+  t_shirt: ['t_shirt', 'shirt'],
+  trousers: ['trousers'],
+};
 
 /** How a look's garments compare with the design. */
 export function matchDesign(specs: readonly LookSpec[], design: EngineDesign): DesignMatch {
-  const spec = specs.find((s) => s.category === design.category);
+  const compatible = COMPATIBLE_CATEGORIES[design.category] ?? [design.category];
+  const spec = specs.find((s) => s.category === design.category || compatible.includes(s.category));
   if (!spec) return { level: 'none', differs: [] };
   const differs = DESIGN_MATCH_ATTRIBUTES.filter(
     (a) => design.features[a] !== undefined && spec[a] !== design.features[a],

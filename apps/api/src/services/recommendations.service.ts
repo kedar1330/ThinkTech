@@ -2,6 +2,10 @@ import { Types } from 'mongoose';
 import {
   bodyTypeProportion,
   heightBand,
+  COLOR_IDS,
+  type ColorId,
+  FIT_IDS,
+  SILHOUETTE_IDS,
   type AppearanceResponse,
   type Look,
   type ProfileResponse,
@@ -16,10 +20,12 @@ import {
   AVOIDED_MAX_DISTANCE,
   LIKED_MAX_DISTANCE,
   generateLooks,
+  nearestColour,
   signalsFromAppearance,
   toEngineDesign,
   vocabularyColours,
   type EngineSignals,
+  type ProfileWithMeasurements,
   type StyleLibrary,
 } from './engine';
 import type { MeasurementsService } from './measurements.service';
@@ -75,14 +81,52 @@ export class RecommendationsService {
   }
 
   /**
-   * The profile with the colours liked and avoided in My Colour Palette (D-133) added, as their nearest look
-   * colours: liked ones are preferred, avoided ones are left out only when they are near-identical. A colour
-   * that ends up both liked and avoided is avoided (FR-LOOK-10).
+   * Applies custom colours chosen specifically for this style to the profile.
+   * Liked colours from My Colour Palette are strictly decoupled from Discover My Style recommendations,
+   * so they are never automatically injected or used as filters for general look discovery.
+   * If custom colours are chosen, outfits are generated strictly around those colours.
    */
-  private async withPaletteColours(userId: Types.ObjectId, profile: ProfileResponse): Promise<ProfileResponse> {
+  private async withPaletteColours(
+    userId: Types.ObjectId,
+    profile: ProfileResponse,
+    customColors?: readonly string[],
+  ): Promise<ProfileResponse> {
+    if (customColors && customColors.length > 0) {
+      let customVocab: ColorId[] = [];
+      if (this.colours) {
+        const mine = await this.colours.mine(userId);
+        const nameMap = new Map(mine.colours.map((c) => [c.name.toLowerCase(), c.hex]));
+        const hexList = customColors
+          .map((c) => nameMap.get(c.toLowerCase()) ?? (c.startsWith('#') ? c : null))
+          .filter(Boolean) as string[];
+        if (hexList.length > 0) {
+          customVocab = vocabularyColours(hexList, LIKED_MAX_DISTANCE);
+          // If strict LIKED_MAX_DISTANCE filtered them, map each hex to nearest ColorId
+          if (customVocab.length === 0) {
+            customVocab = [...new Set(hexList.map((h) => nearestColour(h).colorId))];
+          }
+        }
+      }
+      // If still empty, check if any customColor matches a ColorId directly
+      if (customVocab.length === 0) {
+        const directMatches = customColors
+          .map((c) => c.toLowerCase().replace(/\s+/g, '_'))
+          .filter((c): c is ColorId => (COLOR_IDS as readonly string[]).includes(c));
+        if (directMatches.length > 0) {
+          customVocab = directMatches;
+        }
+      }
+      return {
+        ...profile,
+        likedColors: (customVocab.length > 0 ? customVocab : profile.likedColors) as ProfileResponse['likedColors'],
+      };
+    }
+
     if (!this.colours) return profile;
-    const { liked, avoided } = await this.colours.getPreferences(userId);
-    if (liked.length === 0 && avoided.length === 0) return profile;
+    const [{ avoided }, mine] = await Promise.all([
+      this.colours.getPreferences(userId),
+      this.colours.mine(userId),
+    ]);
     const disliked = [
       ...new Set([
         ...profile.dislikedColors,
@@ -92,16 +136,56 @@ export class RecommendationsService {
         ),
       ]),
     ];
-    const likedColors = [
-      ...new Set([
-        ...profile.likedColors,
-        ...vocabularyColours(
-          liked.map((c) => c.hex),
-          LIKED_MAX_DISTANCE,
-        ),
-      ]),
-    ].filter((c) => !disliked.includes(c));
-    return { ...profile, likedColors, dislikedColors: disliked };
+    // When custom colors are not chosen, outfits are generated strictly from the user's seasonal colour palette
+    const sourceHexes = mine.colours.map((c) => c.hex);
+
+    let paletteVocab =
+      sourceHexes.length > 0
+        ? vocabularyColours(sourceHexes, LIKED_MAX_DISTANCE)
+        : [];
+    if (paletteVocab.length === 0 && sourceHexes.length > 0) {
+      paletteVocab = [...new Set(sourceHexes.map((h) => nearestColour(h).colorId))];
+    }
+
+    const likedColors = (
+      paletteVocab.length > 0 ? paletteVocab : profile.likedColors
+    ).filter((c) => !disliked.includes(c));
+    return { ...profile, likedColors: likedColors as ProfileResponse['likedColors'], dislikedColors: disliked };
+  }
+
+  /** Softly applies the user's saved styling goals to recommendation rankings. */
+  private async withStylingGoals(userId: Types.ObjectId, profile: ProfileResponse): Promise<ProfileResponse> {
+    const prefs = await this.models.UserDesignPreference.findOne({ userId }).lean();
+    if (!prefs || !prefs.stylingGoals || prefs.stylingGoals.length === 0) return profile;
+
+    const extraSilhouettes: string[] = [];
+    const updatedFits = { ...(profile.fitPreferences ?? { tops: null, bottoms: null, ethnicTops: null, ethnicSets: null }) };
+
+    for (const goal of prefs.stylingGoals) {
+      if (goal === 'define_waist') {
+        extraSilhouettes.push('wrap', 'a_line', 'fitted');
+        if (!updatedFits.tops) updatedFits.tops = 'slim';
+      } else if (goal === 'longer_line') {
+        extraSilhouettes.push('straight', 'wide_leg');
+      } else if (goal === 'add_structure') {
+        extraSilhouettes.push('a_line', 'fit_and_flare');
+      } else if (goal === 'relaxed_comfort') {
+        extraSilhouettes.push('straight');
+        if (!updatedFits.tops) updatedFits.tops = 'regular';
+      } else if (goal === 'taller_silhouette') {
+        extraSilhouettes.push('straight', 'a_line');
+      }
+    }
+
+    const silhouettePreferences = [...new Set([...(profile.silhouettePreferences ?? []), ...extraSilhouettes])].filter((s) =>
+      (SILHOUETTE_IDS as readonly string[]).includes(s),
+    );
+
+    return {
+      ...profile,
+      silhouettePreferences: silhouettePreferences as ProfileResponse['silhouettePreferences'],
+      fitPreferences: updatedFits,
+    };
   }
 
   /** The user's own saved design for the requested garment, in engine terms; never features from the request. */
@@ -112,16 +196,32 @@ export class RecommendationsService {
       garmentType: request.design.garmentType,
       outfitCategory: request.design.outfitCategory,
     }).lean();
-    return selection ? toEngineDesign(selection.garmentType, selection.selectedFeatures ?? {}) : null;
+    return selection
+      ? toEngineDesign(selection.garmentType, selection.selectedFeatures ?? {})
+      : toEngineDesign(request.design.garmentType, {});
   }
 
   async recommend(userId: Types.ObjectId, request: RecommendationRequest): Promise<RecommendationResult> {
-    const [profile, signals, feedbackSignals, design] = await Promise.all([
-      this.profiles.get(userId).then((p) => this.withPaletteColours(userId, p)),
+    const [profileBase, signals, feedbackSignals, design, measurements] = await Promise.all([
+      this.profiles
+        .get(userId)
+        .then((p) => this.withPaletteColours(userId, p, request.customColors))
+        .then((p) => this.withStylingGoals(userId, p)),
       this.appearance.get(userId).then((a) => this.signalsFor(userId, a)),
       this.feedback ? this.feedback.getSignals(userId) : Promise.resolve(null),
       this.designFor(userId, request),
+      this.measurements ? this.measurements.get(userId) : Promise.resolve(null),
     ]);
+    const profile: ProfileWithMeasurements = {
+      ...profileBase,
+      measurements:
+        measurements?.valuesCm && Object.keys(measurements.valuesCm).length > 0
+          ? {
+              displayUnit: measurements.displayUnit,
+              valuesCm: measurements.valuesCm as Record<string, number>,
+            }
+          : undefined,
+    };
     const result = generateLooks({
       request,
       profile,
@@ -131,8 +231,31 @@ export class RecommendationsService {
       design,
     });
 
+    // If an anarkali design was chosen, update slots and explanations to describe Anarkali
+    const isAnarkali = request.design?.garmentType === 'anarkali';
+    if (isAnarkali) {
+      for (const look of result.looks) {
+        for (const slot of look.slots) {
+          if (slot.slot === 'top' || slot.slot === 'one_piece') {
+            slot.searchPhrase = slot.searchPhrase.replace(/\b(kurti|kurta)\b/gi, 'flared anarkali suit');
+            for (const alt of slot.alternatives) {
+              alt.searchPhrase = alt.searchPhrase.replace(/\b(kurti|kurta)\b/gi, 'flared anarkali suit');
+            }
+          }
+        }
+      }
+    }
+
     // Optional AI wording (FR-LOOK-16) runs after the deterministic result; a failure keeps the template text.
-    const worded = await Promise.all(result.looks.map((look) => this.wording.reword(look, request.occasion)));
+    const worded = await Promise.all(
+      result.looks.map((look) => {
+        if (isAnarkali) {
+          const transformedExplanation = look.explanation.replace(/\b(kurti|kurta)\b/gi, 'anarkali suit');
+          return this.wording.reword({ ...look, explanation: transformedExplanation }, request.occasion);
+        }
+        return this.wording.reword(look, request.occasion);
+      }),
+    );
     const warnings: WarningCode[] = [...result.warnings];
     if (worded.some((w) => w.skipped !== null)) warnings.push('AI_ENHANCEMENT_SKIPPED');
 
@@ -158,25 +281,30 @@ export class RecommendationsService {
       signalsUsed: result.signalsUsed,
     };
 
-    const docs = result.looks.map((look, i) => ({
-      _id: new Types.ObjectId(),
-      userId,
-      recommendationId,
-      status: 'suggested' as const,
-      // Every look made here is a Discover My Style look (#115).
-      source: 'discover_my_style' as const,
-      ...look,
-      explanation: worded[i]!.explanation,
-      contentVersion: result.contentVersion,
-      request,
-      inputsUsed,
-      defaultsApplied: result.defaultsApplied,
-      conflicts: result.conflicts,
-      warnings,
-      aiModel: worded[i]!.aiModel,
-      aiPromptVersion: worded[i]!.aiPromptVersion,
-      expiresAt,
-    }));
+    const docs = result.looks.map((look, i) => {
+      let explanation = worded[i]!.explanation;
+      if (isAnarkali) {
+        explanation = explanation.replace(/\b(kurti|kurta)\b/gi, 'anarkali suit');
+      }
+      return {
+        _id: new Types.ObjectId(),
+        userId,
+        recommendationId,
+        status: 'suggested' as const,
+        source: 'discover_my_style' as const,
+        ...look,
+        explanation,
+        contentVersion: result.contentVersion,
+        request,
+        inputsUsed,
+        defaultsApplied: result.defaultsApplied,
+        conflicts: result.conflicts,
+        warnings,
+        aiModel: worded[i]!.aiModel,
+        aiPromptVersion: worded[i]!.aiPromptVersion,
+        expiresAt,
+      };
+    });
     if (docs.length > 0) await this.models.Outfit.insertMany(docs);
 
     const looks: Look[] = docs.map((doc) => ({

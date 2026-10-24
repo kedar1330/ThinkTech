@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart } from 'lucide-react';
+import { Heart, Sparkles } from 'lucide-react';
 import type { CoordinatingColours as Coordinating, MyColourCombinationsResponse } from '@styleme/contracts';
 import { textContrastColor } from '@/lib/palette/palette-utils';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,7 @@ type OwnColour = MyColourCombinationsResponse['colours'][number];
  * Coordinating colours (#105): choose one of your colours to see the colours from your own palette that go well
  * with it, best first. Liked colours are listed first in the picker; avoided colours are never offered.
  */
-export function CoordinatingColours({ colours, coordinating }: { colours: OwnColour[]; coordinating: Coordinating[] }) {
+export function CoordinatingColours({ colours, coordinating, garment = null }: { colours: OwnColour[]; coordinating: Coordinating[]; garment?: string | null }) {
   const ordered = [
     ...colours.filter((c) => c.preference === 'liked'),
     ...colours.filter((c) => c.preference !== 'liked'),
@@ -100,6 +100,21 @@ export function CoordinatingColours({ colours, coordinating }: { colours: OwnCol
                 <span className="block space-y-0.5 px-2.5 py-2">
                   <span className="block truncate text-sm font-medium text-foreground">{m.name}</span>
                   <span className="block font-mono text-[11px] text-muted-foreground">{m.hex}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const names = [selected.name, m.name];
+                      const hexes = [selected.hex, m.hex];
+                      const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+                      const g = garment || params.get('garment');
+                      const gParam = g ? `&from=design&garment=${encodeURIComponent(g)}` : '';
+                      window.location.href = `/discover/looks?colors=${encodeURIComponent(names.join(','))}&colorHexes=${encodeURIComponent(hexes.join(','))}${gParam}`;
+                    }}
+                    className="inline-flex items-center gap-1 pt-1 text-[11px] font-semibold text-plum hover:underline"
+                  >
+                    <Sparkles className="size-2.5" />
+                    Use pair in Discover
+                  </button>
                 </span>
               </li>
             ))}

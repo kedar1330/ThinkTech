@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { Ban, Check, Heart, X } from 'lucide-react';
+import { Ban, Check, Heart, Sparkles, X } from 'lucide-react';
 import {
   COLOUR_FAMILIES,
   COLOUR_LIBRARY_LIMITS,
@@ -30,7 +30,7 @@ const PREFERENCE_FILTERS: Array<{ id: PreferenceFilter; label: string }> = [
  * save them as liked or to avoid, or clear them. With one colour selected, its reasons are shown. In `saved`
  * mode, cleared colours leave the list.
  */
-export function ColourAlbum({ colours, mode = 'category' }: { colours: AlbumColour[]; mode?: 'category' | 'saved' }) {
+export function ColourAlbum({ colours, mode = 'category', fromDiscover = false, garment = null }: { colours: AlbumColour[]; mode?: 'category' | 'saved'; fromDiscover?: boolean; garment?: string | null }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [overrides, setOverrides] = useState<Map<string, ColourPreference | null>>(new Map());
   const [family, setFamily] = useState<ColourFamily | 'all'>('all');
@@ -92,8 +92,33 @@ export function ColourAlbum({ colours, mode = 'category' }: { colours: AlbumColo
       active ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-surface hover:bg-surface-muted',
     );
 
+  const navigateToDiscover = (chosenColours: AlbumColour[]) => {
+    const names = chosenColours.map((c) => c.name);
+    const hexes = chosenColours.map((c) => c.hex);
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const g = garment || params.get('garment');
+    const gParam = g ? `&from=design&garment=${encodeURIComponent(g)}` : '';
+    window.location.href = `/discover/looks?colors=${encodeURIComponent(names.join(','))}&colorHexes=${encodeURIComponent(hexes.join(','))}${gParam}`;
+  };
+
   return (
     <div className="space-y-4">
+      {fromDiscover && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-plum/30 bg-plum/5 p-4 text-xs text-foreground shadow-2xs">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4 text-plum shrink-0" />
+            <span>
+              <strong>Choose outfit colours:</strong> Tap any colours below to select them for your Discover My Style look, then click <strong>"Use in Discover My Style"</strong>.
+            </span>
+          </div>
+          <a
+            href={`/discover/looks${garment ? `?from=design&garment=${encodeURIComponent(garment)}` : ''}`}
+            className="font-semibold text-plum underline hover:text-plum/80"
+          >
+            Cancel &amp; Return to Discover
+          </a>
+        </div>
+      )}
       <div className="space-y-2">
         <div role="group" aria-label="Filter by colour family" className="flex flex-wrap gap-2">
           <button
@@ -236,6 +261,15 @@ export function ColourAlbum({ colours, mode = 'category' }: { colours: AlbumColo
                     <span className="ml-1 text-xs text-muted-foreground">(the most at once)</span>
                   )}
                 </span>
+                <Button
+                  size="sm"
+                  type="button"
+                  className="bg-plum text-white hover:bg-plum/90 font-medium"
+                  onClick={() => navigateToDiscover(selectedColours)}
+                >
+                  <Sparkles aria-hidden className="size-3.5 mr-1" />
+                  Use {selected.size} in Discover My Style
+                </Button>
                 <Button size="sm" disabled={pending} onClick={() => apply('liked')}>
                   <Heart aria-hidden /> Like
                 </Button>

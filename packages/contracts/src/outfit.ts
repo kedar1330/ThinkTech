@@ -61,6 +61,7 @@ export const recommendationRequestSchema = z
     wearType: uniqueList(wearTypeSchema, 3).min(1).optional(),
     paletteMode: paletteModeSchema.default('suggested'),
     design: designRequestSchema.optional(),
+    customColors: z.array(z.string().trim().min(1)).max(10).optional(),
   })
   .strict();
 export type RecommendationRequest = z.infer<typeof recommendationRequestSchema>;

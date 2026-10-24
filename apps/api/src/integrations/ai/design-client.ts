@@ -34,9 +34,9 @@ export function geminiDesignProvider(
       const parts: object[] = [];
       if (image) parts.push({ inlineData: { mimeType: image.contentType, data: image.bytes.toString('base64') } });
       parts.push({ text: buildDesignPrompt(brief, image !== null) });
-      let res: Response;
-      try {
-        res = await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, {
+      
+      const tryCall = async (targetModel: string) => {
+        return await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(targetModel)}:generateContent`, {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
           body: JSON.stringify({
@@ -45,6 +45,20 @@ export function geminiDesignProvider(
           }),
           signal,
         });
+      };
+
+      let res: Response;
+      try {
+        res = await tryCall(model);
+        if (res.status === 429 && model !== 'gemini-3.5-flash-lite') {
+          // Automatic fallback to lightweight model if primary hits rate limit
+          try {
+            const fallbackRes = await tryCall('gemini-3.5-flash-lite');
+            if (fallbackRes.ok) res = fallbackRes;
+          } catch {
+            // Keep original res
+          }
+        }
       } catch {
         throw new VisionProviderError(signal.aborted ? 'timeout' : 'provider_error');
       }

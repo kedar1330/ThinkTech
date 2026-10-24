@@ -31,7 +31,7 @@ const VIEWS: Array<{ id: View; label: string; href: string }> = [
 export default async function MyColoursPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ view?: string }>;
+  searchParams?: Promise<{ view?: string; from?: string; garment?: string }>;
 } = {}) {
   const params = searchParams ? await searchParams : {};
   const view: View = params?.view === 'coordinating' || params?.view === 'combinations' ? params.view : 'colours';
@@ -125,7 +125,12 @@ export default async function MyColoursPage({
       </nav>
 
       {category && view === 'colours' ? (
-        <ColourAlbum key={category.categoryId} colours={data.colours} />
+        <ColourAlbum
+          key={category.categoryId}
+          colours={data.colours}
+          fromDiscover={params?.from === 'discover'}
+          garment={params?.garment ?? null}
+        />
       ) : !category && view === 'colours' ? (
         <div className="space-y-6">
           <div className="space-y-3 rounded-xl border border-dashed border-plum/30 bg-plum/5 p-6 text-center">
@@ -146,9 +151,17 @@ export default async function MyColoursPage({
           <StarterPaletteShowcase colours={STARTER_PALETTE_COLOURS} />
         </div>
       ) : category && combos && !combos.missing && view === 'coordinating' ? (
-        <CoordinatingColours colours={combos.colours} coordinating={combos.coordinating} />
+        <CoordinatingColours
+          colours={combos.colours}
+          coordinating={combos.coordinating}
+          garment={params?.garment ?? null}
+        />
       ) : category && combos && !combos.missing && view === 'combinations' ? (
-        <CombinationGallery combinations={combos.combinations} harmonies={combos.harmonies} />
+        <CombinationGallery
+          combinations={combos.combinations}
+          harmonies={combos.harmonies}
+          garment={params?.garment ?? null}
+        />
       ) : (
         <div className="space-y-3 rounded-xl border border-dashed border-border px-4 py-12 text-center">
           <p className="font-display text-xl text-primary">{missing.title}</p>

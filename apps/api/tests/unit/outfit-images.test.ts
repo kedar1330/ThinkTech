@@ -1,3 +1,4 @@
+import { buildOutfitImagePrompt } from '../../src/integrations/ai/prompts/outfit-image-v2';
 import { describe, expect, it } from 'vitest';
 import type { LookSpec } from '@styleme/contracts';
 import { ImageProviderError, pollinationsImageProvider } from '../../src/integrations/ai/image-client';
@@ -112,5 +113,41 @@ describe('design matching', () => {
       level: 'none',
       differs: [],
     });
+  });
+});
+
+describe('buildOutfitImagePrompt with garment & custom colors', () => {
+
+  it('generates an anarkali prompt instead of kurti when anarkali design is selected', () => {
+    const prompt = buildOutfitImagePrompt({
+      slots: [
+        { slotId: 'slot-1', slot: 'top', searchPhrase: 'coral cotton knee-length regular a-line v-neck kurti', swatches: [{ colorId: 'coral', hex: '#FF7F50', name: 'Coral' }], alternatives: [] } as any,
+        { slotId: 'slot-2', slot: 'bottom', searchPhrase: 'white silk regular straight trousers', swatches: [{ colorId: 'white', hex: '#FFFFFF', name: 'White' }], alternatives: [] } as any,
+      ],
+      occasion: 'festive',
+      style: null,
+      department: 'women',
+      designGarment: 'anarkali',
+    });
+    expect(prompt).toContain('anarkali');
+    expect(prompt).toContain('flared anarkali suit with voluminous kalidar umbrella flare');
+    expect(prompt).not.toContain('kurti');
+  });
+
+  it('uses custom selected colors for pieces when provided', () => {
+    const colours = new Map([['slot-1', 'Emerald'], ['slot-2', 'Gold']]);
+    const prompt = buildOutfitImagePrompt({
+      slots: [
+        { slotId: 'slot-1', slot: 'top', searchPhrase: 'coral cotton kurti', swatches: [{ colorId: 'coral', hex: '#FF7F50', name: 'Coral' }], alternatives: [] } as any,
+        { slotId: 'slot-2', slot: 'bottom', searchPhrase: 'white trousers', swatches: [{ colorId: 'white', hex: '#FFFFFF', name: 'White' }], alternatives: [] } as any,
+      ],
+      occasion: 'wedding',
+      style: null,
+      department: 'women',
+      colours,
+      customColors: ['Emerald', 'Gold'],
+    });
+    expect(prompt.toLowerCase()).toContain('emerald');
+    expect(prompt.toLowerCase()).toContain('gold');
   });
 });
