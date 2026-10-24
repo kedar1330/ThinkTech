@@ -4,7 +4,6 @@ import {
   type ColorId,
   type DesignMatch,
   type LookSlot,
-  type ProfileResponse,
   type RecommendationRequest,
   type WarningCode,
 } from '@styleme/contracts';
@@ -13,7 +12,13 @@ import { wearsContrast } from './contrast';
 import { designRank, matchDesign, type EngineDesign } from './design';
 import { explain, type Explanation } from './explain';
 import { templateWearType, type StyleLibrary } from './library';
-import { resolvePreferences, type EngineSignals, type PreferenceConflict, type Preferences } from './preferences';
+import {
+  resolvePreferences,
+  type EngineSignals,
+  type PreferenceConflict,
+  type Preferences,
+  type ProfileWithMeasurements,
+} from './preferences';
 import { applicableRules, ruleEffects, type ApplicableRule } from './rules';
 import { ZERO, add, compareScores, round, type FeedbackSignals, type Score } from './score';
 import { MIN_ALTERNATIVES, fillSlot, type Choice, type Constraint, type FilledSlot, type Match } from './slots';
@@ -28,7 +33,7 @@ import { searchPhrase, sizeNote, swatch } from './text';
 
 export interface EngineInput {
   request: RecommendationRequest;
-  profile: ProfileResponse;
+  profile: ProfileWithMeasurements;
   /** `null` when the user has no signals or has switched `useInRecommendations` off. */
   signals: EngineSignals | null;
   feedbackSignals?: FeedbackSignals | null;
@@ -249,7 +254,7 @@ function toLookSlot(filled: FilledSlot, prefs: Preferences): LookSlot {
     slotId: filled.slot.slotId,
     slot: filled.slot.slot,
     ...alt(filled.choice),
-    sizeNote: sizeNote(filled.choice.spec.category, prefs.sizes),
+    sizeNote: sizeNote(filled.choice.spec.category, prefs.sizes, prefs.measurements),
     alternatives: filled.alternatives.map(alt),
   };
 }
@@ -285,7 +290,10 @@ function select(
   preferred: (c: Candidate) => boolean = () => true,
 ): Candidate[] {
   const ranked = [...candidates].sort(compare);
-  const groups = [ranked.filter(preferred), ranked.filter((c) => !preferred(c))];
+  const matching = ranked.filter(preferred);
+  const nonMatching = ranked.filter((c) => !preferred(c));
+  // If we have candidates matching the user's design, only pick matching garments (FR-LOOK-11)
+  const groups = matching.length > 0 ? [matching] : [nonMatching];
   const picked: Candidate[] = [];
   const signatures = new Set<string>();
   const outfits = new Set<string>();
@@ -316,7 +324,7 @@ export function generateLooks(input: EngineInput): EngineResult {
   const { request, library } = input;
   const prefs = resolvePreferences(input.profile, input.signals);
   const defaultsApplied = [...prefs.defaultsApplied];
-  if (!request.style && prefs.styles.size === 0) defaultsApplied.push('style');
+  if (!request.style && !input.design && prefs.styles.size === 0) defaultsApplied.push('style');
 
   const { templates, eliminated, forOccasion } = filterTemplates(library, request, prefs);
   const candidates: Candidate[] = [];

@@ -168,29 +168,21 @@ const SELECTION = FEATURES.selection!;
 const NAMED = (name: string) => ({ category: 'neckline' as const, featureId: `neckline_${name}`, name });
 
 describe('PaletteColours', () => {
-  const colour = (colourId: string, name: string, hex: string) =>
-    ({ colourId, name, hex, preference: 'liked' }) as never;
-
-  it('shows the liked colours from My Colour Palette and says how looks use them', () => {
-    render(
-      <PaletteColours
-        colours={{
-          liked: [colour('CLR-0001', 'Deep navy', '#1E2B45')],
-          avoided: [colour('CLR-0002', 'Snow', '#FEFEFE')],
-          updatedAt: null,
-        }}
-      />,
+  it('explains that harmonious colours are used without forcing palette likes', () => {
+    render(<PaletteColours />);
+    expect(screen.getByText('All harmonious colours')).toBeInTheDocument();
+    expect(screen.getByText(/Colours you like in/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Choose specific colours in Colour Palette/ })).toHaveAttribute(
+      'href',
+      '/palette/colours?from=discover',
     );
-    expect(screen.getByRole('list', { name: 'Liked colours' })).toHaveTextContent('Deep navy');
-    expect(
-      screen.getByText(/favour these colours, and leave out colours that look the same as the 1 you avoid/),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Edit in My Colour Palette' })).toHaveAttribute('href', '/palette/colours');
   });
 
-  it('invites the user to choose colours when none are liked', () => {
-    render(<PaletteColours colours={null} />);
-    expect(screen.getByRole('link', { name: 'Choose colours in My Colour Palette' })).toBeInTheDocument();
+  it('shows custom chosen colours when provided', () => {
+    render(<PaletteColours customColors={['Emerald', 'Gold']} customColorHexes={['#046A38', '#FFD700']} />);
+    expect(screen.getByRole('list', { name: 'Chosen style colours' })).toHaveTextContent('Emerald');
+    expect(screen.getByRole('list', { name: 'Chosen style colours' })).toHaveTextContent('Gold');
+    expect(screen.getByRole('link', { name: /Change colours in palette/ })).toBeInTheDocument();
   });
 });
 

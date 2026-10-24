@@ -11,6 +11,8 @@ export interface RequestFormFields {
   /** Hidden fields set when the request is built around a designed garment (D-132). */
   designGarment?: string;
   designOutfit?: string;
+  /** Custom colours selected by user for this style. */
+  customColors?: string[];
   /** CLR-XXXX colour IDs the user explicitly picked for the outfit image (optional). */
   chosenColours?: string[];
 }
@@ -28,6 +30,7 @@ export function requestFormToRequest(fields: RequestFormFields): RequestFormResu
       fields.designGarment && fields.designOutfit
         ? { garmentType: fields.designGarment, outfitCategory: fields.designOutfit }
         : undefined,
+    customColors: fields.customColors && fields.customColors.length > 0 ? fields.customColors : undefined,
     chosenColours: fields.chosenColours?.length ? fields.chosenColours : undefined,
   });
   if (parsed.success) return { ok: true, body: parsed.data };

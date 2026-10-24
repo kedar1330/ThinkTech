@@ -75,32 +75,43 @@ export function searchPhrase(spec: LookSpec): string {
 }
 
 /** "Your saved size: M", or a prompt to add one; free-size categories say so (FR-SIZE-04). */
-export function sizeNote(category: Category, sizes: ProfileSizes): string {
+export function sizeNote(
+  category: Category,
+  sizes: ProfileSizes,
+  measurements?: { valuesCm?: Record<string, number> } | null,
+): string {
   const group = categoryGroup(category);
   const prompt = `Add your ${lower(CATEGORY_GROUPS, group)} size in your profile`;
+  const hasMeasurements = Boolean(measurements?.valuesCm && Object.keys(measurements.valuesCm).length > 0);
   switch (group) {
     case 'freeSize':
       return 'Free size';
     case 'tops':
-      return sizes.tops
-        ? `Your saved size: ${sizes.tops.letter}${sizes.tops.collarIn ? `, collar ${sizes.tops.collarIn} in` : ''}`
-        : prompt;
+      if (sizes.tops)
+        return `Your saved size: ${sizes.tops.letter}${sizes.tops.collarIn ? `, collar ${sizes.tops.collarIn} in` : ''}`;
+      if (hasMeasurements) return 'Tailored to your measurements';
+      return prompt;
     case 'bottoms':
-      return sizes.bottoms
-        ? `Your saved waist: ${sizes.bottoms.waistIn} in${sizes.bottoms.lengthIn ? `, length ${sizes.bottoms.lengthIn} in` : ''}`
-        : prompt;
+      if (sizes.bottoms)
+        return `Your saved waist: ${sizes.bottoms.waistIn} in${sizes.bottoms.lengthIn ? `, length ${sizes.bottoms.lengthIn} in` : ''}`;
+      if (hasMeasurements) return 'Tailored to your measurements';
+      return prompt;
     case 'ethnicTops': {
       const s = sizes.ethnicTops;
-      return s ? `Your saved size: ${s.letter ?? `${s.numeric} in`}` : prompt;
+      if (s) return `Your saved size: ${s.letter ?? `${s.numeric} in`}`;
+      if (hasMeasurements) return 'Tailored to your measurements';
+      return prompt;
     }
     case 'ethnicSets': {
       const s = sizes.ethnicSets;
-      return s ? `Your saved size: ${s.letter ?? `waist ${s.waistIn} in`}` : prompt;
+      if (s) return `Your saved size: ${s.letter ?? `waist ${s.waistIn} in`}`;
+      if (hasMeasurements) return 'Tailored to your measurements';
+      return prompt;
     }
     case 'shoes':
       return sizes.shoes ? `Your saved size: UK ${sizes.shoes.uk}` : prompt;
     default:
-      // Dresses join in Stage 2 (D-57); the profile has no dress size yet.
+      if (hasMeasurements) return 'Tailored to your measurements';
       return prompt;
   }
 }

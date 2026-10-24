@@ -90,7 +90,7 @@ export function createRateLimits(): AppRateLimits {
     photoAnalysis: [limiter(MINUTE, 5, byUser), limiter(HOUR, 20, byUser)],
     outfitImage: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
     priceRange: [limiter(MINUTE, 60, byUser), limiter(HOUR, 300, byUser)],
-    designStudio: [limiter(MINUTE, 5, byUser), limiter(HOUR, 30, byUser)],
+    designStudio: [limiter(MINUTE, 20, byUser), limiter(HOUR, 60, byUser)],
     assistant: [limiter(MINUTE, 10, byUser), limiter(HOUR, 120, byUser)],
     tryOn: [limiter(MINUTE, 3, byUser), limiter(HOUR, 20, byUser)],
     tryOnPoll: [limiter(MINUTE, 60, byUser)],

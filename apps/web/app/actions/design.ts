@@ -56,6 +56,17 @@ export async function saveDesignAction(input: {
   return { success: 'Your preferences are saved.', issuedAt: Date.now() };
 }
 
+/** Save only styling goals: updates what the outfit should do directly in preferences. */
+export async function saveStylingGoalsAction(stylingGoals: string[]): Promise<FormState> {
+  const parsed = z.array(stylingGoalSchema).max(9).safeParse(stylingGoals);
+  if (!parsed.success) return { error: 'Please choose valid styling goals.' };
+  const res = await call<DesignPreferencesResponse>('/v1/design/preferences', 'PUT', {
+    stylingGoals: parsed.data,
+  });
+  if (res?.error) return res;
+  return { success: 'Your styling goals are saved.', issuedAt: Date.now() };
+}
+
 /** Reset: forget the saved combination for this garment. */
 export async function resetDesignAction(garmentType: string, department?: string): Promise<FormState> {
   const parsed = garmentTypeIdSchema.safeParse(garmentType);

@@ -56,22 +56,36 @@ export class OutfitImageService {
 
   /**
    * Resolves the colour palette to dress the outfit image in (highest priority first):
-   * 1. `chosenColours` — explicit colour IDs the user picked in the Discover My Style form.
-   * 2. Coordinating / combination colours from their palette (D-133 §3.14).
-   * 3. Liked palette colours, else the top of the user's own palette less avoided ones.
-   * 4. Empty (no palette) — the look's own swatches are shown unchanged.
+   * 1. customColors — explicit colour names / hexes passed in the request.
+   * 2. chosenColourIds — explicit CLR-XXXX colour IDs the user picked in the Discover My Style form.
+   * 3. Coordinating / combination colours from their palette (D-133 §3.14).
+   * 4. User's full seasonal category palette less avoided colours.
    */
   private async palette(
     userId: Types.ObjectId,
+    customColors?: readonly string[],
     chosenColourIds?: readonly ColourId[],
   ): Promise<Array<{ name: string; hex: string }>> {
+    if (customColors && customColors.length > 0) {
+      if (this.colours) {
+        const mine = await this.colours.mine(userId);
+        const nameMap = new Map(mine.colours.map((c) => [c.name.toLowerCase(), c.hex]));
+        return customColors.map((c) => ({
+          name: c,
+          hex: nameMap.get(c.toLowerCase()) || (c.startsWith('#') ? c : '#A8432A'),
+        }));
+      }
+      return customColors.map((c) => ({
+        name: c,
+        hex: c.startsWith('#') ? c : '#A8432A',
+      }));
+    }
+
     if (!this.colours) return [];
 
-    // Priority 1: explicit user choice from the form.
     if (chosenColourIds && chosenColourIds.length > 0) {
       const prefs = await this.colours.getPreferences(userId);
       const allKnown = [...prefs.liked, ...prefs.avoided];
-      // Fetch any that aren't in preferences (e.g. palette colours not yet marked liked/avoided).
       const knownIds = new Set(allKnown.map((c) => c.colourId));
       const missingIds = chosenColourIds.filter((id) => !knownIds.has(id));
       const mine = missingIds.length > 0 ? await this.colours.mine(userId) : null;
@@ -83,14 +97,11 @@ export class OutfitImageService {
       });
     }
 
-    // Priority 2: coordinating/combination colours from the user's palette (best-first).
     const combs = await this.colours.combinations(userId);
     if (combs.colours.length > 0) {
-      // Use all non-avoided colours from combinations (includes coordinating base).
       return combs.colours.filter((c) => c.preference !== 'avoided').map((c) => ({ name: c.name, hex: c.hex }));
     }
 
-    // Priority 3: liked palette colours; without any, the top of the user's own palette less avoided ones.
     const { liked, avoided } = await this.colours.getPreferences(userId);
     if (liked.length > 0) return liked;
     const mine = await this.colours.mine(userId);
@@ -102,14 +113,16 @@ export class OutfitImageService {
   private async slotColours(
     userId: Types.ObjectId,
     slots: readonly LookSlot[],
+    customColors?: readonly string[],
     chosenColourIds?: readonly ColourId[],
   ): Promise<Map<string, string>> {
-    const palette = await this.palette(userId, chosenColourIds);
+    const palette = await this.palette(userId, customColors, chosenColourIds);
     const colours = new Map<string, string>();
     for (const slot of slots) {
       const hex = slot.swatches[0]?.hex;
       const match = hex ? closestOf(hex, palette) : null;
       if (match) colours.set(slot.slotId, match.name);
+      else if (palette.length > 0) colours.set(slot.slotId, palette[0]!.name);
     }
     return colours;
   }
@@ -171,7 +184,7 @@ export class OutfitImageService {
       style: look.request.style ?? null,
       wearType: look.request.design?.outfitCategory ?? (wearTypes.length === 1 ? wearTypes[0] : null),
       department: look.inputsUsed?.department ?? null,
-      colours: await this.slotColours(userId, look.slots, look.request.chosenColours),
+      colours: await this.slotColours(userId, look.slots, look.request.customColors, look.request.chosenColours),
       design: await this.design(userId, look),
     });
     const controller = new AbortController();

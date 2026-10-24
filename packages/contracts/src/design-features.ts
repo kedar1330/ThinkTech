@@ -58,7 +58,7 @@ export const DESIGN_FEATURE_CATEGORIES = [
   { id: 'waistline', label: 'Waistline and rise', presentation: 'tags', kinds: ['one_piece', 'bottom'] },
   { id: 'silhouette', label: 'Silhouette', presentation: 'tags', kinds: ['top', 'one_piece'] },
   { id: 'leg_shape', label: 'Leg shape', presentation: 'tags', kinds: ['bottom'] },
-  { id: 'waistband', label: 'Waistband', presentation: 'tags', kinds: ['bottom'] },
+  { id: 'waistband', label: 'Waistband', presentation: 'tags', kinds: ['bottom', 'one_piece'] },
   { id: 'pleats', label: 'Pleats', presentation: 'tags', kinds: ['bottom'] },
   { id: 'bottom_hem', label: 'Trouser hem', presentation: 'tags', kinds: ['bottom'] },
   {

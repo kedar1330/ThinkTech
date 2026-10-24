@@ -73,7 +73,7 @@ describe('Discover My Style request (built from Outfit Categories)', () => {
     const summary = screen.getByRole('region', { name: 'From Outfit Categories' });
     expect(within(summary).getByText('Festive')).toBeInTheDocument();
     expect(within(summary).getByText('Indian')).toBeInTheDocument();
-    expect(within(summary).getByText('From My Colour Palette')).toBeInTheDocument();
+    expect(within(summary).getByText('All harmonious colours')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Show me looks' }));
     expect(Object.fromEntries(sent())).toEqual({

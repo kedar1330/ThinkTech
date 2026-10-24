@@ -51,9 +51,11 @@ export function RegenerateButton({
         <section aria-label="Regenerated looks" className="space-y-4">
           <WhatChanged changes={state.changes ?? []} />
           <ResultFlags result={result} />
-          {looks.map((look, i) => (
-            <LookCard key={look.id} look={look} position={i + 1} sizes={sizes} />
-          ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+            {looks.map((look, i) => (
+              <LookCard key={look.id} look={look} position={i + 1} sizes={sizes} />
+            ))}
+          </div>
         </section>
       ) : (
         children

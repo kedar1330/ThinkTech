@@ -254,7 +254,10 @@ function planCategory(
 
   const base = fromRules(rules, { category, slotType: slot.slot });
   const garment = GARMENT_SLOTS.has(slot.slot);
-  const colours = pool.map((color) => {
+  // Garments are strictly chosen from the user's selected/palette colours when available
+  const eligibleColours = garment && prefs.liked.size > 0 ? pool.filter((c) => prefs.liked.has(c)) : pool;
+  const effectivePool = eligibleColours.length > 0 ? eligibleColours : pool;
+  const colours = effectivePool.map((color) => {
     const family = COLORS.find((c) => c.id === color)!.family;
     // A liked colour counts once per look, so one liked colour doesn't take over every slot.
     const liked = prefs.liked.has(color) && !ctx.usedColours.has(color);
@@ -268,7 +271,7 @@ function planCategory(
       ...fromRules(
         rules,
         { color, colorFamily: family },
-        { preference: liked ? 1 : 0, rule: coordination, signal: 0, feedback: 0 },
+        { preference: liked ? 10 : 0, rule: coordination, signal: 0, feedback: 0 },
         liked ? [{ attribute: 'likedColor', value: color }] : [],
       ),
     };

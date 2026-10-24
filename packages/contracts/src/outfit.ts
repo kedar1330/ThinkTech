@@ -68,6 +68,7 @@ export const recommendationRequestSchema = z
     wearType: uniqueList(wearTypeSchema, 3).min(1).optional(),
     paletteMode: paletteModeSchema.default('suggested'),
     design: designRequestSchema.optional(),
+    customColors: z.array(z.string().trim().min(1)).max(10).optional(),
     /**
      * Colour IDs (`CLR-XXXX`) the user explicitly picked for the outfit image in Discover My Style.
      * Optional: when absent the image falls back to coordinating/combination colours from their palette.

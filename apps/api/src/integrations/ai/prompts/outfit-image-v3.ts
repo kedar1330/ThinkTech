@@ -60,9 +60,16 @@ export interface OutfitImagePromptInput {
 
 /** The slot's phrase with its leading colour word replaced by `colour`, when the phrase starts with it. */
 function inColour(slot: LookSlot, colour: string | undefined): string {
+  if (!colour) return slot.searchPhrase;
   const current = slot.swatches[0]?.name.toLowerCase();
-  if (!colour || !current || !slot.searchPhrase.startsWith(current)) return slot.searchPhrase;
-  return `${colour.toLowerCase()}${slot.searchPhrase.slice(current.length)}`;
+  if (current && slot.searchPhrase.toLowerCase().startsWith(current)) {
+    return `${colour.toLowerCase()}${slot.searchPhrase.slice(current.length)}`;
+  }
+  const firstSpace = slot.searchPhrase.indexOf(' ');
+  if (firstSpace > 0) {
+    return `${colour.toLowerCase()} ${slot.searchPhrase.slice(firstSpace + 1).trim()}`;
+  }
+  return `${colour.toLowerCase()} ${slot.searchPhrase}`;
 }
 
 function featurePhrase({ category, name }: { category: string; name: string }): string {
@@ -89,13 +96,29 @@ export function buildOutfitImagePrompt({
   design,
 }: OutfitImagePromptInput): string {
   const figure = department === 'women' ? 'a woman' : department === 'men' ? 'a man' : 'a fashion model';
-  const pieces = slots
+  let pieces = slots
     .filter((s) => SLOT_ORDER.includes(s.slot))
     .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot))
     .map((s) => {
       const colour = colours?.get(s.slotId);
-      return design && s.lookSpec.category === design.category ? designed(s, colour, design) : inColour(s, colour);
+      return design && s.lookSpec?.category === design.category ? designed(s, colour, design) : inColour(s, colour);
     });
+
+  const isAnarkali =
+    design?.garmentName?.toLowerCase().includes('anarkali') ||
+    slots.some((s) => s.searchPhrase.toLowerCase().includes('anarkali'));
+
+  if (isAnarkali) {
+    pieces = pieces.map((p) => {
+      if (/\b(kurti|kurta|anarkali)\b/i.test(p)) {
+        return p.replace(/\b(kurti|kurta|anarkali)\b/gi, 'flared anarkali suit with voluminous kalidar umbrella flare');
+      }
+      return p;
+    });
+    if (!pieces.some((p) => p.toLowerCase().includes('anarkali'))) {
+      pieces.unshift('flared kalidar anarkali suit');
+    }
+  }
   const wear = WEAR_TYPES.find((w) => w.id === wearType)?.label;
   const kind = [occasionLabel(occasion), wear, style ? styleLabel(style) : null]
     .filter(Boolean)

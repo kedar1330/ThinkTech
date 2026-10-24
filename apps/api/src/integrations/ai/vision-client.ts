@@ -39,6 +39,7 @@ export interface PhotoAnalysisProvider {
 }
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const VISION_FALLBACKS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
 
 /** Gemini `generateContent` with the photo inline (D-129). */
 export function geminiVisionProvider(
@@ -47,37 +48,58 @@ export function geminiVisionProvider(
   fetchImpl: typeof fetch = fetch,
 ): PhotoAnalysisProvider {
   async function generate(photo: PhotoInput, prompt: string, signal: AbortSignal): Promise<unknown> {
-    let res: Response;
-    try {
-      res = await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { inlineData: { mimeType: photo.contentType, data: photo.bytes.toString('base64') } },
-                { text: prompt },
-              ],
-            },
-          ],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0 },
-        }),
-        signal,
-      });
-    } catch {
-      throw new VisionProviderError(signal.aborted ? 'timeout' : 'provider_error');
-    }
-    if (res.status === 429) throw new VisionProviderError('rate_limited');
-    if (!res.ok) {
-      let details: string | undefined;
+    const candidateModels = [model, ...VISION_FALLBACKS].filter((m, idx, arr) => arr.indexOf(m) === idx);
+
+    let res: Response | undefined;
+    let details: string | undefined;
+    let isRateLimited = false;
+
+    for (const targetModel of candidateModels) {
+      if (signal.aborted) throw new VisionProviderError('timeout');
+      try {
+        res = await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(targetModel)}:generateContent`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  { inlineData: { mimeType: photo.contentType, data: photo.bytes.toString('base64') } },
+                  { text: prompt },
+                ],
+              },
+            ],
+            generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+          }),
+          signal,
+        });
+      } catch {
+        if (signal.aborted) throw new VisionProviderError('timeout');
+        continue;
+      }
+
+      if (res.ok) {
+        break;
+      }
+
+      if (res.status === 429) isRateLimited = true;
+
       try {
         const errJson = (await res.json()) as { error?: { message?: string } };
         details = errJson?.error?.message;
       } catch {
         // ignore
       }
+
+      if ([429, 500, 502, 503, 504].includes(res.status)) {
+        continue;
+      }
+      break;
+    }
+
+    if (!res || !res.ok) {
+      if (isRateLimited) throw new VisionProviderError('rate_limited');
       throw new VisionProviderError('provider_error', details);
     }
     try {

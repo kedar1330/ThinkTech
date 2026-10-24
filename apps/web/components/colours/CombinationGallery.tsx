@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart } from 'lucide-react';
+import { Heart, Sparkles } from 'lucide-react';
 import type { ColourCombination, CombinationHarmony, CombinationRole } from '@styleme/contracts';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,11 @@ export interface CombinationGalleryProps {
  * Curated combinations (#105): two- and three-colour outfits built only from the user's own colours, best first,
  * filterable by harmony and by colours the user likes.
  */
-export function CombinationGallery({ combinations, harmonies }: CombinationGalleryProps) {
+export function CombinationGallery({
+  combinations,
+  harmonies,
+  garment = null,
+}: CombinationGalleryProps & { garment?: string | null }) {
   const [harmony, setHarmony] = useState<CombinationHarmony | 'all'>('all');
   const [likedOnly, setLikedOnly] = useState(false);
   const [limit, setLimit] = useState(PAGE_SIZE);
@@ -123,6 +127,23 @@ export function CombinationGallery({ combinations, harmonies }: CombinationGalle
                     ))}
                   </ul>
                   <p className="text-xs text-muted-foreground">{c.reason}</p>
+                  <div className="pt-2 border-t border-border/50">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const names = c.colours.map((col) => col.name);
+                        const hexes = c.colours.map((col) => col.hex);
+                        const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+                        const g = garment || params.get('garment');
+                        const gParam = g ? `&from=design&garment=${encodeURIComponent(g)}` : '';
+                        window.location.href = `/discover/looks?colors=${encodeURIComponent(names.join(','))}&colorHexes=${encodeURIComponent(hexes.join(','))}${gParam}`;
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-plum hover:underline"
+                    >
+                      <Sparkles className="size-3" />
+                      Use this combination in Discover My Style &rarr;
+                    </button>
+                  </div>
                 </div>
               </article>
             </li>

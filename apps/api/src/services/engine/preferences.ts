@@ -17,6 +17,10 @@ import {
   type Undertone,
 } from '@styleme/contracts';
 
+export interface ProfileWithMeasurements extends ProfileResponse {
+  measurements?: { displayUnit?: string; valuesCm?: Record<string, number> } | null;
+}
+
 /**
  * Self-reported appearance signals as the engine sees them. The service passes `null` when the user
  * has none or has switched `useInRecommendations` off (FR-SIG-03), so the engine never sees them then.
@@ -63,6 +67,7 @@ export interface Preferences {
   /** Hard constraint (FR-LOOK-08): the least coverage the user is comfortable with. */
   coverage: ProfileResponse['coveragePreferences'];
   sizes: ProfileSizes;
+  measurements?: { displayUnit?: string; valuesCm?: Record<string, number> } | null;
   /** Signals, only when enabled; "not sure" and "prefer not to say" count as not given. */
   undertone: Exclude<Undertone, 'not_sure'> | null;
   monkRange: readonly [number, number] | null;
@@ -83,18 +88,18 @@ export function parseMonkRange(range: MonkRange): readonly [number, number] {
   return [from, to];
 }
 
-export function resolvePreferences(profile: ProfileResponse, signals: EngineSignals | null): Preferences {
+export function resolvePreferences(profile: ProfileWithMeasurements, signals: EngineSignals | null): Preferences {
   const scope = departmentScope(profile);
   const defaultsApplied: string[] = [];
   const conflicts: PreferenceConflict[] = [];
 
-  const disliked = new Set(profile.dislikedColors);
+  const disliked = new Set<ColorId>(profile.dislikedColors);
   const liked = new Set<ColorId>();
-  for (const color of profile.likedColors) {
+  for (const color of [...profile.likedColors].sort()) {
     if (disliked.has(color)) conflicts.push({ field: 'colors', value: color });
     else liked.add(color);
   }
-  const avoidedFabrics = new Set(profile.fabricPreferences.avoided);
+  const avoidedFabrics = new Set<Fabric>(profile.fabricPreferences.avoided);
   const likedFabrics = new Set<Fabric>();
   for (const fabric of profile.fabricPreferences.liked) {
     if (avoidedFabrics.has(fabric)) conflicts.push({ field: 'fabrics', value: fabric });
@@ -110,7 +115,10 @@ export function resolvePreferences(profile: ProfileResponse, signals: EngineSign
   if (profile.department === null) defaultsApplied.push('department');
   if (liked.size === 0) defaultsApplied.push('colors');
   if (!signalsUsed) defaultsApplied.push('signals');
-  if (Object.values(profile.sizes).every((size) => size === null)) defaultsApplied.push('sizes');
+  const hasSizes =
+    Object.values(profile.sizes).some((size) => size !== null) ||
+    Boolean(profile.measurements && Object.keys(profile.measurements.valuesCm ?? {}).length > 0);
+  if (!hasSizes) defaultsApplied.push('sizes');
 
   return {
     department: scope.department,
@@ -127,6 +135,7 @@ export function resolvePreferences(profile: ProfileResponse, signals: EngineSign
     occasions: new Set(profile.preferredOccasions),
     coverage: profile.coveragePreferences,
     sizes: profile.sizes,
+    measurements: profile.measurements ?? null,
     undertone,
     monkRange,
     proportions,
