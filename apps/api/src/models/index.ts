@@ -366,6 +366,111 @@ const chatConversationSchema = new Schema(
   { timestamps: true },
 );
 chatConversationSchema.index({ userId: 1, updatedAt: -1 });
+// 3D Virtual Try-On (#106, D-137, DATABASE.md §4g). One document per try-on, deleted automatically after
+// TRY_ON_KEEP_HOURS (TTL on `expiresAt`). The dressed picture (`image`) and the 3D model (`model3d`, GLB) are
+// stored here as BSON binary, never selected by default and never logged. `resultUrl` is fal's URL of the latest
+// dressed picture, needed for the next step only; it is cleared when the try-on ends. `cacheKey` (a hash of the
+// photo ID, models and garment pictures) lets the same try-on be reused instead of paying for it again.
+const tryOnGarmentSchema = new Schema(
+  {
+    slotId: { type: String, required: true },
+    category: { type: String, enum: ['tops', 'bottoms', 'one-pieces'], required: true },
+    store: { type: String, required: true },
+    title: { type: String, required: true },
+    price: { type: Number, required: true },
+    link: { type: String, default: null },
+    imageUrl: { type: String, required: true },
+  },
+  { _id: false },
+);
+const queuedRequestSchema = new Schema(
+  {
+    requestId: { type: String, required: true },
+    statusUrl: { type: String, required: true },
+    responseUrl: { type: String, required: true },
+  },
+  { _id: false },
+);
+const tryOnJobSchema = new Schema(
+  {
+    ...fixtureField,
+    userId: { type: Schema.Types.ObjectId, required: true },
+    outfitId: { type: Schema.Types.ObjectId, required: true },
+    slotId: { type: String, default: null },
+    photoId: { type: Schema.Types.ObjectId, required: true },
+    cacheKey: { type: String, required: true },
+    garments: { type: [tryOnGarmentSchema], required: true },
+    stage: { type: String, enum: ['try_on', 'model_3d', 'done', 'failed'], required: true },
+    /** The garment being put on now, from 0. */
+    step: { type: Number, default: 0 },
+    stageStartedAt: { type: Date, required: true },
+    request: { type: queuedRequestSchema, default: null },
+    resultUrl: { type: String, default: null, select: false },
+    image: { type: designImageSchema, default: null, select: false },
+    model3d: { type: designImageSchema, default: null, select: false },
+    model3dStatus: { type: String, enum: ['pending', 'ready', 'failed'], default: 'pending' },
+    message: { type: String, default: null },
+    /** Set while one request advances the try-on, so two polls never submit the same step twice. */
+    lockedUntil: { type: Date, default: null },
+    provider: { type: String, required: true },
+    tryOnModel: { type: String, required: true },
+    model3dModel: { type: String, required: true },
+    noticeVersion: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: true },
+);
+tryOnJobSchema.index({ userId: 1, createdAt: -1 });
+tryOnJobSchema.index({ userId: 1, cacheKey: 1 });
+tryOnJobSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+// Cartoon avatar drape (D-138, DATABASE.md §4g). `tryOnAvatars` is shared system data: one generated cartoon
+// avatar per Clothing Preference, made from a fixed prompt (nothing about any user) and reused by everyone.
+// `tryOnDrapes` holds a user's dressed avatars for TRY_ON_KEEP_HOURS (TTL); the picture is BSON binary, never
+// selected by default and never logged.
+const tryOnAvatarSchema = new Schema(
+  {
+    department: { type: String, enum: ['women', 'men'], required: true, unique: true },
+    image: { type: designImageSchema, required: true, select: false },
+    provider: { type: String, required: true },
+    model: { type: String, required: true },
+    promptVersion: { type: String, required: true },
+  },
+  { timestamps: true },
+);
+const tryOnDrapeSchema = new Schema(
+  {
+    ...fixtureField,
+    userId: { type: Schema.Types.ObjectId, required: true },
+    outfitId: { type: Schema.Types.ObjectId, required: true },
+    department: { type: String, enum: ['women', 'men'], required: true },
+    cacheKey: { type: String, required: true },
+    garments: { type: [tryOnGarmentSchema], required: true },
+    /** The dressed front. */
+    image: { type: designImageSchema, required: true, select: false },
+    /** The other angles (D-139), drawn from the front on request; `viewsReady` lists what exists. */
+    views: {
+      type: new Schema(
+        {
+          three_quarter: { type: designImageSchema, default: null },
+          side: { type: designImageSchema, default: null },
+          back: { type: designImageSchema, default: null },
+        },
+        { _id: false },
+      ),
+      default: () => ({}),
+      select: false,
+    },
+    viewsReady: { type: [String], enum: ['front', 'three_quarter', 'side', 'back'], default: ['front'] },
+    provider: { type: String, required: true },
+    model: { type: String, required: true },
+    promptVersion: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: true },
+);
+tryOnDrapeSchema.index({ userId: 1, cacheKey: 1 });
+tryOnDrapeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // History of appearance analyses (DATABASE.md §3.8, D-103, D-129): photo analyses by Gemini and body types
 // identified from measurements. The value in use lives in `appearanceProfiles`; a new result is applied
@@ -612,6 +717,9 @@ export type UserDesignPreferenceDoc = InferSchemaType<typeof userDesignPreferenc
 export type UserDesignSelectionDoc = InferSchemaType<typeof userDesignSelectionSchema>;
 export type DesignDoc = InferSchemaType<typeof designSchema>;
 export type ChatConversationDoc = InferSchemaType<typeof chatConversationSchema>;
+export type TryOnJobDoc = InferSchemaType<typeof tryOnJobSchema>;
+export type TryOnAvatarDoc = InferSchemaType<typeof tryOnAvatarSchema>;
+export type TryOnDrapeDoc = InferSchemaType<typeof tryOnDrapeSchema>;
 
 export interface Models {
   User: Model<UserDoc>;
@@ -663,6 +771,11 @@ export interface Models {
   Design: Model<DesignDoc>;
   // Style Assistant (D-136).
   ChatConversation: Model<ChatConversationDoc>;
+  // 3D Virtual Try-On (D-137).
+  TryOnJob: Model<TryOnJobDoc>;
+  // Cartoon avatar drape (D-138).
+  TryOnAvatar: Model<TryOnAvatarDoc>;
+  TryOnDrape: Model<TryOnDrapeDoc>;
 }
 
 export function registerModels(main: Connection, tombstones: Connection): Models {
@@ -715,6 +828,9 @@ export function registerModels(main: Connection, tombstones: Connection): Models
     UserColourCombination: main.model('UserColourCombination', userColourCombinationSchema, 'userColourCombinations'),
     Design: main.model('Design', designSchema, 'designs'),
     ChatConversation: main.model('ChatConversation', chatConversationSchema, 'chatConversations'),
+    TryOnJob: main.model('TryOnJob', tryOnJobSchema, 'tryOnJobs'),
+    TryOnAvatar: main.model('TryOnAvatar', tryOnAvatarSchema, 'tryOnAvatars'),
+    TryOnDrape: main.model('TryOnDrape', tryOnDrapeSchema, 'tryOnDrapes'),
   };
 }
 
@@ -757,4 +873,8 @@ export const USER_OWNED_COLLECTIONS = [
   'designs',
   // Style Assistant (D-136, DATABASE.md §4f).
   'chatConversations',
+  // 3D Virtual Try-On (D-137, DATABASE.md §4g). Pictures and 3D models are stored in `tryOnJobs` itself.
+  'tryOnJobs',
+  // Cartoon avatar drape (D-138). `tryOnAvatars` is shared system data and not listed.
+  'tryOnDrapes',
 ] as const;

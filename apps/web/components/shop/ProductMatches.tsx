@@ -250,8 +250,8 @@ export function ProductMatches({
               <Heart aria-hidden className="size-3.5" />
               {isPicked ? 'Remove from this look' : 'Save to this look'}
             </button>
-            {/* Coming soon until Virtual Try-On is built; then it opens with this garment (#124). */}
-            <TryOnButton outfitId={look.id} lookName={l.title} slotId={slotId} />
+            {/* Tries this item on in the fitting room (#124, D-138). */}
+            <TryOnButton outfitId={look.id} lookName={l.title} slotId={slotId} item={l} />
             {/* The store's own search for this title: Serper gives no store URLs (#134). */}
             <a
               href={storeSearchUrl(l.store, l.title)}
@@ -276,7 +276,7 @@ export function ProductMatches({
           </div>
         ) : (
           <div className="mt-auto">
-            <TryOnButton outfitId={look.id} lookName={l.title} slotId={slotId} />
+            <TryOnButton outfitId={look.id} lookName={l.title} slotId={slotId} item={l} />
           </div>
         )}
       </li>

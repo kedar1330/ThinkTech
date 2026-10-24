@@ -97,12 +97,16 @@ test('Shop this look saves a Discover look as a Shop My Look tab; a suggested lo
     await expect(page.getByRole('list', { name: 'Parts of this look' })).toBeVisible();
   });
 
-  await test.step('each tab’s Virtual Try-On button opens the honest Coming soon page', async () => {
+  await test.step('each tab’s Virtual Try-On button opens the try-on for that look (D-137)', async () => {
     const tabs = page.getByRole('navigation', { name: 'Your looks from Discover My Style' });
-    const tryOn = tabs.getByRole('link', { name: /^Virtual Try-On: .+ \(coming soon\)$/ });
+    const tryOn = tabs.getByRole('link', { name: /^Virtual Try-On: / });
     // One per tab: both saved looks have one.
     await expect(tryOn).toHaveCount(2);
     await tryOn.first().click();
-    await expect(page).toHaveURL(/\/features\/virtual-try-on$/);
+    await expect(page).toHaveURL(/\/try-on\?outfitId=[a-f0-9]{24}$/);
+    // E2E runs without a fal.ai key and without a try-on photo, so the page says what is needed; nothing is sent.
+    await expect(
+      page.getByText(/Virtual Try-On is not available right now|Add your photo to try this on/),
+    ).toBeVisible();
   });
 });

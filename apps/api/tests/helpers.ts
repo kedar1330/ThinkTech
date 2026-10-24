@@ -13,6 +13,8 @@ import type { OutfitImageProvider } from '../src/integrations/ai/image-client';
 import type { ShoppingSearchProvider } from '../src/integrations/shopping/serper-client';
 import type { PhotoAnalysisProvider } from '../src/integrations/ai/vision-client';
 import type { ImageGenerator } from '../src/integrations/image/image-client';
+import type { TryOnRenderer } from '../src/integrations/tryon/fal-client';
+import type { ImageEditor } from '../src/integrations/image/image-edit-client';
 import type { WordingProvider } from '../src/integrations/ai/wording-client';
 import { createLogger } from '../src/logger';
 import type { StyleLibrary } from '../src/services/engine';
@@ -62,6 +64,16 @@ export const BASE_CONFIG: Config = {
   IMAGE_GENERATION_TIMEOUT_MS: 30_000,
   STYLE_ASSISTANT_AI_ENABLED: true,
   STYLE_ASSISTANT_TIMEOUT_MS: 5000,
+  TRY_ON_ENABLED: true,
+  FAL_KEY: undefined,
+  TRIPOSR_URL: undefined,
+  FAL_TRY_ON_MODEL: 'test-try-on-model',
+  FAL_3D_MODEL: 'test-3d-model',
+  TRY_ON_REQUEST_TIMEOUT_MS: 5000,
+  TRY_ON_STEP_TIMEOUT_MS: 300_000,
+  DRAPE_ENABLED: true,
+  DRAPE_MODELS: ['test-edit-model'],
+  DRAPE_TIMEOUT_MS: 5000,
 };
 
 /**
@@ -163,6 +175,10 @@ export interface AppOptions {
   imageGenerators?: ImageGenerator[];
   /** A fake Style Assistant provider (tests/fixtures/style-assistant.ts); used while STYLE_ASSISTANT_AI_ENABLED is true. */
   assistant?: AssistantProvider;
+  /** A fake try-on renderer (tests/fixtures/try-on.ts); used while TRY_ON_ENABLED is true. */
+  tryOn?: TryOnRenderer;
+  /** A fake image editor for the cartoon avatar drape (tests/fixtures/drape.ts); used while DRAPE_ENABLED is true. */
+  imageEditor?: ImageEditor;
   /** Custom rate limits (for rate limit tests). */
   rateLimits?: AppRateLimits;
 }
@@ -210,6 +226,8 @@ export async function startTestEnv(): Promise<TestEnv> {
         designAnalysisProvider: options.designAnalysis ?? null,
         imageGenerators: options.imageGenerators ?? [],
         assistantProvider: options.assistant ?? null,
+        tryOnRenderer: options.tryOn ?? null,
+        imageEditor: options.imageEditor ?? null,
         rateLimits: options.rateLimits,
       });
       return { ...app, config, mail, sms };
