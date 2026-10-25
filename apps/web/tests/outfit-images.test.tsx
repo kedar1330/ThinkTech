@@ -36,6 +36,20 @@ describe('OutfitImage', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
+  it('drops the loading message for a picture that loaded before the page listened (a cached one)', () => {
+    const proto = HTMLImageElement.prototype;
+    const complete = vi.spyOn(proto, 'complete', 'get').mockReturnValue(true);
+    const width = vi.spyOn(proto, 'naturalWidth', 'get').mockReturnValue(768);
+    try {
+      render(<OutfitImage outfitId={'c'.repeat(24)} ready />);
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'AI-generated picture of this outfit' })).toBeInTheDocument();
+    } finally {
+      complete.mockRestore();
+      width.mockRestore();
+    }
+  });
+
   it('disappears when the image cannot be made', () => {
     render(<OutfitImage outfitId={'b'.repeat(24)} ready />);
     fireEvent.error(screen.getByRole('img', { name: 'AI-generated picture of this outfit' }));

@@ -117,7 +117,10 @@ describe('similar products to compare', () => {
     expect(screen.getByText(PRODUCT_MATCHES_LABEL)).toBeInTheDocument();
 
     const kurta = screen.getByRole('region', { name: /^Kurta/ });
-    expect(within(kurta).getByText('Synthetic kurta M').closest('li')).toHaveTextContent('₹299 · Meesho');
+    const card = within(kurta).getByText('Synthetic kurta M').closest('li')!;
+    // The store is a label on the picture; the price is under the title.
+    expect(within(card).getByText('Meesho')).toBeInTheDocument();
+    expect(within(card).getByText('₹299')).toBeInTheDocument();
     expect(within(kurta).getByRole('list', { name: 'Prices by store for Kurta' })).toHaveTextContent(
       'Amazon: 1 found, ₹699 – ₹699 (typical ₹699)',
     );
@@ -192,6 +195,36 @@ describe('similar products to compare', () => {
       'top',
       item('flipkart', 'Synthetic printed kurta', 349),
     );
+  });
+
+  it('shows 8 items in each list at first, and more with "Show more"', async () => {
+    const many = (n: number, what: string) =>
+      Array.from({ length: n }, (_, i) => item('amazon', `Synthetic ${what} ${i}`, 300 + i));
+    replyWith(
+      Response.json({
+        ...matches,
+        slots: [
+          { ...matches.slots[0]!, listings: many(20, 'kurta').map((l) => matchOf(l)), alternatives: many(10, 'style') },
+          matches.slots[1]!,
+        ],
+      }),
+    );
+    render(<ProductMatches look={look} budget={null} fallback={<p>Product data unavailable</p>} />);
+    await screen.findByRole('heading', { name: 'Similar items to compare' });
+
+    const shownIn = (name: string) => within(screen.getByRole('list', { name })).getAllByRole('listitem').length;
+    expect(shownIn('Matches your look: Kurta')).toBe(8);
+    expect(shownIn('Other Kurta styles')).toBe(8);
+    expect(screen.getByRole('heading', { name: 'Matches your look (20)' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show more (12 left)' }));
+    expect(shownIn('Matches your look: Kurta')).toBe(16);
+    await userEvent.click(screen.getByRole('button', { name: 'Show more (4 left)' }));
+    expect(shownIn('Matches your look: Kurta')).toBe(20);
+    // The other styles list has its own button.
+    await userEvent.click(screen.getByRole('button', { name: 'Show more (2 left)' }));
+    expect(shownIn('Other Kurta styles')).toBe(10);
+    expect(screen.queryByRole('button', { name: /^Show more/ })).not.toBeInTheDocument();
   });
 
   it('#134 an item without a Google link still links to its store', async () => {
