@@ -1057,6 +1057,52 @@ function Stretch({ slug }: { slug: string }) {
   );
 }
 
+// --- Draping: saree drapes, and the dupatta drape on a lehenga (#162) -------------------------------------
+
+/** How each drape sits: the pallu (saree) or dupatta (lehenga) path, plus its details. */
+const DRAPES: Record<string, { cloth: string; details?: string; dashed?: string; belt?: boolean }> = {
+  straight: { cloth: 'M 98 36 L 106 38 L 108 160 L 98 160 Z' },
+  wrap: {
+    cloth: 'M 60 38 Q 80 50 100 38 L 104 48 Q 80 62 56 48 Z M 58 52 Q 80 70 102 54 L 100 64 Q 80 78 60 62 Z',
+  },
+  pleated: {
+    cloth: 'M 96 36 L 108 38 L 112 150 L 92 150 Z',
+    details: 'M 98 40 L 96 148 M 102 40 L 102 148 M 106 40 L 107 148',
+  },
+  gathered: {
+    cloth: 'M 96 36 Q 104 34 108 40 Q 116 90 112 150 L 94 150 Q 92 90 96 36 Z',
+    details: 'M 98 44 q 3 4 6 0 q 3 4 6 0 M 98 52 q 3 4 6 0 q 3 4 6 0',
+  },
+  nivi: {
+    cloth: 'M 60 70 L 98 36 L 108 40 L 112 150 L 100 150 L 96 52 L 66 80 Z',
+    details: 'M 70 100 L 70 166 M 75 100 L 76 166 M 80 100 L 81 166',
+  },
+  front_pallu: { cloth: 'M 62 36 L 70 34 L 102 92 L 104 120 L 58 120 L 56 92 Z', details: 'M 60 112 L 102 112' },
+  belted: { cloth: 'M 60 70 L 98 36 L 108 40 L 104 86 L 66 80 Z', belt: true },
+  pre_stitched: { cloth: 'M 60 70 L 98 36 L 108 40 L 110 140 L 100 140 L 96 56 L 66 80 Z', dashed: 'M 62 80 L 100 80' },
+};
+
+function Draping({ slug, isLehenga }: { slug: string; isLehenga?: boolean }) {
+  const drape = DRAPES[slug];
+  if (!drape) return null;
+  // A lehenga's flared skirt with a choli, or a saree's draped column.
+  const skirt = isLehenga ? 'M 64 70 L 96 70 L 124 166 L 36 166 Z' : 'M 64 70 L 96 70 L 102 168 L 58 168 Z';
+  return (
+    <Frame name={`draping-${isLehenga ? 'lehenga' : 'saree'}-${slug}`}>
+      <FigureGuide />
+      <path d={skirt} fill={CLOTH} stroke={LINE} strokeWidth="1.3" />
+      {isLehenga && <path d="M 40 160 L 120 160" stroke={ACCENT} strokeWidth="2" />}
+      <path d={bodice(isLehenga ? 66 : 62)} fill={CLOTH_SHADOW} stroke={LINE} strokeWidth="1.2" />
+      <path d={drape.cloth} fill={ACCENT} opacity="0.85" stroke={LINE} strokeWidth="1.1" />
+      {drape.details && <path d={drape.details} stroke={LINE} strokeWidth="0.9" />}
+      {drape.dashed && <path d={drape.dashed} stroke={LINE} strokeWidth="1.1" strokeDasharray="3 2" />}
+      {drape.belt && (
+        <rect x="60" y="74" width="42" height="6" rx="1.5" fill={LINE_MUTED} stroke={LINE} strokeWidth="0.8" />
+      )}
+    </Frame>
+  );
+}
+
 /** The picture for an option without a generated illustration, or null when another drawer handles it. */
 export function OptionThumbnail({ feature, hClass, garmentKind, isSkirt, isLehenga }: Props) {
   const slug = feature.featureId.slice(feature.category.length + 1);
@@ -1095,6 +1141,9 @@ export function OptionThumbnail({ feature, hClass, garmentKind, isSkirt, isLehen
       break;
     case 'stretch':
       drawing = <Stretch slug={slug} />;
+      break;
+    case 'draping':
+      drawing = <Draping slug={slug} isLehenga={isLehenga} />;
       break;
   }
   if (!drawing) return null;
