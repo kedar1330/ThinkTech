@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 interface ApiRequestOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   /** A raw (non-JSON) body, e.g. a photo upload (D-129); replaces `body`. */
   rawBody?: { bytes: Uint8Array; contentType: string };
@@ -50,8 +50,15 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
           : JSON.stringify(options.body),
       cache: 'no-store',
     });
-  } catch {
-    throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'StyleMe is temporarily unavailable');
+  } catch (err) {
+    console.error(`[BFF apiRequest] Could not reach StyleMe API backend at ${baseUrl}${path}:`, err);
+    throw new ApiError(
+      503,
+      'SERVICE_UNAVAILABLE',
+      process.env.NODE_ENV === 'development'
+        ? `StyleMe API backend is temporarily unavailable at ${baseUrl}. Ensure 'pnpm dev:api' is running.`
+        : 'StyleMe is temporarily unavailable',
+    );
   }
 
   let json: Envelope<T>;
