@@ -215,17 +215,15 @@ describe('GET /v1/outfits/:id/price-range (#118)', () => {
 describe('GET /v1/outfits/:id/products (#120)', () => {
   it('lists each store’s cheapest listings per garment with its own title, cheapest first, and price stats', async () => {
     const shopping = new FakeShoppingProvider();
-    shopping.reply = {
-      kind: 'listings',
-      listings: [
-        listing('Amazon.in', '₹1,299.00', 'Synthetic navy kurta A'),
-        listing('Amazon.in', '₹699', 'Synthetic navy kurta B'),
-        listing('Amazon.in', '₹899', 'Synthetic navy kurta C'),
-        listing('Flipkart', '₹449', 'Synthetic navy kurta D'),
-        listing('Meesho', '₹299', 'Synthetic navy kurta E'),
-        listing('Myntra', '₹199', 'Synthetic navy kurta F'),
-      ],
-    };
+    // Each title names the searched garment, as a store's would; the letter tells the listings apart.
+    shopping.respond = (query) => [
+      listing('Amazon.in', '₹1,299.00', `Synthetic ${query} A`),
+      listing('Amazon.in', '₹699', `Synthetic ${query} B`),
+      listing('Amazon.in', '₹899', `Synthetic ${query} C`),
+      listing('Flipkart', '₹449', `Synthetic ${query} D`),
+      listing('Meesho', '₹299', `Synthetic ${query} E`),
+      listing('Myntra', '₹199', `Synthetic ${query} F`),
+    ];
     const { app, token } = await signedIn('products@example.com', shopping);
     const look = await firstLook(app, token);
 
@@ -237,12 +235,12 @@ describe('GET /v1/outfits/:id/products (#120)', () => {
     expect(matches.slots.map((s) => s.slotId)).toEqual(garments.map((s) => s.slotId));
     for (const slot of matches.slots) {
       // Each search keeps only its own store, so the fake's listings count once per store; Myntra is left out.
-      expect(slot.listings.map((l) => [l.store, l.price, l.title])).toEqual([
-        ['meesho', 299, 'Synthetic navy kurta E'],
-        ['flipkart', 449, 'Synthetic navy kurta D'],
-        ['amazon', 699, 'Synthetic navy kurta B'],
-        ['amazon', 899, 'Synthetic navy kurta C'],
-        ['amazon', 1299, 'Synthetic navy kurta A'],
+      expect(slot.listings.map((l) => [l.store, l.price, l.title.slice(-1)])).toEqual([
+        ['meesho', 299, 'E'],
+        ['flipkart', 449, 'D'],
+        ['amazon', 699, 'B'],
+        ['amazon', 899, 'C'],
+        ['amazon', 1299, 'A'],
       ]);
       expect(slot.stats).toEqual([
         { store: 'amazon', listings: 3, min: 699, median: 899, max: 1299 },
@@ -258,21 +256,20 @@ describe('GET /v1/outfits/:id/products (#120)', () => {
 
   it(`returns at most ${PRODUCTS_PER_STORE} per store, and passes on only Google Shopping links and Google thumbnails`, async () => {
     const shopping = new FakeShoppingProvider();
-    const many = Array.from({ length: 12 }, (_, i) => listing('Amazon.in', `₹${500 + i}`, `Synthetic item ${i}`));
-    const unsafe = [
+    shopping.respond = (query) => [
+      ...Array.from({ length: 20 }, (_, i) => listing('Amazon.in', `₹${500 + i}`, `Synthetic ${query} ${i}`)),
       {
-        ...listing('Amazon.in', '₹100', 'Synthetic bad link'),
+        ...listing('Amazon.in', '₹100', `Synthetic bad link ${query}`),
         link: 'javascript:alert(1)',
         imageUrl: 'http://evil.example/x.png',
       },
       {
-        ...listing('Amazon.in', '₹120', 'Synthetic other host'),
+        ...listing('Amazon.in', '₹120', `Synthetic other host ${query}`),
         link: 'https://evil.example/',
         imageUrl: 'https://evil.example/x.png',
       },
       { ...listing('Amazon.in', '₹130', 'Synthetic no title'), title: '   ' },
     ];
-    shopping.reply = { kind: 'listings', listings: [...many, ...unsafe] };
     const { app, token } = await signedIn('safe-products@example.com', shopping);
     const look = await firstLook(app, token);
     const matches = lookProductMatchesSchema.parse(
@@ -286,7 +283,7 @@ describe('GET /v1/outfits/:id/products (#120)', () => {
     );
     expect(bad).toHaveLength(2);
     for (const l of bad) expect([l.link, l.imageUrl]).toEqual([null, null]);
-    expect(slot.stats[0]).toMatchObject({ store: 'amazon', listings: 14 });
+    expect(slot.stats[0]).toMatchObject({ store: 'amazon', listings: 22 });
   });
 
   it('is owner-only and unavailable without a key', async () => {
