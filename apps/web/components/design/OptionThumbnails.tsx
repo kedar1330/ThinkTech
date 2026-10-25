@@ -1079,12 +1079,38 @@ const DRAPES: Record<string, { cloth: string; details?: string; dashed?: string;
   },
   front_pallu: { cloth: 'M 62 36 L 70 34 L 102 92 L 104 120 L 58 120 L 56 92 Z', details: 'M 60 112 L 102 112' },
   belted: { cloth: 'M 60 70 L 98 36 L 108 40 L 104 86 L 66 80 Z', belt: true },
+  bengali: {
+    cloth: 'M 60 70 L 98 36 L 108 40 L 110 100 Q 82 114 58 96 Z',
+    details: 'M 70 100 L 70 166 M 76 100 L 77 166 M 58 96 L 52 106',
+  },
+  maharashtrian: {
+    cloth: 'M 64 70 L 96 70 L 102 124 L 84 168 L 80 112 L 76 168 L 58 124 Z',
+    details: 'M 98 36 L 108 40 L 104 90 L 96 76 Z',
+  },
+  dhoti_saree: {
+    cloth: 'M 62 70 L 98 70 L 106 166 L 84 166 L 80 100 L 76 166 L 54 166 Z',
+    details: 'M 64 100 q 8 10 0 22 M 96 100 q -8 10 0 22 M 62 132 q 8 10 0 22 M 98 132 q -8 10 0 22',
+  },
+  mermaid: {
+    cloth: 'M 64 70 L 96 70 L 98 124 L 120 168 L 40 168 L 62 124 Z',
+    details: 'M 98 36 L 108 40 L 106 96 L 98 84 Z',
+  },
+  lehenga_style: {
+    cloth: 'M 64 70 L 96 70 L 124 166 L 36 166 Z',
+    details: 'M 70 72 L 50 164 M 76 72 L 66 164 M 80 72 L 80 164 M 84 72 L 94 164 M 90 72 L 110 164 M 98 36 L 108 40',
+  },
+  retro_mumtaz: {
+    cloth:
+      'M 62 80 L 100 72 L 102 84 L 60 92 Z M 60 104 L 102 96 L 104 108 L 58 116 Z M 58 128 L 104 120 L 106 132 L 56 140 Z',
+    details: 'M 98 36 L 104 38 L 104 70',
+  },
+  cape_pallu: { cloth: 'M 58 36 Q 80 28 102 36 L 114 66 Q 80 78 46 66 Z', details: 'M 52 60 Q 80 70 108 60' },
   pre_stitched: { cloth: 'M 60 70 L 98 36 L 108 40 L 110 140 L 100 140 L 96 56 L 66 80 Z', dashed: 'M 62 80 L 100 80' },
 };
 
 function Draping({ slug, isLehenga }: { slug: string; isLehenga?: boolean }) {
-  const drape = DRAPES[slug];
-  if (!drape) return null;
+  // A drape added later still gets a picture: the classic pallu, never a blank card.
+  const drape = DRAPES[slug] ?? DRAPES.nivi!;
   // A lehenga's flared skirt with a choli, or a saree's draped column.
   const skirt = isLehenga ? 'M 64 70 L 96 70 L 124 166 L 36 166 Z' : 'M 64 70 L 96 70 L 102 168 L 58 168 Z';
   return (

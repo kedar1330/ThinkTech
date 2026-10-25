@@ -67,7 +67,23 @@ const OPTIONS: Record<string, string[]> = {
     'shorts',
     'adjustable',
   ],
-  draping: ['straight', 'wrap', 'pleated', 'gathered', 'nivi', 'front_pallu', 'belted', 'pre_stitched'],
+  draping: [
+    'straight',
+    'wrap',
+    'pleated',
+    'gathered',
+    'nivi',
+    'front_pallu',
+    'belted',
+    'pre_stitched',
+    'bengali',
+    'maharashtrian',
+    'dhoti_saree',
+    'mermaid',
+    'lehenga_style',
+    'retro_mumtaz',
+    'cape_pallu',
+  ],
   neckline: ['deep_u_back', 'backless_dori', 'keyhole_back', 'sheer_illusion_back', 'square_back', 'inverted_v_back'],
 };
 
@@ -127,6 +143,12 @@ describe('Outfit Categories option pictures', () => {
       expect(d.html).not.toBe(draw('draping', d.slug).html);
     }
     expect(new Set(lehenga.map((d) => d.html)).size).toBe(slugs.length);
+  });
+
+  it('gives a draping option added later a drape picture, never a blank card', () => {
+    const later = draw('draping', 'some_new_drape');
+    expect(later.placeholder).toBe(false);
+    expect(later.html).toContain('draping-saree-some_new_drape');
   });
 
   it('draws top lengths on a top: waist above hip above tunic', () => {
