@@ -111,7 +111,7 @@ describe('3D figure', () => {
   it('builds a mannequin with head, torso, arms and legs, and no garments when undressed', () => {
     const figure = buildFigure(THREE, { department: 'women', proportions: proportionsFor(null), outfit: [] });
     const meshes = names(figure);
-    for (const part of ['body:head', 'body:torso', 'body:upper-arm', 'body:thigh', 'body:shoe']) {
+    for (const part of ['body:head', 'body:torso', 'body:arm', 'body:hand', 'body:leg', 'body:shoe']) {
       expect(meshes).toContain(part);
     }
     expect(meshes.some((n) => n.startsWith('garment:'))).toBe(false);
@@ -129,7 +129,7 @@ describe('3D figure', () => {
       `#${(garments.find((g) => g.name === `garment:${slotId}`)!.material as THREE.MeshStandardMaterial).color.getHexString()}`;
     expect(colourOf('top')).toBe('#1f2a44');
     expect(colourOf('bottom')).toBe('#d9c3a0');
-    // Full sleeves on both arms (a sleeve and its cap each).
+    // Full sleeves on both arms (a sleeve and its finished edge each).
     expect(garments.filter((g) => g.name === 'garment:top' && g.parent !== figure).length).toBe(4);
     // Every garment geometry is valid (no NaN from the outline).
     for (const g of garments) {
@@ -137,6 +137,30 @@ describe('3D figure', () => {
       expect(Number.isFinite(g.geometry.boundingBox!.max.y)).toBe(true);
     }
     disposeFigure(figure);
+  });
+
+  it('tells a kurta from a shirt by its front: a placket with buttons, or a collar and a buttoned front', () => {
+    expect(shapeFor(spec('kurta'))).toMatchObject({ detail: 'placket' });
+    expect(shapeFor(spec('kurti'))).toMatchObject({ detail: 'placket' });
+    expect(shapeFor(spec('shirt'))).toMatchObject({ detail: 'collar' });
+    expect(shapeFor(spec('t_shirt'))).not.toHaveProperty('detail');
+    const buttons = (category: Parameters<typeof spec>[0]) => {
+      const figure = buildFigure(THREE, {
+        department: 'women',
+        proportions: proportionsFor(null),
+        outfit: [item('top', 'top', category)],
+      });
+      let count = 0;
+      figure.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.isMesh && m.name === 'garment:top' && m.geometry.type === 'SphereGeometry') count++;
+      });
+      disposeFigure(figure);
+      return count;
+    };
+    expect(buttons('kurta')).toBe(3);
+    expect(buttons('shirt')).toBe(6);
+    expect(buttons('t_shirt')).toBe(0);
   });
 
   it('builds every garment kind without errors', () => {

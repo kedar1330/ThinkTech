@@ -9,8 +9,11 @@ export type SleeveLength = 'none' | 'cap' | 'short' | 'elbow' | 'three_quarter' 
 /** Where a garment ends, from the waist down. */
 export type HemLength = 'cropped' | 'waist' | 'hip' | 'thigh' | 'knee' | 'midi' | 'ankle' | 'floor';
 
+/** A front detail that tells similar tops apart: a kurta's button placket, a shirt's collar and buttons. */
+export type FrontDetail = 'placket' | 'collar';
+
 export type GarmentShape =
-  | { kind: 'top'; hem: HemLength; sleeve: SleeveLength; flare: number }
+  | { kind: 'top'; hem: HemLength; sleeve: SleeveLength; flare: number; detail?: FrontDetail }
   | { kind: 'trousers'; hem: HemLength; width: number }
   | { kind: 'dress'; hem: HemLength; sleeve: SleeveLength; flare: number }
   | { kind: 'saree'; sleeve: SleeveLength }
@@ -71,11 +74,29 @@ export function shapeFor(slot: Pick<LookSlot, 'slot' | 'lookSpec'>): GarmentShap
     case 't_shirt':
       return { kind: 'top', hem: hemOf('hip'), sleeve: sleeveOf('short'), flare: flareOf(silhouette, 0.15) };
     case 'shirt':
-      return { kind: 'top', hem: hemOf('hip'), sleeve: sleeveOf('full'), flare: flareOf(silhouette, 0.15) };
+      return {
+        kind: 'top',
+        hem: hemOf('hip'),
+        sleeve: sleeveOf('full'),
+        flare: flareOf(silhouette, 0.15),
+        detail: 'collar',
+      };
     case 'kurta':
-      return { kind: 'top', hem: hemOf('knee'), sleeve: sleeveOf('full'), flare: flareOf(silhouette, 0.3) };
+      return {
+        kind: 'top',
+        hem: hemOf('knee'),
+        sleeve: sleeveOf('full'),
+        flare: flareOf(silhouette, 0.3),
+        detail: 'placket',
+      };
     case 'kurti':
-      return { kind: 'top', hem: hemOf('thigh'), sleeve: sleeveOf('three_quarter'), flare: flareOf(silhouette, 0.3) };
+      return {
+        kind: 'top',
+        hem: hemOf('thigh'),
+        sleeve: sleeveOf('three_quarter'),
+        flare: flareOf(silhouette, 0.3),
+        detail: 'placket',
+      };
     case 'jeans':
       return { kind: 'trousers', hem: hemOf('ankle'), width: flareOf(silhouette, 0.1) };
     case 'trousers':
