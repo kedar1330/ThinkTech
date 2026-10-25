@@ -1,15 +1,10 @@
 'use client';
 
 import React from 'react';
-import type { DesignFeatureItem } from '@styleme/contracts';
+import type { DesignFeatureItem, GarmentKind } from '@styleme/contracts';
 
-// Palette matching atelier sketch illustrations (illustrations.ts)
-const LINE = '#8a6a42';
-const LINE_MUTED = '#a2845e';
-const CLOTH = '#fbf6ec';
-const CLOTH_SHADOW = '#f3ebd9';
-const ACCENT = '#e2c07a';
-const MANNEQUIN_DASH = '#c4b5a5';
+import { ACCENT, CLOTH, CLOTH_SHADOW, LINE, LINE_MUTED, MANNEQUIN_DASH } from './designPalette';
+import { OptionThumbnail } from './OptionThumbnails';
 
 interface FeatureThumbnailSvgProps {
   feature: DesignFeatureItem;
@@ -17,6 +12,8 @@ interface FeatureThumbnailSvgProps {
   isBottom?: boolean;
   isLehenga?: boolean;
   isSkirt?: boolean;
+  /** The garment being designed, so lengths and silhouettes are drawn on the right garment (#163). */
+  garmentKind?: GarmentKind;
 }
 
 /**
@@ -30,10 +27,16 @@ export function FeatureThumbnailSvg({
   isBottom = false,
   isLehenga = false,
   isSkirt = false,
+  garmentKind,
 }: FeatureThumbnailSvgProps) {
   const fid = feature.featureId;
   const cat = feature.category;
   const hClass = compact ? 'h-24' : 'h-36 sm:h-40';
+
+  // Lengths, closures, fabrics, hemlines, layering, occasions, patterns, pockets, silhouettes, stretch and
+  // transparency have their own pictures (#163).
+  const option = OptionThumbnail({ feature, hClass, garmentKind, isSkirt, isLehenga });
+  if (option) return option;
 
   const viewBox = '0 0 160 180';
 
@@ -455,31 +458,6 @@ export function FeatureThumbnailSvg({
     );
   }
 
-  // 6. LENGTH (Cropped, Ankle, Floor)
-  if (cat === 'length' || fid.startsWith('length_')) {
-    const isCropped = fid.includes('cropped');
-    const isFloor = fid.includes('floor');
-    const isAnkle = fid.includes('ankle') || fid.includes('full_length');
-
-    const hemY = isCropped ? 95 : isFloor ? 150 : isAnkle ? 138 : 120;
-
-    return (
-      <svg viewBox={viewBox} className={`w-auto ${hClass}`} aria-hidden="true" fill="none">
-        {/* Leg dashed guide */}
-        <line x1="65" y1="35" x2="65" y2="155" stroke={MANNEQUIN_DASH} strokeWidth="1" strokeDasharray="3 3" />
-        <line x1="95" y1="35" x2="95" y2="155" stroke={MANNEQUIN_DASH} strokeWidth="1" strokeDasharray="3 3" />
-        <line x1="50" y1="155" x2="110" y2="155" stroke={MANNEQUIN_DASH} strokeWidth="1.2" />
-
-        {/* Garment silhouette */}
-        <path d={`M 54 35 L 56 ${hemY} L 104 ${hemY} L 106 35 Z`} fill={CLOTH} stroke={LINE} strokeWidth="1.3" />
-        {/* Hem indicator marker */}
-        <line x1="48" y1={hemY} x2="112" y2={hemY} stroke={ACCENT} strokeWidth="2" />
-        <polygon points={`48,${hemY} 44,${hemY - 3} 44,${hemY + 3}`} fill={ACCENT} />
-        <polygon points={`112,${hemY} 116,${hemY - 3} 116,${hemY + 3}`} fill={ACCENT} />
-      </svg>
-    );
-  }
-
   // 7. PLEATS & TROUSER HEM
   if (cat === 'pleats' || cat === 'bottom_hem' || fid.startsWith('pleats_') || fid.startsWith('bottom_hem_')) {
     const isDouble = fid.includes('double');
@@ -556,9 +534,9 @@ export function FeatureThumbnailSvg({
     );
   }
 
-  // DEFAULT / FALLBACK: Atelier dummy icon
+  // DEFAULT / FALLBACK: Atelier dummy icon (no option should reach this; tests check, #163)
   return (
-    <svg viewBox={viewBox} className={`w-auto ${hClass}`} aria-hidden="true" fill="none">
+    <svg viewBox={viewBox} className={`w-auto ${hClass}`} aria-hidden="true" fill="none" data-thumbnail="placeholder">
       <rect x="42" y="32" width="76" height="106" rx="12" fill={CLOTH} stroke={LINE} strokeWidth="1.2" />
       <circle cx="80" cy="70" r="16" stroke={LINE_MUTED} strokeWidth="1" strokeDasharray="3 3" />
       <path d="M 68 105 Q 80 115 92 105" stroke={LINE} strokeWidth="1.2" />

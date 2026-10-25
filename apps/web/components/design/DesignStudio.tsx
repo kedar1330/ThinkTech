@@ -124,6 +124,8 @@ function EmptyCategory({ label }: { label: string }) {
 export function DesignStudio({ data, outfitCategory, stylingGoals, department }: DesignStudioProps) {
   const [selected, setSelected] = useState<SelectedFeatures>(data.selection?.selectedFeatures ?? {});
   const [goals, setGoals] = useState<string[]>(stylingGoals);
+  /** Options whose picture failed to load; they show their drawing instead (#163). */
+  const [brokenImages, setBrokenImages] = useState<ReadonlySet<string>>(() => new Set());
   const [message, setMessage] = useState<{ error?: string; success?: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [blouseView, setBlouseView] = useState<'front' | 'back'>('front');
@@ -377,7 +379,8 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
           >
             {isSelected && <Check className="size-3.5" />}
           </span>
-          {feature.image ? (
+          {/* A picture that fails to load falls back to the drawing, never a broken card (#163). */}
+          {feature.image && !brokenImages.has(feature.featureId) ? (
             <Image
               src={feature.image.url}
               alt={feature.image.alt}
@@ -385,6 +388,7 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
               height={240}
               unoptimized
               className={cn('w-auto', compact ? 'h-24' : 'h-36 sm:h-40')}
+              onError={() => setBrokenImages((b) => new Set(b).add(feature.featureId))}
             />
           ) : (
             <FeatureThumbnailSvg
@@ -393,6 +397,7 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
               isBottom={isBottom}
               isLehenga={isLehenga}
               isSkirt={isSkirt}
+              garmentKind={data.garmentType.kind}
             />
           )}
           <span className="mt-1 w-full text-center text-sm font-medium text-foreground">{feature.name}</span>
