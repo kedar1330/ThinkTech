@@ -101,6 +101,18 @@ const NOT_APPLICABLE = (what: string): Row => [
 const neck = (depth: string, width: string) => ({ attributes: { depth, width } });
 const sleeve = (length: string, volume: string) => ({ attributes: { length, volume } });
 const LAYERS: GarmentKind[] = ['layer'];
+// Length options by garment (#163): top lengths aren't offered on bottoms, nor trouser lengths on tops.
+const TOP_LENGTH: Partial<DesignFeatureSeed> = { kinds: ['top', 'layer'] };
+const LEG_LENGTH: Partial<DesignFeatureSeed> = { kinds: ['bottom', 'one_piece'] };
+const HEM_LENGTH: Partial<DesignFeatureSeed> = { kinds: ['bottom', 'one_piece', 'layer'] };
+
+/**
+ * Back necklines (#163) are seen from behind, so they aren't drawn on the front-view dress form; Outfit
+ * Categories shows its back-view drawing for them instead.
+ */
+export function isBackDesign(featureId: string): boolean {
+  return /^neckline_.*(_back|backless.*)$/.test(featureId);
+}
 
 export const DESIGN_FEATURES: DesignFeatureSeed[] = [
   ...rows('neckline', [
@@ -460,18 +472,18 @@ export const DESIGN_FEATURES: DesignFeatureSeed[] = [
   ]),
   ...rows('length', [
     ['cropped', 'Cropped', B, 'Ends above the natural waist (tops) or above the ankle (bottoms).'],
-    ['waist_length', 'Waist length', W, 'Ends at the natural waist.'],
-    ['hip_length', 'Hip length', W, 'Ends at the hip.'],
-    ['tunic', 'Tunic length', W, 'Ends between the hip and mid-thigh.'],
-    ['mid_thigh', 'Mid-thigh', W, 'Ends halfway down the thigh.'],
-    ['above_knee', 'Above knee', W, 'Ends just above the knee.'],
-    ['knee', 'Knee length', W, 'Ends at the knee.'],
-    ['midi', 'Midi', W, 'Ends between the knee and the calf.'],
-    ['calf', 'Calf length', W, 'Ends at the widest part of the calf.'],
+    ['waist_length', 'Waist length', W, 'Ends at the natural waist.', TOP_LENGTH],
+    ['hip_length', 'Hip length', W, 'Ends at the hip.', TOP_LENGTH],
+    ['tunic', 'Tunic length', W, 'Ends between the hip and mid-thigh.', TOP_LENGTH],
+    ['mid_thigh', 'Mid-thigh', W, 'Ends halfway down the thigh.', HEM_LENGTH],
+    ['above_knee', 'Above knee', W, 'Ends just above the knee.', HEM_LENGTH],
+    ['knee', 'Knee length', W, 'Ends at the knee.', HEM_LENGTH],
+    ['midi', 'Midi', W, 'Ends between the knee and the calf.', HEM_LENGTH],
+    ['calf', 'Calf length', W, 'Ends at the widest part of the calf.', HEM_LENGTH],
     ['ankle', 'Ankle length', B, 'Ends at the ankle.'],
-    ['floor', 'Floor length', W, 'Reaches the floor.'],
-    ['full_length', 'Full length', M, 'Trousers that reach the top of the shoe.'],
-    ['shorts', 'Shorts length', M, 'Ends on the thigh or at the knee.'],
+    ['floor', 'Floor length', W, 'Reaches the floor.', HEM_LENGTH],
+    ['full_length', 'Full length', M, 'Trousers that reach the top of the shoe.', LEG_LENGTH],
+    ['shorts', 'Shorts length', M, 'Ends on the thigh or at the knee.', LEG_LENGTH],
     ['adjustable', 'Adjustable / variable', W, 'Length can be changed, for example with ties or a high-low hem.'],
     NOT_APPLICABLE('set length'),
   ]),

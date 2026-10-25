@@ -1,5 +1,5 @@
 import type { ClothingPreference } from '@styleme/contracts';
-import { DESIGN_FEATURES, type DesignFeatureSeed } from './catalogue';
+import { DESIGN_FEATURES, type DesignFeatureSeed, isBackDesign } from './catalogue';
 
 // Design-feature illustrations (D-132), generated in code (rights source `code_generated`, D-65). Every image
 // shares one 200 × 240 canvas per Clothing Preference: a faceless dress form (the base figure), a bodice with
@@ -627,6 +627,9 @@ export function designIllustrations(): DesignIllustrationRecord[] {
     });
     const defaultSleeve = department === 'women' ? '' : sleeves(department, 'short', CLOTH);
     illustrated('neckline', department).forEach((feature, i) => {
+      // Back designs get their back-view drawing in Outfit Categories, not a front view (#163). The index is
+      // kept, so every other neckline keeps its asset ID.
+      if (isBackDesign(feature.featureId)) return;
       const slug = slugOf(feature.featureId, 'neckline');
       out.push({
         assetId: assetId(department, 100 + i),

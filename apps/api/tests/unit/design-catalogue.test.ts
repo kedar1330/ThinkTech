@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DESIGN_FEATURE_CATEGORIES } from '@styleme/contracts';
-import { DESIGN_FEATURES, GARMENT_TYPES, INCOMPATIBLE_PAIRS } from '../../src/design/catalogue';
+import { DESIGN_FEATURES, GARMENT_TYPES, INCOMPATIBLE_PAIRS, isBackDesign } from '../../src/design/catalogue';
 import { designIllustrations } from '../../src/design/illustrations';
 import { evaluateSuitability, suitabilityRuleFileSchema, type MatchableRule } from '../../src/design/rules';
 import { approvedSuitabilityRules } from '../../src/design/seed';
@@ -38,11 +38,12 @@ describe('design catalogue data', () => {
     }
   });
 
-  it('draws a card and a layer for every selectable neckline and sleeve, per department', () => {
+  it('draws a card and a layer for every selectable neckline (except back designs, #163) and sleeve, per department', () => {
     const images = designIllustrations();
     expect(new Set(images.map((i) => i.assetId)).size).toBe(images.length);
     for (const f of DESIGN_FEATURES.filter(
-      (x) => (x.category === 'neckline' || x.category === 'sleeve') && x.selectable !== false,
+      (x) =>
+        (x.category === 'neckline' || x.category === 'sleeve') && x.selectable !== false && !isBackDesign(x.featureId),
     )) {
       for (const d of f.departments) {
         const mine = images.filter((i) => i.featureId === f.featureId && i.department === d);
@@ -120,5 +121,44 @@ describe('evaluateSuitability', () => {
     const r = rule('A', 'neckline_v_neck', { bodyTypes: ['pear'] }, 'recommended', 2);
     expect(evaluateSuitability([{ ...r, departments: ['men'] }], input).size).toBe(0);
     expect(evaluateSuitability([r], { ...input, garmentKind: 'bottom' }).size).toBe(0);
+  });
+});
+
+describe('design pictures and lengths (#163)', () => {
+  const PUBLIC = new URL('../../../web/public', import.meta.url);
+
+  it('never draws a back neckline on the front-view dress form', () => {
+    const back = DESIGN_FEATURES.filter((f) => isBackDesign(f.featureId)).map((f) => f.featureId);
+    expect(back).toEqual(
+      expect.arrayContaining(['neckline_deep_u_back', 'neckline_backless_dori', 'neckline_keyhole_back']),
+    );
+    expect(isBackDesign('neckline_keyhole')).toBe(false);
+    const drawn = new Set(designIllustrations().map((i) => i.featureId));
+    for (const id of back) expect(drawn.has(id)).toBe(false);
+  });
+
+  it('has a committed SVG for every picture it publishes, so no card can show a broken image', () => {
+    const missing = designIllustrations()
+      .map((i) => i.path)
+      .filter((path) => !existsSync(new URL(`.${path}`, `${PUBLIC.href}/`)));
+    // Run `pnpm --filter @styleme/api design:generate` and commit the files when this fails.
+    expect(missing).toEqual([]);
+  });
+
+  it('keeps every other neckline on its asset ID when back designs are skipped', () => {
+    const ids = designIllustrations().map((i) => i.assetId);
+    expect(new Set(ids).size).toBe(ids.length);
+    const crew = designIllustrations().find((i) => i.featureId === 'neckline_crew_neck' && i.kind === 'design_feature');
+    expect(crew?.assetId).toMatch(/^ILL-/);
+  });
+
+  it('offers top lengths on tops only and trouser lengths on bottoms and one-pieces', () => {
+    const kinds = (slug: string) => DESIGN_FEATURES.find((f) => f.featureId === `length_${slug}`)?.kinds ?? [];
+    for (const top of ['waist_length', 'hip_length', 'tunic']) expect(kinds(top)).toEqual(['top', 'layer']);
+    for (const leg of ['full_length', 'shorts']) expect(kinds(leg)).toEqual(['bottom', 'one_piece']);
+    for (const hem of ['knee', 'midi', 'calf', 'floor', 'mid_thigh', 'above_knee']) {
+      expect(kinds(hem)).toEqual(['bottom', 'one_piece', 'layer']);
+    }
+    for (const any of ['cropped', 'ankle', 'adjustable']) expect(kinds(any)).toEqual([]);
   });
 });
