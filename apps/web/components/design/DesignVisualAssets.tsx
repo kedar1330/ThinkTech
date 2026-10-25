@@ -488,52 +488,6 @@ export function FeatureThumbnailSvg({
     );
   }
 
-  // 8. SAREE DRAPING (Nivi, Front Pallu, Belted, Pre-stitched)
-  if (cat === 'draping' || fid.startsWith('draping_')) {
-    const isBelted = fid.includes('belted');
-    const isFrontPallu = fid.includes('front_pallu');
-
-    return (
-      <svg viewBox={viewBox} className={`w-auto ${hClass}`} aria-hidden="true" fill="none">
-        {/* Figure outline */}
-        <ellipse cx="80" cy="35" rx="10" ry="12" stroke={MANNEQUIN_DASH} strokeWidth="1" strokeDasharray="2 2" />
-        <path d="M 68 55 L 92 55 L 90 85 L 70 85 Z" stroke={MANNEQUIN_DASH} strokeWidth="1" strokeDasharray="2 2" />
-
-        {/* Saree drape & pleats */}
-        <path d="M 60 85 Q 80 82 100 85 L 105 155 Q 80 158 55 155 Z" fill={CLOTH} stroke={LINE} strokeWidth="1.3" />
-        {/* Accordion front pleats */}
-        <line x1="76" y1="85" x2="76" y2="155" stroke={LINE_MUTED} strokeWidth="0.9" />
-        <line x1="80" y1="85" x2="80" y2="155" stroke={LINE_MUTED} strokeWidth="0.9" />
-        <line x1="84" y1="85" x2="84" y2="155" stroke={LINE_MUTED} strokeWidth="0.9" />
-
-        {/* Pallu flowing across shoulder */}
-        {isFrontPallu ? (
-          <path
-            d="M 94 50 Q 86 75 75 110 L 68 110 Q 78 70 84 50 Z"
-            fill={CLOTH_SHADOW}
-            stroke={LINE}
-            strokeWidth="1.2"
-          />
-        ) : (
-          <path
-            d="M 66 50 Q 76 75 88 115 L 96 115 Q 84 70 74 50 Z"
-            fill={CLOTH_SHADOW}
-            stroke={LINE}
-            strokeWidth="1.2"
-          />
-        )}
-
-        {/* Kamarbandh / Belt */}
-        {isBelted && (
-          <g>
-            <rect x="62" y="83" width="36" height="5" fill={ACCENT} stroke={LINE} strokeWidth="0.8" rx="1" />
-            <circle cx="80" cy="85.5" r="2.2" fill={ACCENT} stroke={LINE} strokeWidth="0.8" />
-          </g>
-        )}
-      </svg>
-    );
-  }
-
   // DEFAULT / FALLBACK: Atelier dummy icon (no option should reach this; tests check, #163)
   return (
     <svg viewBox={viewBox} className={`w-auto ${hClass}`} aria-hidden="true" fill="none" data-thumbnail="placeholder">

@@ -67,6 +67,7 @@ const OPTIONS: Record<string, string[]> = {
     'shorts',
     'adjustable',
   ],
+  draping: ['straight', 'wrap', 'pleated', 'gathered', 'nivi', 'front_pallu', 'belted', 'pre_stitched'],
   neckline: ['deep_u_back', 'backless_dori', 'keyhole_back', 'sheer_illusion_back', 'square_back', 'inverted_v_back'],
 };
 
@@ -109,6 +110,23 @@ describe('Outfit Categories option pictures', () => {
     expect([...hems].sort((a, b) => a - b)).toEqual(hems);
     const palazzo = draw('length', 'ankle', 'bottom');
     expect(palazzo.html).toContain(`data-hem="${lengthHem('ankle', 'bottom')}"`);
+  });
+
+  it('#162 draws every lehenga dupatta drape differently, and differently from the saree drape', () => {
+    const slugs = OPTIONS.draping!;
+    const lehenga = slugs.map((slug) => {
+      const { container, unmount } = render(<FeatureThumbnailSvg feature={item('draping', slug)} isLehenga />);
+      const html = container.innerHTML;
+      const placeholder = container.querySelector('[data-thumbnail="placeholder"]') !== null;
+      unmount();
+      return { slug, html, placeholder };
+    });
+    for (const d of lehenga) {
+      expect(d.placeholder, d.slug).toBe(false);
+      expect(d.html).toContain(`draping-lehenga-${d.slug}`);
+      expect(d.html).not.toBe(draw('draping', d.slug).html);
+    }
+    expect(new Set(lehenga.map((d) => d.html)).size).toBe(slugs.length);
   });
 
   it('draws top lengths on a top: waist above hip above tunic', () => {
