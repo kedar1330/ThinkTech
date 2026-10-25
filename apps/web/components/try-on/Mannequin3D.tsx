@@ -19,8 +19,8 @@ interface Scene {
 /**
  * The 3D mannequin (D-137), drawn with three.js in the browser: drag or swipe to turn it through 360°, pinch or
  * scroll to zoom, the turn buttons rotate it a quarter at a time, and it turns slowly by itself until touched.
- * Studio lighting with a soft floor shadow. three.js loads only when this mounts, and the WebGL context is
- * released when it unmounts.
+ * It stands on a plinth in a soft-lit studio (`lib/try-on/stage`). three.js loads only when this mounts, and
+ * the WebGL context is released when it unmounts.
  */
 export function Mannequin3D({
   department,
@@ -46,11 +46,14 @@ export function Mannequin3D({
     let created: Scene | null = null;
     (async () => {
       try {
-        const [THREE, { OrbitControls }, { buildFigure, disposeFigure }] = await Promise.all([
-          import('three'),
-          import('three/addons/controls/OrbitControls.js'),
-          import('@/lib/try-on/figure'),
-        ]);
+        const [THREE, { OrbitControls }, { RoomEnvironment }, { buildFigure, disposeFigure }, { buildStage }] =
+          await Promise.all([
+            import('three'),
+            import('three/addons/controls/OrbitControls.js'),
+            import('three/addons/environments/RoomEnvironment.js'),
+            import('@/lib/try-on/figure'),
+            import('@/lib/try-on/stage'),
+          ]);
         const host = mount.current;
         if (cancelled || !host) return;
 
@@ -64,31 +67,13 @@ export function Mannequin3D({
         host.appendChild(renderer.domElement);
 
         const world = new THREE.Scene();
+        // The studio: soft reflections, key, fill and rim lights, and a plinth with the figure's shadow.
+        const stage = buildStage(THREE, RoomEnvironment, world, renderer);
         const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 50);
-        camera.position.set(0, 1.05, 4.4);
-
-        // Studio light: a soft sky/ground fill, a key light that casts the floor shadow, and a rim light.
-        world.add(new THREE.HemisphereLight('#ffffff', '#d8d0c4', 1.6));
-        const key = new THREE.DirectionalLight('#ffffff', 2.2);
-        key.position.set(1.8, 3.2, 2.4);
-        key.castShadow = true;
-        key.shadow.mapSize.set(1024, 1024);
-        key.shadow.camera.left = -1.2;
-        key.shadow.camera.right = 1.2;
-        key.shadow.camera.top = 2.2;
-        key.shadow.camera.bottom = -0.2;
-        key.shadow.radius = 6;
-        world.add(key);
-        const rim = new THREE.DirectionalLight('#fff4e8', 0.9);
-        rim.position.set(-2, 2.5, -2.5);
-        world.add(rim);
-        const floor = new THREE.Mesh(new THREE.CircleGeometry(1.4, 64), new THREE.ShadowMaterial({ opacity: 0.18 }));
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        world.add(floor);
+        camera.position.copy(stage.cameraPosition);
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        controls.target.set(0, 0.92, 0);
+        controls.target.copy(stage.target);
         controls.enableDamping = true;
         controls.dampingFactor = 0.08;
         controls.enablePan = false;
@@ -153,8 +138,7 @@ export function Mannequin3D({
             observer.disconnect();
             controls.dispose();
             if (figure) disposeFigure(figure);
-            floor.geometry.dispose();
-            floor.material.dispose();
+            stage.dispose();
             renderer.dispose();
             renderer.forceContextLoss();
             renderer.domElement.remove();
