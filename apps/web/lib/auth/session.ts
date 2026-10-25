@@ -34,7 +34,7 @@ export async function getCurrentUser(): Promise<{ user: UserResponse; accessToke
     const user = await apiRequest<UserResponse>('/v1/auth/me', { token: accessToken });
     return { user, accessToken };
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401) return null;
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return null;
     throw err;
   }
 }
