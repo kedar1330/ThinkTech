@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Info } from 'lucide-react';
 import {
+  CATEGORIES,
   SHORTLIST_LIMITS,
   objectIdSchema,
   type AppearanceResponse,
@@ -24,7 +25,7 @@ import { ProductMatches } from '@/components/shop/ProductMatches';
 import { Card } from '@/components/ui/card';
 import { ApiError, apiRequest } from '@/lib/api/server';
 import { requireOnboarded } from '@/lib/auth/session';
-import { lookTitle } from '@/lib/outfits/look-text';
+import { garmentSlots, lookTitle, vocabLabel } from '@/lib/outfits/look-text';
 
 export const metadata: Metadata = { title: 'Shop My Look' };
 
@@ -172,11 +173,45 @@ export default async function ShopPage({
         <h2 id="your-outfit" className="font-display text-2xl text-primary">
           Your outfit
         </h2>
-        {look.image && (
-          <div className="max-w-md overflow-hidden rounded-2xl border border-border/70 bg-surface shadow-xs">
-            <OutfitImage outfitId={look.id} ready={look.image === 'ready'} />
+        {/* The picture beside the pieces to shop for, so the card has no empty half. */}
+        <Card className={look.image ? 'grid gap-5 p-4 sm:grid-cols-[15rem_minmax(0,1fr)] sm:p-5' : 'p-4 sm:p-5'}>
+          {look.image && (
+            <OutfitImage outfitId={look.id} ready={look.image === 'ready'} className="max-w-60 sm:max-w-none" />
+          )}
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-plum">In this look</h3>
+              <p className="text-sm text-muted-foreground">
+                Similar items for each piece are listed below, from Amazon, Flipkart and Meesho.
+              </p>
+            </div>
+            <ul className="divide-y divide-border/70 rounded-xl border border-border/70">
+              {garmentSlots(look).map((s) => (
+                <li key={s.slotId} className="flex items-center gap-3 p-3">
+                  <span
+                    aria-hidden
+                    className="size-9 shrink-0 rounded-full border border-black/10 shadow-xs"
+                    style={{ backgroundColor: s.swatches[0]?.hex }}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground">
+                      {vocabLabel(CATEGORIES, s.lookSpec.category)}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground first-letter:uppercase">
+                      {s.searchPhrase}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <a
+              href="#similar-items"
+              className="inline-flex min-h-10 w-fit items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+            >
+              See similar items
+            </a>
           </div>
-        )}
+        </Card>
       </section>
       <ProductMatches
         // Starts afresh for each tab; the key differs from LookShopper's, as sibling keys must be unique.

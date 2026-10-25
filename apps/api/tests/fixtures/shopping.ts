@@ -38,6 +38,10 @@ export class FakeShoppingProvider implements ShoppingSearchProvider {
   async search(query: string): Promise<ShoppingListing[]> {
     this.queries.push(query);
     if (this.reply.kind === 'fail') throw new ShoppingProviderError(this.reply.cause);
-    return this.respond ? this.respond(query) : this.reply.listings;
+    if (this.respond) return this.respond(query);
+    // A listing without its own title is named after the search, like a store's title for that garment.
+    return this.reply.listings.map((l) =>
+      l.title === `Synthetic ${l.source} item` ? { ...l, title: `Synthetic ${query}` } : l,
+    );
   }
 }

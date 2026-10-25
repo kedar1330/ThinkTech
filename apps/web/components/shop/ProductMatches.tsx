@@ -36,6 +36,9 @@ type State = { kind: 'loading' } | { kind: 'ready'; matches: LookProductMatches 
 type StoreFilter = 'all' | PriceRangeStore;
 
 const storeName = (id: PriceRangeStore) => PRICE_RANGE_STORES.find((s) => s.id === id)!.label;
+
+/** Items shown at first in each list, and how many more each "Show more" adds. */
+const SHOWN_AT_FIRST = 8;
 const pickKey = (l: ProductListing) => `${l.store}|${l.title}|${l.price}`;
 
 /** The listing as it is saved: without the `matched` attributes of a match (#133). */
@@ -103,6 +106,8 @@ export function ProductMatches({
   const [saving, startSaving] = useTransition();
   /** The one item whose options are open (#125): `<slotId>|<item>`. */
   const [openKey, setOpenKey] = useState<string | null>(null);
+  /** How many items each list shows (`<slotId>|match` or `<slotId>|other`); more appear with "Show more". */
+  const [shownCount, setShownCount] = useState<Record<string, number>>({});
 
   // Escape closes the open options and returns focus to the item.
   useEffect(() => {
@@ -192,7 +197,7 @@ export function ProductMatches({
       <li
         key={pickKey(l)}
         className={cn(
-          'flex flex-col gap-2 rounded-xl border p-2 text-xs',
+          'group flex flex-col overflow-hidden rounded-2xl border bg-surface text-xs shadow-xs transition-shadow hover:shadow-md',
           isPicked ? 'border-primary ring-1 ring-primary' : 'border-border',
         )}
       >
@@ -203,43 +208,59 @@ export function ProductMatches({
           aria-expanded={open}
           aria-controls={optionsId}
           onClick={() => setOpenKey(open ? null : optionsKey)}
-          className="flex flex-col gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex flex-1 flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
-          {l.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- the store's Google-hosted thumbnail, as the search returned it
-            <img
-              src={l.imageUrl}
-              alt=""
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              className="aspect-square w-full rounded-lg bg-surface-muted object-contain"
-            />
-          ) : (
-            <span aria-hidden className="block aspect-square w-full rounded-lg bg-surface-muted" />
-          )}
-          {isPicked && (
-            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
-              <Heart aria-hidden className="size-3 fill-current" />
-              Saved
+          {/* Every picture the same portrait shape, filled from the top so the garment shows. */}
+          <span className="relative block aspect-[3/4] w-full overflow-hidden bg-surface-muted">
+            {l.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- the store's Google-hosted thumbnail, as the search returned it
+              <img
+                src={l.imageUrl}
+                alt=""
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.hidden = true;
+                }}
+                className="size-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.03]"
+              />
+            )}
+            {isPicked && (
+              <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+                <Heart aria-hidden className="size-3 fill-current" />
+                Saved
+              </span>
+            )}
+            {/* Read out after the price instead, so the item's name comes first. */}
+            <span
+              aria-hidden
+              className="absolute left-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-[11px] font-medium text-foreground shadow-xs"
+            >
+              {storeName(l.store)}
             </span>
-          )}
-          <span className="line-clamp-2 text-foreground">{l.title}</span>
-          <span>
-            <span className="text-sm font-medium text-foreground">{formatInr(l.price)}</span>{' '}
-            <span className="text-muted-foreground">· {storeName(l.store)}</span>
           </span>
-          {matchedText ? (
-            <span className="text-[11px] text-success">Matches: {matchedText}</span>
-          ) : (
-            !spec && <span className="text-[11px] text-muted-foreground">Different style</span>
-          )}
+          {/* Fixed heights, so prices, matches and buttons line up across a row. */}
+          <span className="flex flex-1 flex-col gap-1 p-3">
+            <span className="line-clamp-2 min-h-[2.75em] leading-snug text-foreground">{l.title}</span>
+            <span className="text-base font-semibold text-foreground">
+              {formatInr(l.price)}
+              <span className="sr-only"> · {storeName(l.store)}</span>
+            </span>
+            <span className="line-clamp-1 min-h-4 text-[11px]">
+              {matchedText ? (
+                <span className="text-success">Matches: {matchedText}</span>
+              ) : (
+                !spec && <span className="text-muted-foreground">Different style</span>
+              )}
+            </span>
+          </span>
         </button>
         {open ? (
           <div
             id={optionsId}
             role="group"
             aria-label={`Options for ${l.title}`}
-            className="mt-auto flex flex-col gap-2 rounded-lg bg-surface-muted p-2"
+            className="mx-3 mb-3 flex flex-col gap-2 rounded-lg bg-surface-muted p-2"
           >
             <button
               type="button"
@@ -275,7 +296,7 @@ export function ProductMatches({
             )}
           </div>
         ) : (
-          <div className="mt-auto">
+          <div className="px-3 pb-3">
             <TryOnButton outfitId={look.id} lookName={l.title} slotId={slotId} item={l} />
           </div>
         )}
@@ -283,10 +304,39 @@ export function ProductMatches({
     );
   };
 
+  /** One list of items, the first ones shown, with "Show more" for the rest. */
+  const itemList = (
+    slotId: string,
+    group: 'match' | 'other',
+    items: readonly (ProductListing | MatchedListing)[],
+    label: string,
+    spec: LookSpec | null,
+  ) => {
+    const key = `${slotId}|${group}`;
+    const count = shownCount[key] ?? SHOWN_AT_FIRST;
+    const left = items.length - count;
+    return (
+      <>
+        <ul aria-label={label} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {items.slice(0, count).map((l, i) => itemCard(slotId, l, i, spec))}
+        </ul>
+        {left > 0 && (
+          <button
+            type="button"
+            onClick={() => setShownCount((c) => ({ ...c, [key]: count + SHOWN_AT_FIRST }))}
+            className="mx-auto flex min-h-10 items-center rounded-full border border-border px-4 text-sm font-medium text-plum hover:border-plum/60"
+          >
+            Show more ({left} left)
+          </button>
+        )}
+      </>
+    );
+  };
+
   return (
     <section aria-labelledby="similar-items" className="space-y-4">
       <div className="space-y-1">
-        <h2 id="similar-items" className="font-display text-2xl text-primary">
+        <h2 id="similar-items" className="scroll-mt-28 font-display text-2xl text-primary">
           Similar items to compare
         </h2>
         <p className="text-xs text-muted-foreground">{matches.label}</p>
@@ -367,25 +417,21 @@ export function ProductMatches({
                 No items matching your look found{store === 'all' ? '' : ` on ${storeName(store)}`}.
               </p>
             ) : (
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-plum">Matches your look</h4>
-                <ul
-                  aria-label={`Matches your look: ${name}`}
-                  className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
-                >
-                  {shown.map((l, i) => itemCard(slot.slotId, l, i, garment?.lookSpec ?? null))}
-                </ul>
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-plum">
+                  Matches your look{' '}
+                  <span className="font-normal normal-case text-muted-foreground">({shown.length})</span>
+                </h4>
+                {itemList(slot.slotId, 'match', shown, `Matches your look: ${name}`, garment?.lookSpec ?? null)}
               </div>
             )}
             {others.length > 0 && (
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-plum">Other {name} styles</h4>
-                <ul
-                  aria-label={`Other ${name} styles`}
-                  className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
-                >
-                  {others.map((l, i) => itemCard(slot.slotId, l, i, null))}
-                </ul>
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-plum">
+                  Other {name} styles{' '}
+                  <span className="font-normal normal-case text-muted-foreground">({others.length})</span>
+                </h4>
+                {itemList(slot.slotId, 'other', others, `Other ${name} styles`, null)}
               </div>
             )}
           </section>

@@ -26,7 +26,7 @@ import {
   type ShoppingSearchProvider,
 } from '../integrations/shopping/serper-client';
 import type { Models } from '../models/index';
-import { categoryQuery, matchedAttributes } from './listing-match';
+import { byRelevance, categoryQuery, relevanceOf } from './listing-match';
 import { AppError } from '../utils/errors';
 
 // Price ranges (#118) and similar products (#120) on Shop My Look. For each garment of one of the user's own
@@ -65,6 +65,8 @@ type CachedListing = ProductListing;
 
 interface Searched {
   slot: LookSlot;
+  /** The look's clothing department, for leaving out other departments' items. */
+  department: string | null;
   listings: CachedListing[];
   /** Other styles of the same garment (#133); only searched for the products view. */
   alternatives: CachedListing[];
@@ -166,7 +168,11 @@ export class PriceRangeService {
   /** `GET /v1/outfits/:id/price-range`: the price range of one of the user's own looks. */
   async range(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<LookPriceRange> {
     const searched = await this.search(userId, outfitId);
-    const slots: SlotPriceRange[] = searched.map(({ slot, listings }) => {
+    const slots: SlotPriceRange[] = searched.map(({ slot, department, listings: all }) => {
+      // Only listings that are this garment count, so other garments, sets and children's wear don't skew it.
+      const listings = onlyConfirmed(
+        all.map((l) => ({ ...l, ...relevanceOf(l.title, slot.lookSpec, department) })).filter((l) => l.relevant),
+      );
       const prices = listings.map((l) => l.price);
       return {
         slotId: slot.slotId,
@@ -197,7 +203,11 @@ export class PriceRangeService {
    */
   async products(userId: Types.ObjectId, outfitId: Types.ObjectId): Promise<LookProductMatches> {
     const searched = await this.search(userId, outfitId, { alternatives: true });
-    const slots: SlotProducts[] = searched.map(({ slot, listings, alternatives }) => {
+    const slots: SlotProducts[] = searched.map(({ slot, department, listings: all, alternatives }) => {
+      // Only listings that are this garment: they name it, are for the look's department, aren't children's
+      // wear, and a set isn't offered as just its bottom.
+      const scored = all.map((l) => ({ ...l, ...relevanceOf(l.title, slot.lookSpec, department) }));
+      const listings = onlyConfirmed(scored.filter((l) => l.relevant));
       const stats: StorePriceStats[] = PRICE_RANGE_STORE_IDS.flatMap((store) => {
         const prices = listings
           .filter((l) => l.store === store)
@@ -206,23 +216,33 @@ export class PriceRangeService {
         if (prices.length === 0) return [];
         return [{ store, listings: prices.length, min: prices[0]!, median: median(prices), max: prices.at(-1)! }];
       });
-      // Matches (#133): best match first (most of the garment's attributes in the title), then cheapest.
-      const byMatch = (a: MatchedListing, b: MatchedListing) =>
-        b.matched.length - a.matched.length || a.price - b.price;
-      const matched = listings.map((l) => ({ ...l, matched: matchedAttributes(l.title, slot.lookSpec) }));
-      const matches = PRICE_RANGE_STORE_IDS.flatMap((store) =>
-        matched
-          .filter((l) => l.store === store)
-          .sort(byMatch)
+      // Matches (#133): items the title confirms are for the look's department first, then the best fit
+      // (attributes the title mentions, less a set or another colour), then cheapest. With enough confirmed
+      // items, unconfirmed ones (a "Kurta-Cotton-Peach" that may be a men's kurta) aren't shown at all.
+      const matches: MatchedListing[] = PRICE_RANGE_STORE_IDS.flatMap((store) =>
+        dedupe(listings.filter((l) => l.store === store))
+          .sort(byRelevance)
           .slice(0, PRODUCTS_PER_STORE),
-      ).sort(byMatch);
-      // Other styles of the same garment (#133): never an item already listed as a match.
-      const seen = new Set(listings.map(listingKey));
+      )
+        .sort(byRelevance)
+        .map(({ store, title, price, link, imageUrl, matched }) => ({ store, title, price, link, imageUrl, matched }));
+      // Other styles of the same garment (#133): this garment too, never an item already listed as a match.
+      const seen = new Set(all.map(listingKey));
+      const otherStyles = onlyConfirmed(
+        alternatives
+          .filter((l) => !seen.has(listingKey(l)))
+          .map((l) => ({ ...l, ...relevanceOf(l.title, slot.lookSpec, department) }))
+          .filter((l) => l.relevant),
+      );
+      const cheapestConfirmed = (a: (typeof otherStyles)[number], b: (typeof otherStyles)[number]) =>
+        Number(b.confirmed) - Number(a.confirmed) || a.price - b.price;
       const others = PRICE_RANGE_STORE_IDS.flatMap((store) =>
-        dedupe(alternatives.filter((l) => l.store === store && !seen.has(listingKey(l))))
-          .sort((a, b) => a.price - b.price)
+        dedupe(otherStyles.filter((l) => l.store === store))
+          .sort(cheapestConfirmed)
           .slice(0, ALTERNATIVES_PER_STORE),
-      ).sort((a, b) => a.price - b.price);
+      )
+        .sort(cheapestConfirmed)
+        .map(({ store, title, price, link, imageUrl }) => ({ store, title, price, link, imageUrl }));
       const cleanSlotId = slot.slotId === 'one_piece' ? 'one-piece' : slot.slotId;
       return { slotId: cleanSlotId, listings: matches, alternatives: others, stats };
     });
@@ -320,6 +340,7 @@ export class PriceRangeService {
         const all = [...results, ...broad];
         return {
           slot,
+          department,
           listings: results.flatMap((r) => r.listings),
           alternatives: broad.flatMap((r) => r.listings),
           checkedAt: new Date(Math.min(...all.map((r) => r.checkedAt.getTime()))),
@@ -375,8 +396,17 @@ export class PriceRangeService {
  */
 const listingKey = (l: CachedListing) => `${l.store}|${l.title.toLowerCase().replace(/\s+/g, ' ').trim()}`;
 
+/** With at least this many items confirmed for the look's department, unconfirmed ones are left out. */
+const ENOUGH_CONFIRMED = 3;
+
+/** Only the confirmed items when there are enough of them; otherwise all (unconfirmed ones rank last). */
+function onlyConfirmed<T extends { confirmed: boolean }>(list: T[]): T[] {
+  const confirmed = list.filter((l) => l.confirmed);
+  return confirmed.length >= ENOUGH_CONFIRMED ? confirmed : list;
+}
+
 /** The first of each listing that appears more than once. */
-function dedupe(list: CachedListing[]): CachedListing[] {
+function dedupe<T extends CachedListing>(list: T[]): T[] {
   const seen = new Set<string>();
   return list.filter((l) => !seen.has(listingKey(l)) && seen.add(listingKey(l)));
 }

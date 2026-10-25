@@ -414,7 +414,7 @@ export const PRODUCT_MATCHES_LABEL =
   'Similar items found by search on Amazon, Flipkart and Meesho — not exact matches. Prices change; not verified by StyleMe; not a checkout price.';
 
 /** At most this many of the cheapest listings per store are returned for each garment. */
-export const PRODUCTS_PER_STORE = 8;
+export const PRODUCTS_PER_STORE = 16;
 
 /** One listing as the search returned it: the store's title and price, a Google Shopping link and thumbnail. */
 export const productListingSchema = z
@@ -462,7 +462,7 @@ export const matchedListingSchema = productListingSchema.extend({ matched: z.arr
 export type MatchedListing = z.infer<typeof matchedListingSchema>;
 
 /** At most this many other styles of the same garment per store (#133). */
-export const ALTERNATIVES_PER_STORE = 4;
+export const ALTERNATIVES_PER_STORE = 8;
 
 /**
  * One garment. `listings`: items that match the look, best match first (the most of its attributes found in
