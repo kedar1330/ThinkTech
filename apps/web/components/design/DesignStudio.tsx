@@ -144,6 +144,18 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
     return map;
   }, [data.categories]);
   const category = (id: DesignFeatureCategory) => data.categories.find((c) => c.id === id);
+
+  /** Every chosen option, so each one is tried on in the visual customizer. */
+  const chosen = useMemo(
+    () => Object.values(selected).flatMap((id) => (id && byId.get(id) ? [byId.get(id)!] : [])),
+    [selected, byId],
+  );
+  // On a saree the chosen drape is the figure itself; otherwise the classic drape until one is picked.
+  const drapeOnFigure = chosen.find((f) => f.category === 'draping') ?? category('draping')?.features[0] ?? null;
+  /** Whether the figure already shows this option: a neckline or sleeve picture layer, or the saree drape. */
+  const onFigure = (f: DesignFeatureItem) =>
+    (isDrape && f.category === 'draping') ||
+    ((f.category === 'neckline' || f.category === 'sleeve') && Boolean(f.layer));
   const necklines = category('neckline');
   const sleeves = category('sleeve');
 
@@ -432,9 +444,6 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
 
   const necklineLayer = selected.neckline ? byId.get(selected.neckline)?.layer : null;
   const sleeveLayer = selected.sleeve ? byId.get(selected.sleeve)?.layer : null;
-  const chosen = Object.values(selected)
-    .map((id) => byId.get(id))
-    .filter((f): f is DesignFeatureItem => Boolean(f));
 
   return (
     <div className="space-y-6">
@@ -545,6 +554,14 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
               <div aria-label="Your selected combination">
                 <LowerBodyMannequin selected={selected} department={department} garmentId={data.garmentType.id} />
               </div>
+            ) : isDrape && drapeOnFigure ? (
+              // Saree: the saree itself, in the chosen drape
+              <div
+                className="flex aspect-[200/240] w-full items-center justify-center rounded-2xl border border-[#ecdac7] bg-[#faf6ef] shadow-inner"
+                aria-label="Your selected combination"
+              >
+                <FeatureThumbnailSvg feature={drapeOnFigure} garmentKind={data.garmentType.kind} />
+              </div>
             ) : isBlouse && blouseView === 'back' ? (
               // Blouse Back View Mannequin (Backless dori, deep U back, keyhole)
               <div aria-label="Your selected combination">
@@ -585,6 +602,33 @@ export function DesignStudio({ data, outfitCategory, stylingGoals, department }:
                     <span className="mt-0.5 text-[10px] text-muted-foreground">Neckline or sleeve</span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Every other chosen option, tried on beside the figure: nothing picked goes unseen. */}
+            {chosen.some((f) => !onFigure(f)) && (
+              <div aria-label="Tried on" className="mt-3">
+                <p className="mb-1 text-center text-xs font-medium text-muted-foreground">Tried on</p>
+                <ul className="grid grid-cols-3 gap-2">
+                  {chosen
+                    .filter((f) => !onFigure(f))
+                    .map((f) => (
+                      <li
+                        key={f.featureId}
+                        className="flex flex-col items-center rounded-lg border border-border bg-[#fbf6ec] p-1"
+                      >
+                        <FeatureThumbnailSvg
+                          feature={f}
+                          compact
+                          isBottom={isBottom}
+                          isLehenga={isLehenga}
+                          isSkirt={isSkirt}
+                          garmentKind={data.garmentType.kind}
+                        />
+                        <span className="text-center text-[10px] leading-tight text-foreground">{f.name}</span>
+                      </li>
+                    ))}
+                </ul>
               </div>
             )}
 
