@@ -17,6 +17,10 @@ export function adminRoutes(controller: AdminController, auth: RequestHandler[],
   router.post('/admin/users/:id/status', ...adminAuth('users.suspend'), controller.setUserStatus);
   router.get('/admin/catalogue', ...adminAuth('catalogue.edit'), controller.getCatalogue);
   router.post('/admin/catalogue/:type/:id/status', ...adminAuth('catalogue.publish'), controller.updateCatalogueStatus);
+  router.get('/admin/admins', ...adminAuth('admins.manage'), controller.getAdmins);
+  router.post('/admin/admins', ...adminAuth('admins.manage'), controller.createAdmin);
+  router.patch('/admin/admins/:id', ...adminAuth('admins.manage'), controller.updateAdmin);
+  router.post('/admin/admins/:id', ...adminAuth('admins.manage'), controller.updateAdmin);
   router.get('/admin/audit-logs', ...adminAuth('audit.view'), controller.getAuditLogs);
 
   return router;

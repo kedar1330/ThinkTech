@@ -1,17 +1,24 @@
 import { Types } from 'mongoose';
 import {
   ADMIN_ROLE_PERMISSIONS,
+  getAdminEffectivePermissions,
   type AdminAuditLogItem,
   type AdminCatalogueItem,
   type AdminCatalogueType,
+  type AdminCreateAdminRequest,
   type AdminDashboardResponse,
+  type AdminListItem,
+  type AdminListResponse,
   type AdminMeResponse,
+  type AdminPermission,
   type AdminRole,
+  type AdminUpdateAdminRequest,
   type AdminUserItem,
   type AdminUsersResponse,
 } from '@styleme/contracts';
 import type { Models } from '../models';
 import { AppError } from '../utils/errors';
+import { hashPassword } from './passwords';
 
 export class AdminService {
   constructor(private readonly models: Models) {}
@@ -32,6 +39,7 @@ export class AdminService {
       const created = await this.models.AdminAccount.create({
         userId,
         role: 'super_admin',
+        permissions: [...ADMIN_ROLE_PERMISSIONS.super_admin],
         status: 'active',
         lastLoginAt: new Date(),
       });
@@ -40,12 +48,13 @@ export class AdminService {
       await this.models.AdminAccount.updateOne({ _id: admin._id }, { $set: { lastLoginAt: new Date() } });
     }
 
-    if (admin.status !== 'active') {
+    if (!admin || admin.status !== 'active') {
       throw new AppError('FORBIDDEN');
     }
 
     const role = admin.role as AdminRole;
-    const permissions = ADMIN_ROLE_PERMISSIONS[role] ?? [];
+    const customPermissions = (admin.permissions as AdminPermission[]) ?? [];
+    const permissions = getAdminEffectivePermissions(role, customPermissions);
 
     return {
       id: String(admin._id),
@@ -55,6 +64,193 @@ export class AdminService {
       status: admin.status as 'active' | 'disabled',
       permissions,
     };
+  }
+
+  /**
+   * List all admin accounts along with their associated user identifiers and effective permissions.
+   */
+  async getAdmins(): Promise<AdminListResponse> {
+    const adminDocs = await this.models.AdminAccount.find().sort({ createdAt: -1 }).lean();
+    const userIds = adminDocs.map((a) => a.userId);
+    const userDocs = await this.models.User.find({ _id: { $in: userIds } })
+      .select({ email: 1, name: 1 })
+      .lean();
+    const userMap = new Map(userDocs.map((u) => [String(u._id), u]));
+
+    const admins: AdminListItem[] = adminDocs.map((a) => {
+      const u = userMap.get(String(a.userId));
+      const role = a.role as AdminRole;
+      const customPerms = (a.permissions as AdminPermission[]) ?? [];
+      return {
+        id: String(a._id),
+        userId: String(a.userId),
+        email: u?.email ?? 'unknown@styleme.internal',
+        name: u?.name ?? 'Admin',
+        role,
+        status: a.status as 'active' | 'disabled',
+        permissions: getAdminEffectivePermissions(role, customPerms),
+        lastLoginAt: a.lastLoginAt ? new Date(a.lastLoginAt).toISOString() : null,
+        createdAt: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString(),
+      };
+    });
+
+    return { admins, total: admins.length };
+  }
+
+  /**
+   * Add a new administrator or promote an existing registered user to an admin role,
+   * setting granular restrictions / permissions and logging to the audit trail.
+   */
+  async createAdmin(currentAdminUserId: Types.ObjectId, input: AdminCreateAdminRequest): Promise<AdminListItem> {
+    const email = input.email.toLowerCase().trim();
+    let user = await this.models.User.findOne({ email });
+
+    if (user) {
+      // Check if already an admin
+      const existingAdmin = await this.models.AdminAccount.findOne({ userId: user._id }).lean();
+      if (existingAdmin) {
+        throw new AppError('CONFLICT', 'An admin account already exists for this email address');
+      }
+      user.role = 'admin';
+      if (!user.isActive) {
+        user.isActive = true;
+      }
+      await user.save();
+    } else {
+      const rawPassword = input.password || 'StyleMe@Admin2026!';
+      const passwordHash = await hashPassword(rawPassword);
+      const now = new Date();
+      user = await this.models.User.create({
+        email,
+        name: input.name?.trim() || 'StyleMe Admin',
+        role: 'admin',
+        passwordHash,
+        passwordChangedAt: now,
+        emailVerifiedAt: now,
+        isActive: true,
+      });
+    }
+
+    const role = input.role;
+    const assignedPermissions: AdminPermission[] =
+      role === 'custom_admin'
+        ? [...(input.permissions ?? [])]
+        : input.permissions && input.permissions.length > 0
+          ? [...input.permissions]
+          : [...(ADMIN_ROLE_PERMISSIONS[role] ?? [])];
+
+    const created = await this.models.AdminAccount.create({
+      userId: user._id,
+      role,
+      permissions: [...assignedPermissions],
+      status: 'active',
+      createdBy: currentAdminUserId,
+    });
+
+    // Write audit trail
+    await this.models.AdminAuditLog.create({
+      adminId: currentAdminUserId,
+      action: 'CREATED',
+      targetType: 'admin',
+      targetId: String(created._id),
+      status: 'success',
+      changes: [
+        { field: 'email', to: email },
+        { field: 'role', to: role },
+        { field: 'permissions', to: assignedPermissions.join(', ') },
+      ],
+      at: new Date(),
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+    });
+
+    return {
+      id: String(created._id),
+      userId: String(user._id),
+      email: user.email,
+      name: user.name,
+      role,
+      status: 'active',
+      permissions: getAdminEffectivePermissions(role, assignedPermissions),
+      lastLoginAt: null,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Update an existing admin's role, restrictions / permissions, or enable/disable status.
+   * If disabled, active sessions are immediately revoked.
+   */
+  async updateAdmin(
+    currentAdminUserId: Types.ObjectId,
+    adminAccountId: string,
+    input: AdminUpdateAdminRequest,
+  ): Promise<{ success: true }> {
+    if (!Types.ObjectId.isValid(adminAccountId)) {
+      throw new AppError('INVALID_REQUEST');
+    }
+
+    const admin = await this.models.AdminAccount.findById(adminAccountId);
+    if (!admin) {
+      throw new AppError('NOT_FOUND');
+    }
+
+    const isSelf = String(admin.userId) === String(currentAdminUserId);
+
+    if (isSelf && input.status === 'disabled') {
+      throw new AppError('INVALID_REQUEST', 'You cannot disable your own admin account');
+    }
+    if (isSelf && input.role && input.role !== 'super_admin') {
+      throw new AppError('INVALID_REQUEST', 'You cannot demote your own super admin role');
+    }
+
+    const changes: Array<{
+      field: string;
+      from?: string | number | boolean | null;
+      to?: string | number | boolean | null;
+    }> = [];
+    let auditAction: 'ADMIN_ROLE_CHANGED' | 'ADMIN_DISABLED' | 'ADMIN_ENABLED' = 'ADMIN_ROLE_CHANGED';
+
+    if (input.role && input.role !== admin.role) {
+      changes.push({ field: 'role', from: admin.role, to: input.role });
+      admin.role = input.role;
+    }
+
+    if (input.permissions !== undefined) {
+      const previousPerms = (admin.permissions as string[])?.join(', ') ?? '';
+      const nextPerms = input.permissions.join(', ');
+      if (previousPerms !== nextPerms) {
+        changes.push({ field: 'permissions', from: previousPerms, to: nextPerms });
+        admin.permissions = input.permissions;
+      }
+    }
+
+    if (input.status && input.status !== admin.status) {
+      changes.push({ field: 'status', from: admin.status, to: input.status });
+      admin.status = input.status;
+      auditAction = input.status === 'disabled' ? 'ADMIN_DISABLED' : 'ADMIN_ENABLED';
+
+      if (input.status === 'disabled') {
+        // Invalidate active sessions immediately
+        await this.models.User.updateOne({ _id: admin.userId }, { $inc: { tokenVersion: 1 } });
+      }
+    }
+
+    await admin.save();
+
+    if (changes.length > 0) {
+      await this.models.AdminAuditLog.create({
+        adminId: currentAdminUserId,
+        action: auditAction,
+        targetType: 'admin',
+        targetId: adminAccountId,
+        status: 'success',
+        changes,
+        at: new Date(),
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      });
+    }
+
+    return { success: true };
   }
 
   /**

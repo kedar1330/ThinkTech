@@ -5,8 +5,12 @@ import type {
   AdminAuditLogsResponse,
   AdminCatalogueResponse,
   AdminCatalogueType,
+  AdminCreateAdminRequest,
   AdminDashboardResponse,
+  AdminListItem,
+  AdminListResponse,
   AdminMeResponse,
+  AdminUpdateAdminRequest,
   AdminUsersResponse,
 } from '@styleme/contracts';
 import { apiRequest } from '@/lib/api/server';
@@ -112,5 +116,54 @@ export async function getAdminAuditLogsAction(page = 1): Promise<{ data?: AdminA
     return { data };
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed to load audit logs' };
+  }
+}
+
+export async function getAdminsAction(): Promise<{ data?: AdminListResponse; error?: string }> {
+  const token = await tokenOrLogin();
+  try {
+    const data = await apiRequest<AdminListResponse>('/v1/admin/admins', { token });
+    return { data };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to load admins list' };
+  }
+}
+
+export async function createAdminAction(
+  input: AdminCreateAdminRequest,
+): Promise<{ data?: AdminListItem; error?: string }> {
+  if (!(await sameOrigin())) return { error: 'Request blocked' };
+  const token = await tokenOrLogin();
+  try {
+    const data = await apiRequest<AdminListItem>('/v1/admin/admins', {
+      method: 'POST',
+      token,
+      body: input,
+    });
+    revalidatePath('/admin/admins');
+    revalidatePath('/admin/audit');
+    return { data };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to create admin' };
+  }
+}
+
+export async function updateAdminAction(
+  id: string,
+  input: AdminUpdateAdminRequest,
+): Promise<{ success?: boolean; error?: string }> {
+  if (!(await sameOrigin())) return { error: 'Request blocked' };
+  const token = await tokenOrLogin();
+  try {
+    await apiRequest(`/v1/admin/admins/${id}`, {
+      method: 'PATCH',
+      token,
+      body: input,
+    });
+    revalidatePath('/admin/admins');
+    revalidatePath('/admin/audit');
+    return { success: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to update admin' };
   }
 }

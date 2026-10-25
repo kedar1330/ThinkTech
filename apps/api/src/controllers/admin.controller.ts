@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
 import {
   adminCatalogueTypeSchema,
+  adminCreateAdminSchema,
+  adminUpdateAdminSchema,
   adminUpdateCatalogueStatusSchema,
   adminUpdateUserStatusSchema,
 } from '@styleme/contracts';
@@ -20,6 +22,29 @@ export class AdminController {
   dashboard = async (_req: Request, res: Response): Promise<void> => {
     const data = await this.service.getDashboard();
     sendData(res, data);
+  };
+
+  getAdmins = async (_req: Request, res: Response): Promise<void> => {
+    const data = await this.service.getAdmins();
+    sendData(res, data);
+  };
+
+  createAdmin = async (req: Request, res: Response): Promise<void> => {
+    if (!req.auth) throw new AppError('UNAUTHENTICATED');
+    const parsed = adminCreateAdminSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError('INVALID_REQUEST');
+    const result = await this.service.createAdmin(req.auth.user._id, parsed.data);
+    sendData(res, result, 201);
+  };
+
+  updateAdmin = async (req: Request, res: Response): Promise<void> => {
+    if (!req.auth) throw new AppError('UNAUTHENTICATED');
+    const id = typeof req.params.id === 'string' ? req.params.id : '';
+    if (!id) throw new AppError('INVALID_REQUEST');
+    const parsed = adminUpdateAdminSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError('INVALID_REQUEST');
+    const result = await this.service.updateAdmin(req.auth.user._id, id, parsed.data);
+    sendData(res, result);
   };
 
   getUsers = async (req: Request, res: Response): Promise<void> => {
