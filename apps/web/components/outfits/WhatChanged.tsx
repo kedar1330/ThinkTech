@@ -9,8 +9,8 @@ export function WhatChanged({ changes }: { changes: readonly string[] }) {
         <p>Nothing in your profile has changed since the original look, so these looks use the same inputs.</p>
       ) : (
         <ul className="list-disc space-y-0.5 pl-4">
-          {changes.map((change) => (
-            <li key={change}>{change}</li>
+          {changes.map((change, idx) => (
+            <li key={`${change}-${idx}`}>{change}</li>
           ))}
         </ul>
       )}

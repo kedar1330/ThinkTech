@@ -7,6 +7,7 @@ import type { AppearanceResponse, ColourPreferencesResponse, ProfileResponse } f
 const actions = vi.hoisted(() => ({ requestLooksAction: vi.fn(), regenerateAction: vi.fn() }));
 vi.mock('@/app/actions/discover', () => actions);
 
+import { DesignSummaryCard } from '@/components/discover/DesignSummaryCard';
 import { ProfileSummary } from '@/components/discover/ProfileSummary';
 import { RequestForm } from '@/components/discover/RequestForm';
 import type { DesignSummary } from '@/lib/discover/design-summary';
@@ -177,5 +178,20 @@ describe('profile summary on the request page', () => {
     expect(screen.getByText('Hourglass')).toBeInTheDocument();
     expect(screen.getByText('Navy')).toBeInTheDocument();
     expect(screen.getByText('Mustard')).toBeInTheDocument();
+  });
+
+  it('renders DesignSummaryCard with duplicate feature names without throwing React duplicate key warnings', () => {
+    const designWithDuplicates: DesignSummary = {
+      garmentType: 'kurti',
+      garmentName: 'Kurti',
+      outfitCategory: 'indian',
+      outfitLabel: 'Indian',
+      features: ['Straight', 'Sleeveless', 'Straight'],
+      layers: [],
+      occasionFeature: null,
+    };
+    render(<DesignSummaryCard design={designWithDuplicates} />);
+    const items = screen.getAllByRole('listitem');
+    expect(items.map((i) => i.textContent?.trim())).toEqual(['Straight', 'Sleeveless']);
   });
 });

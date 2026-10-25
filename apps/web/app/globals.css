@@ -133,9 +133,121 @@ h3 {
   }
 }
 
+/* Micro-animations and luxury card styles */
+@keyframes luxury-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.92;
+  }
+}
+
+@keyframes shimmer-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 16px -2px rgba(200, 164, 92, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 28px 2px rgba(200, 164, 92, 0.45);
+  }
+}
+
+.animate-float {
+  animation: luxury-float 5s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3.5s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* Card elevation and luxury micro-interactions */
+.card-lift {
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.28s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 16px 36px -10px rgba(74, 31, 69, 0.14),
+    0 4px 12px -2px rgba(0, 0, 0, 0.04);
+}
+
+.card-glow-plum:hover {
+  border-color: rgba(122, 59, 111, 0.45);
+  box-shadow: 0 12px 32px -8px rgba(122, 59, 111, 0.2);
+}
+
+.card-glow-gold:hover {
+  border-color: rgba(200, 164, 92, 0.6);
+  box-shadow: 0 12px 32px -8px rgba(200, 164, 92, 0.22);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.glass-panel-dark {
+  background: rgba(74, 31, 69, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.mesh-ambient-warm {
+  background-image:
+    radial-gradient(at 0% 0%, rgba(200, 164, 92, 0.1) 0px, transparent 55%),
+    radial-gradient(at 100% 100%, rgba(122, 59, 111, 0.09) 0px, transparent 60%);
+}
+
+.luxury-mesh-dark {
+  background: linear-gradient(135deg, #4a1f45 0%, #361432 50%, #260c23 100%);
+  background-image:
+    radial-gradient(circle at 85% 15%, rgba(200, 164, 92, 0.18) 0%, transparent 40%),
+    radial-gradient(circle at 10% 90%, rgba(122, 59, 111, 0.3) 0%, transparent 50%),
+    linear-gradient(135deg, #4a1f45 0%, #361432 50%, #260c23 100%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .btn-shine::after {
     display: none;
+  }
+  .animate-float,
+  .animate-pulse-subtle,
+  .animate-glow,
+  .card-lift:hover {
+    transform: none !important;
+    animation: none !important;
   }
   *,
   *::before,

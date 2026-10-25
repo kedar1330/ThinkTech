@@ -65,7 +65,8 @@ const outfitLabel = (id: OutfitCategory) => OUTFIT_CATEGORIES.find((c) => c.id =
 
 /** A saved design from `GET /v1/design/selections`, without drawings; null when it has no named feature. */
 export function designFromSelection(item: DesignSelectionItem): DesignSummary | null {
-  const features = (item.features ?? []).map((f) => f.name);
+  const rawFeatures = (item.features ?? []).map((f) => f.name);
+  const features = Array.from(new Set(rawFeatures));
   if (features.length === 0) return null;
   return {
     garmentType: item.garmentType,
@@ -111,7 +112,7 @@ export function designSummary(data: DesignFeaturesResponse): DesignSummary | nul
     garmentName: data.garmentType.name,
     outfitCategory: selection.outfitCategory,
     outfitLabel: outfitLabel(selection.outfitCategory),
-    features: features.map((f) => f.name),
+    features: Array.from(new Set(features.map((f) => f.name))),
     layers: [data.baseFigure, layerOf('neckline'), layerOf('sleeve')].filter((l): l is DesignImage => l !== null),
     occasionFeature: selection.selectedFeatures.occasion ?? null,
   };

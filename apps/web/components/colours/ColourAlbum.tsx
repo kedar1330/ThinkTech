@@ -256,8 +256,8 @@ export function ColourAlbum({
                   )}
                 </p>
                 <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
-                  {single.reasons.map((r) => (
-                    <li key={r}>{r}</li>
+                  {single.reasons.map((r, idx) => (
+                    <li key={`${r}-${idx}`}>{r}</li>
                   ))}
                 </ul>
               </div>

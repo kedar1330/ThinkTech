@@ -145,8 +145,8 @@ export function PhotoUpload({
       />
 
       <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-        {copy.tips.map((t) => (
-          <li key={t}>{t}</li>
+        {copy.tips.map((t, idx) => (
+          <li key={`${t}-${idx}`}>{t}</li>
         ))}
       </ul>
 

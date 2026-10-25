@@ -29,8 +29,8 @@ export function DesignSummaryCard({ design }: { design: DesignSummary }) {
           {design.garmentName} · {design.outfitLabel}
         </h2>
         <ul aria-label="Your chosen features" className="flex flex-wrap gap-1.5">
-          {design.features.map((name) => (
-            <li key={name} className="rounded-full bg-accent/20 px-2.5 py-0.5 text-xs text-foreground">
+          {Array.from(new Set(design.features)).map((name, idx) => (
+            <li key={`${name}-${idx}`} className="rounded-full bg-accent/20 px-2.5 py-0.5 text-xs text-foreground">
               {name}
             </li>
           ))}

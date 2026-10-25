@@ -90,7 +90,7 @@ export function PaletteColours({
               const hex = customColorHexes[i] || (name.startsWith('#') ? name : null);
               return (
                 <li
-                  key={name}
+                  key={`${name}-${i}`}
                   className="inline-flex items-center gap-2 rounded-full border border-plum/30 bg-surface px-3 py-1.5 text-xs font-medium text-foreground shadow-xs"
                 >
                   {hex ? (

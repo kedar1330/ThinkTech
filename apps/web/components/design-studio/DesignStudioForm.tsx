@@ -180,8 +180,8 @@ export function DesignStudioForm({ look }: { look?: LookToChange }) {
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-plum">Quick changes</p>
             <ul className="flex flex-wrap gap-2">
-              {CHANGES.map((c) => (
-                <li key={c}>
+              {CHANGES.map((c, idx) => (
+                <li key={`${c}-${idx}`}>
                   <button
                     type="button"
                     onClick={() => addChange(c)}
