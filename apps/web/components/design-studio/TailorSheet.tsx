@@ -9,8 +9,8 @@ function Steps({ title, items, ordered = false }: { title: string; items: string
     <section className="break-inside-avoid space-y-1.5">
       <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-plum">{title}</h3>
       <List className={ordered ? 'list-decimal space-y-1 pl-5 text-sm' : 'list-disc space-y-1 pl-5 text-sm'}>
-        {items.map((item) => (
-          <li key={item}>{item}</li>
+        {items.map((item, idx) => (
+          <li key={`${item}-${idx}`}>{item}</li>
         ))}
       </List>
     </section>

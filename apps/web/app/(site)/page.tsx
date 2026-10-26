@@ -110,19 +110,22 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       )}
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden mesh-ambient-warm py-6">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
           <div className="space-y-7">
-            <p className="text-xs font-medium uppercase tracking-[0.3em] text-plum">Personal styling for India</p>
-            <h1 className="font-display text-5xl leading-[1.05] text-primary sm:text-6xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-plum/30 bg-plum/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-plum">
+              <Sparkles className="size-3 text-plum animate-pulse-subtle" />
+              Personal styling for India
+            </div>
+            <h1 className="font-display text-5xl leading-[1.05] text-primary sm:text-6xl tracking-tight">
               Discover the Style That Is <span className="italic text-accent">You</span>.
             </h1>
-            <p className="max-w-lg text-lg text-muted-foreground">
+            <p className="max-w-lg text-lg text-muted-foreground leading-relaxed">
               Build a style profile around your sizes, fit, colours and comfort — the foundation for outfit ideas that
               fit your life and your budget, each with a reason.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg">
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Button asChild size="lg" className="shadow-xs">
                 <Link href="/register">
                   Get Started <ArrowRight aria-hidden />
                 </Link>
@@ -134,7 +137,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             <p className="text-xs text-muted-foreground">Open public beta · free to get started</p>
           </div>
           <div className="relative mx-auto grid w-full max-w-md grid-cols-2 gap-4">
-            <div className="relative mt-10 aspect-[2/3] overflow-hidden rounded-[2rem] shadow-xl">
+            <div className="relative mt-10 aspect-[2/3] overflow-hidden rounded-[2.5rem] border border-border/80 shadow-2xl transition-transform duration-700 hover:scale-[1.02]">
               <Image
                 src={heroIndian.src}
                 alt={heroIndian.alt}
@@ -145,7 +148,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 style={{ objectPosition: heroIndian.position }}
               />
             </div>
-            <div className="relative aspect-[2/3] overflow-hidden rounded-[2rem] shadow-xl">
+            <div className="relative aspect-[2/3] overflow-hidden rounded-[2.5rem] border border-border/80 shadow-2xl transition-transform duration-700 hover:scale-[1.02]">
               <Image
                 src={heroWestern.src}
                 alt={heroWestern.alt}
@@ -156,23 +159,32 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 style={{ objectPosition: heroWestern.position }}
               />
             </div>
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-accent/40 bg-surface px-5 py-2 text-sm shadow-lg">
-              <span className="font-display italic text-primary">Indian · Fusion · Western</span>
+            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-accent/60 bg-surface/95 px-6 py-2.5 text-sm shadow-xl backdrop-blur-md animate-float">
+              <span className="font-display italic text-primary font-medium tracking-wide">
+                Indian · Fusion · Western
+              </span>
             </div>
           </div>
         </div>
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" className="scroll-mt-20 bg-surface-muted py-20">
-        <div className="mx-auto max-w-6xl space-y-12 px-4 sm:px-6">
+      <section id="how-it-works" className="scroll-mt-20 bg-surface-muted py-24">
+        <div className="mx-auto max-w-6xl space-y-14 px-4 sm:px-6">
           <SectionHeading eyebrow="How it works" title="From sign-up to your personalized home" />
           <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s) => (
-              <li key={s.n} className="space-y-3 rounded-2xl bg-surface p-6 shadow-sm">
-                <span className="font-display text-3xl text-accent">{s.n}</span>
-                <h3 className="font-display text-xl text-primary">{s.title}</h3>
-                <p className="text-sm text-muted-foreground">{s.body}</p>
+              <li
+                key={s.n}
+                className="group flex flex-col justify-between rounded-3xl border border-border/70 bg-surface p-7 shadow-xs transition-all duration-300 card-lift min-h-[230px] hover:border-plum/40"
+              >
+                <div className="space-y-3.5">
+                  <span className="font-display text-4xl text-accent font-medium tracking-tight block">{s.n}</span>
+                  <h3 className="font-display text-xl text-primary font-semibold leading-snug group-hover:text-plum transition-colors">
+                    {s.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
+                </div>
               </li>
             ))}
           </ol>
@@ -291,18 +303,29 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       </section>
 
       {/* Upcoming features */}
-      <section className="bg-surface-muted py-20">
-        <div className="mx-auto max-w-6xl space-y-12 px-4 sm:px-6">
+      <section className="bg-surface-muted py-24">
+        <div className="mx-auto max-w-6xl space-y-14 px-4 sm:px-6">
           <SectionHeading eyebrow="Upcoming features" title="What we are building next" />
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {UPCOMING.map(({ Icon, title, body }) => (
-              <li key={title} className="space-y-3 rounded-2xl border border-border bg-surface p-6">
-                <div className="flex items-center justify-between">
-                  <Icon aria-hidden className="size-6 text-plum" />
-                  <Badge>Coming soon</Badge>
+              <li
+                key={title}
+                className="group flex flex-col justify-between rounded-3xl border border-border/80 bg-surface p-7 shadow-xs transition-all duration-300 card-lift min-h-[250px] hover:border-plum/50"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex size-12 items-center justify-center rounded-2xl bg-plum/10 text-plum transition-transform duration-300 group-hover:scale-110 shadow-xs">
+                      <Icon aria-hidden className="size-6 text-plum" />
+                    </div>
+                    <Badge className="border-border/80 bg-surface-muted/60 text-muted-foreground font-semibold">
+                      Coming soon
+                    </Badge>
+                  </div>
+                  <h3 className="font-display text-xl text-primary font-semibold group-hover:text-plum transition-colors">
+                    {title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
                 </div>
-                <h3 className="font-display text-xl text-primary">{title}</h3>
-                <p className="text-sm text-muted-foreground">{body}</p>
               </li>
             ))}
           </ul>

@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 interface ApiRequestOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   /** A raw (non-JSON) body, e.g. a photo upload (D-129); replaces `body`. */
   rawBody?: { bytes: Uint8Array; contentType: string };
@@ -38,30 +38,60 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   if (options.token) headers.authorization = `Bearer ${options.token}`;
   if (options.clientIp) headers[CLIENT_IP_HEADER] = options.clientIp;
 
-  let res: Response;
-  try {
-    res = await fetch(`${baseUrl}${path}`, {
-      method: options.method ?? 'GET',
-      headers,
-      body: options.rawBody
-        ? new Blob([options.rawBody.bytes as Uint8Array<ArrayBuffer>])
-        : options.body === undefined
-          ? undefined
-          : JSON.stringify(options.body),
-      cache: 'no-store',
-    });
-  } catch {
-    throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'StyleMe is temporarily unavailable');
+  const isGet = !options.method || options.method === 'GET';
+  const maxAttempts = isGet ? 2 : 1;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${baseUrl}${path}`, {
+        method: options.method ?? 'GET',
+        headers,
+        body: options.rawBody
+          ? new Blob([options.rawBody.bytes as Uint8Array<ArrayBuffer>])
+          : options.body === undefined
+            ? undefined
+            : JSON.stringify(options.body),
+        cache: 'no-store',
+      });
+    } catch (err) {
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
+      }
+      console.error(`[BFF apiRequest] Could not reach StyleMe API backend at ${baseUrl}${path}:`, err);
+      throw new ApiError(
+        503,
+        'SERVICE_UNAVAILABLE',
+        process.env.NODE_ENV === 'development'
+          ? `StyleMe API backend is temporarily unavailable at ${baseUrl}. Ensure 'pnpm dev:api' is running.`
+          : 'StyleMe is temporarily unavailable',
+      );
+    }
+
+    let json: Envelope<T>;
+    try {
+      json = (await res.json()) as Envelope<T>;
+    } catch {
+      if (attempt < maxAttempts && res.status >= 500) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
+      }
+      throw new ApiError(res.status, 'INTERNAL_ERROR', 'Something went wrong');
+    }
+
+    if (!json.success) {
+      if (attempt < maxAttempts && res.status === 503) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
+      }
+      throw new ApiError(res.status, json.error.code, json.error.message, json.error.retryAfterSeconds);
+    }
+
+    return json.data;
   }
 
-  let json: Envelope<T>;
-  try {
-    json = (await res.json()) as Envelope<T>;
-  } catch {
-    throw new ApiError(res.status, 'INTERNAL_ERROR', 'Something went wrong');
-  }
-  if (!json.success) throw new ApiError(res.status, json.error.code, json.error.message, json.error.retryAfterSeconds);
-  return json.data;
+  throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'StyleMe is temporarily unavailable');
 }
 
 /**

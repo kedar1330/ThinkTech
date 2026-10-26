@@ -168,6 +168,7 @@ export const adminAccountSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, required: true, unique: true },
     ...fixtureField,
     role: { type: String, enum: ADMIN_ROLES, required: true },
+    permissions: { type: [String], default: [] },
     status: { type: String, enum: ADMIN_STATUSES, default: 'active', required: true },
     createdBy: { type: Schema.Types.ObjectId, default: null },
     lastLoginAt: { type: Date, default: null },

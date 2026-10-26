@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, BookOpen, FileText, LayoutDashboard, ShieldAlert, Users } from 'lucide-react';
+import { ArrowLeft, BookOpen, FileText, LayoutDashboard, ShieldAlert, UserCog, Users } from 'lucide-react';
 import { requireOnboarded } from '@/lib/auth/session';
 
 export const metadata: Metadata = {
@@ -51,6 +51,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           >
             <LayoutDashboard className="size-4 text-plum" />
             Dashboard
+          </Link>
+          <Link
+            href="/admin/admins"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-muted"
+          >
+            <UserCog className="size-4 text-plum" />
+            Admins & Permissions
           </Link>
           <Link
             href="/admin/users"

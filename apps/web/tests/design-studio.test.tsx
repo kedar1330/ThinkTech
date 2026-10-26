@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { DesignFeatureItem, DesignFeaturesResponse } from '@styleme/contracts';
@@ -101,6 +101,16 @@ describe('DesignStudio', () => {
       '/illustrations/design/women-layer-neckline_square_neck.svg',
       '/illustrations/design/women-layer-sleeve_full_length.svg',
     ]);
+  });
+
+  it('#163 shows the drawing, never a broken image, when a card picture fails to load', () => {
+    render(<DesignStudio data={DATA} outfitCategory="indian" stylingGoals={[]} />);
+    const card = screen.getByRole('button', { name: 'Square neck' });
+    const picture = card.querySelector('img[alt="neckline_square_neck"]')!;
+    expect(picture).toBeTruthy();
+    fireEvent.error(picture);
+    expect(card.querySelector('img[alt="neckline_square_neck"]')).toBeNull();
+    expect(card.querySelector('svg')).toBeTruthy();
   });
 
   it('disables a neckline that cannot be made with the chosen sleeve', async () => {

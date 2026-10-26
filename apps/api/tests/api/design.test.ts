@@ -75,6 +75,32 @@ describe('design catalogue', () => {
     expect(await m.FeatureCombination.countDocuments({ kind: 'incompatible' })).toBeGreaterThan(0);
   });
 
+  it('#163 archives design pictures the generator no longer makes, and back designs list no picture', async () => {
+    await env.db.models.Illustration.create({
+      assetId: 'ILL-9999',
+      kind: 'design_feature',
+      title: 'Stale back picture',
+      altText: 'A picture whose file no longer exists.',
+      views: [
+        { view: 'front', storage: 'static', path: '/illustrations/design/women-neckline-gone_back.svg', format: 'svg' },
+      ],
+      rights: {
+        source: 'code_generated',
+        creator: 'StyleMe',
+        licence: 'StyleMe proprietary',
+        allowedUsage: ['outfit_categories'],
+        verifiedAt: new Date(),
+      },
+      status: 'published',
+    });
+    await seedDesignCatalogue(env.db.models, { rules: DESIGN_FIXTURE_RULES });
+    expect((await env.db.models.Illustration.findOne({ assetId: 'ILL-9999' }).lean())?.status).toBe('archived');
+    const back = await env.db.models.DesignFeature.findOne({ featureId: 'neckline_deep_u_back' }).lean();
+    expect(back?.illustrations).toEqual([]);
+    const front = await env.db.models.DesignFeature.findOne({ featureId: 'neckline_v_neck' }).lean();
+    expect((front?.illustrations ?? []).length).toBeGreaterThan(0);
+  });
+
   it('activates only approved rules; a draft cannot be active', async () => {
     expect(await env.db.models.FeatureSuitabilityRule.countDocuments({ status: 'active' })).toBe(
       DESIGN_FIXTURE_RULES.length,

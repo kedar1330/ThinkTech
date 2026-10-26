@@ -107,6 +107,17 @@ export async function seedDesignCatalogue(
     );
   }
 
+  // Design pictures the generator no longer makes (e.g. back necklines, #163) are archived, so no
+  // database keeps serving a path whose file doesn't exist.
+  await models.Illustration.updateMany(
+    {
+      kind: { $in: ['design_feature', 'design_feature_layer'] },
+      assetId: { $nin: images.map((img) => img.assetId) },
+      status: 'published',
+    },
+    { $set: { status: 'archived' } },
+  );
+
   for (const [i, f] of DESIGN_FEATURES.entries()) {
     const illustrations = images
       .filter((img) => img.featureId === f.featureId)

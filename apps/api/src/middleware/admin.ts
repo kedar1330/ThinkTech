@@ -29,12 +29,13 @@ export function requireAdminPermission(models: Models, permission?: AdminPermiss
       admin = created.toObject();
     }
 
-    if (admin.status !== 'active') {
+    if (!admin || admin.status !== 'active') {
       throw new AppError('FORBIDDEN');
     }
 
     const role = admin.role as AdminRole;
-    if (permission && !hasAdminPermission(role, permission)) {
+    const customPermissions = (admin.permissions as AdminPermission[]) ?? [];
+    if (permission && !hasAdminPermission(role, permission, customPermissions)) {
       throw new AppError('FORBIDDEN');
     }
 

@@ -129,4 +129,81 @@ describe('/v1/admin (FR-ADM, D-120)', () => {
     expect(audit).not.toBeNull();
     expect(audit?.action).toBe('ARCHIVED');
   });
+
+  it('manages admins: lists, adds with custom restrictions, updates permissions, and enforces restrictions', async () => {
+    const { app } = env.makeApp({}, { styleLibrary });
+    const { token: superToken } = await createAdmin(app, 'super@example.com');
+
+    // 1. Super admin lists admins
+    const listRes = await request(app).get('/v1/admin/admins').set(bearer(superToken));
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.data.admins.length).toBeGreaterThanOrEqual(1);
+
+    // 2. Add a new admin with custom restrictions (e.g. only catalogue.edit and dashboard.view)
+    const createRes = await request(app)
+      .post('/v1/admin/admins')
+      .set(bearer(superToken))
+      .send({
+        email: 'restricted.admin@example.com',
+        name: 'Content Curator',
+        password: PASSWORD,
+        role: 'custom_admin',
+        permissions: ['dashboard.view', 'catalogue.edit'],
+      });
+    expect(createRes.status).toBe(201);
+    const newAdmin = createRes.body.data;
+    expect(newAdmin.email).toBe('restricted.admin@example.com');
+    expect(newAdmin.role).toBe('custom_admin');
+    expect(newAdmin.permissions).toEqual(['dashboard.view', 'catalogue.edit']);
+
+    // 3. Log in as the new restricted admin
+    const restrictedToken = await login(app, 'restricted.admin@example.com', PASSWORD);
+
+    // Can access dashboard
+    const dashRes = await request(app).get('/v1/admin/dashboard').set(bearer(restrictedToken));
+    expect(dashRes.status).toBe(200);
+
+    // Can access catalogue (catalogue.edit)
+    const catRes = await request(app).get('/v1/admin/catalogue').set(bearer(restrictedToken));
+    expect(catRes.status).toBe(200);
+
+    // RESTRICTED: cannot access users list (requires users.view_limited)
+    const forbiddenUsersRes = await request(app).get('/v1/admin/users').set(bearer(restrictedToken));
+    expect(forbiddenUsersRes.status).toBe(403);
+
+    // RESTRICTED: cannot manage other admins (requires admins.manage)
+    const forbiddenAdminsRes = await request(app).get('/v1/admin/admins').set(bearer(restrictedToken));
+    expect(forbiddenAdminsRes.status).toBe(403);
+
+    // 4. Super admin updates the restricted admin to add 'users.view_limited'
+    const updateRes = await request(app)
+      .patch(`/v1/admin/admins/${newAdmin.id}`)
+      .set(bearer(superToken))
+      .send({
+        permissions: ['dashboard.view', 'catalogue.edit', 'users.view_limited'],
+      });
+    expect(updateRes.status).toBe(200);
+
+    // Now the restricted admin CAN access users list!
+    const allowedUsersRes = await request(app).get('/v1/admin/users').set(bearer(restrictedToken));
+    expect(allowedUsersRes.status).toBe(200);
+
+    // 5. Super admin disables the restricted admin
+    const disableRes = await request(app).patch(`/v1/admin/admins/${newAdmin.id}`).set(bearer(superToken)).send({
+      status: 'disabled',
+    });
+    expect(disableRes.status).toBe(200);
+
+    // Restricted admin's token is immediately revoked / forbidden
+    const revokedRes = await request(app).get('/v1/admin/dashboard').set(bearer(restrictedToken));
+    expect(revokedRes.status).toBe(401);
+
+    // Audit logs verify CREATED, ADMIN_ROLE_CHANGED, and ADMIN_DISABLED
+    const auditLogsRes = await request(app).get('/v1/admin/audit-logs').set(bearer(superToken));
+    expect(auditLogsRes.status).toBe(200);
+    const actions = auditLogsRes.body.data.logs.map((l: { action: string }) => l.action);
+    expect(actions).toContain('CREATED');
+    expect(actions).toContain('ADMIN_ROLE_CHANGED');
+    expect(actions).toContain('ADMIN_DISABLED');
+  });
 });

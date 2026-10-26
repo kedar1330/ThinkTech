@@ -134,8 +134,8 @@ export function AssistantChat({ overview, initial }: { overview: ChatOverviewRes
                 or help shopping a look.
               </p>
               <ul className="flex flex-wrap justify-center gap-2">
-                {overview.suggestions.map((s) => (
-                  <li key={s}>
+                {overview.suggestions.map((s, idx) => (
+                  <li key={`${s}-${idx}`}>
                     <button
                       type="button"
                       onClick={() => send(s)}
