@@ -113,6 +113,21 @@ describe('DesignStudio', () => {
     expect(card.querySelector('svg')).toBeTruthy();
   });
 
+  it('tries on every chosen option: one the figure does not draw shows under Tried on', async () => {
+    const fabric = feature('fabric_silk', 'Silk', 'fabric', { image: null, layer: null });
+    const data = {
+      ...DATA,
+      categories: [...DATA.categories, { ...DATA.categories[0]!, id: 'fabric', label: 'Fabric', features: [fabric] }],
+    } as DesignFeaturesResponse;
+    render(<DesignStudio data={data} outfitCategory="indian" stylingGoals={[]} />);
+    expect(screen.queryByLabelText('Tried on')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Silk' }));
+    expect(screen.getByLabelText('Tried on')).toHaveTextContent('Silk');
+    // A neckline with a picture layer is drawn on the figure itself, not repeated.
+    await userEvent.click(screen.getByRole('button', { name: 'Square neck' }));
+    expect(screen.getByLabelText('Tried on')).not.toHaveTextContent('Square neck');
+  });
+
   it('disables a neckline that cannot be made with the chosen sleeve', async () => {
     render(<DesignStudio data={DATA} outfitCategory="indian" stylingGoals={[]} />);
     await userEvent.click(screen.getByRole('button', { name: 'Full-length sleeve' }));
