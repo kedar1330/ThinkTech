@@ -345,11 +345,17 @@ export class DesignStudioService {
       colorHex = '#1F2A44';
       colorName = 'Navy';
       colorQuery = 'navy';
-    } else if (/blue|ocean|sky/i.test(textToScan)) {
+    } else if (/sky\s*blue|sky/i.test(textToScan)) {
       colorId = 'sky_blue';
       colorFamily = 'blue';
       colorHex = '#87CEEB';
       colorName = 'Sky Blue';
+      colorQuery = 'sky blue';
+    } else if (/blue|ocean/i.test(textToScan)) {
+      colorId = 'sky_blue';
+      colorFamily = 'blue';
+      colorHex = '#87CEEB';
+      colorName = 'Blue';
       colorQuery = 'blue';
     } else if (/pink|rose|blush|magenta/i.test(textToScan)) {
       colorId = 'rose_pink';
@@ -453,7 +459,7 @@ export class DesignStudioService {
           fabric: 'cotton',
         },
         swatches: [{ colorId: 'white', name: 'White', hex: '#FFFFFF' }],
-        searchPhrase: 'trousers pants',
+        searchPhrase: 'white straight trousers',
         sizeNote: 'Standard fit',
         alternatives: [],
       });
@@ -472,7 +478,7 @@ export class DesignStudioService {
           fabric: 'cotton',
         },
         swatches: [{ colorId: 'white', name: 'White', hex: '#FFFFFF' }],
-        searchPhrase: 'cotton shirt top',
+        searchPhrase: 'white cotton shirt',
         sizeNote: 'Standard fit',
         alternatives: [],
       });
@@ -491,7 +497,9 @@ export class DesignStudioService {
                 s.lookSpec?.category === 'bottoms' ||
                 s.lookSpec?.category === 'tops' ||
                 s.lookSpec?.colorId?.includes('-') ||
-                (s.searchPhrase && s.searchPhrase.length > 40),
+                (s.searchPhrase && s.searchPhrase.length > 40) ||
+                s.searchPhrase === 'trousers pants' ||
+                s.searchPhrase === 'cotton shirt top',
               ),
           );
         if (needsRepair) {

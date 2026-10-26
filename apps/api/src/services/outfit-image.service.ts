@@ -142,7 +142,14 @@ export class OutfitImageService {
       .map((id) => DESIGN_FEATURES.find((f) => f.featureId === id && f.selectable !== false))
       .filter((f) => f !== undefined)
       .map((f) => ({ category: f.category, name: f.name }));
-    return { category: garment.id, garmentName: garment.name, features };
+    const mappedCategory = garment.id === 'anarkali' ? 'kurti' : garment.id === 'saree_blouse' ? 'saree' : garment.id;
+    return {
+      category: mappedCategory,
+      garmentName: garment.name,
+      garmentType: garment.id,
+      garmentKind: garment.kind,
+      features,
+    };
   }
 
   /** Whether new images can be generated (the flag is on and a provider is configured). */

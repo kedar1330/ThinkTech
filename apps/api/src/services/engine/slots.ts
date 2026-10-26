@@ -94,7 +94,7 @@ const VARIED_DIMENSIONS: readonly Dimension[] = ['fabric', 'silhouette'];
 
 const GARMENT_SLOTS = new Set<SlotType>(['top', 'bottom', 'one_piece', 'layer']);
 /** Groups with sleeves, necklines and a garment length. */
-const UPPER_GROUPS = new Set<CategoryGroup>(['tops', 'ethnicTops', 'dresses']);
+const UPPER_GROUPS = new Set<CategoryGroup>(['tops', 'ethnicTops', 'dresses', 'ethnicSets']);
 
 /** Whether a slot's look specification states this dimension at all for the category. */
 function dimensionApplies(dimension: Dimension, slot: TemplateSlot, group: CategoryGroup): boolean {

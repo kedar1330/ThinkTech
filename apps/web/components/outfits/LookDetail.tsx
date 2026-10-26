@@ -1,8 +1,8 @@
-import { CATEGORIES, type Look, type ProfileSizes } from '@styleme/contracts';
+import type { Look, ProfileSizes } from '@styleme/contracts';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { garmentSlots, lookTitle, slotLabel, specAttributes, vocabLabel } from '@/lib/outfits/look-text';
+import { garmentSlots, lookTitle, slotGarmentName, slotLabel, specAttributes } from '@/lib/outfits/look-text';
 import { DesignMatchBadge } from './DesignMatchBadge';
 import { FeedbackButtons } from './FeedbackButtons';
 import { OutfitImage } from './OutfitImage';
@@ -38,11 +38,11 @@ export function LookDetail({ look, sizes }: { look: Look; sizes: ProfileSizes })
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {slotLabel(slot.slot)}
                   </p>
-                  <h3 className="font-medium">{vocabLabel(CATEGORIES, slot.lookSpec.category)}</h3>
+                  <h3 className="font-medium">{slotGarmentName(slot)}</h3>
                 </div>
                 <SlotVisual swatches={slot.swatches} illustration={slot.illustration} />
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                  {specAttributes(slot.lookSpec).map(({ term, value }) => (
+                  {specAttributes(slot.lookSpec, slot).map(({ term, value }) => (
                     <div key={term} className="contents">
                       <dt className="text-muted-foreground">{term}</dt>
                       <dd>{value}</dd>

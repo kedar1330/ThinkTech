@@ -33,15 +33,101 @@ const VOCABULARY: Record<DesignMatchAttribute, readonly string[]> = {
   length: GARMENT_LENGTH_IDS,
 };
 
+export const FEATURE_VALUE_MAP: Record<string, string> = {
+  // Necklines
+  square_neck: 'square',
+  square: 'square',
+  round: 'round',
+  v_neck: 'v_neck',
+  sweetheart: 'sweetheart',
+  boat: 'boat',
+  collared: 'collared',
+  mandarin: 'mandarin',
+  high_neck: 'high_neck',
+  scoop: 'round',
+  cowl: 'boat',
+  halter: 'high_neck',
+  strapless: 'sweetheart',
+  off_shoulder: 'boat',
+  one_shoulder: 'boat',
+  jewel: 'round',
+  queen_anne: 'sweetheart',
+  surplice: 'v_neck',
+
+  // Sleeves
+  sleeveless: 'sleeveless',
+  spaghetti_strap: 'spaghetti_strap',
+  cap: 'cap',
+  short: 'short',
+  elbow_length: 'elbow',
+  elbow: 'elbow',
+  three_quarter: 'three_quarter',
+  full_length: 'full',
+  full: 'full',
+  puff: 'short',
+  bishop: 'full',
+  bell: 'three_quarter',
+  flutter: 'short',
+  raglan: 'full',
+  dolman: 'three_quarter',
+  lantern: 'full',
+  balloon: 'full',
+  leg_of_mutton: 'full',
+  cold_shoulder: 'short',
+  kimono: 'elbow',
+  cuffed: 'full',
+  roll_up: 'elbow',
+  drop_shoulder: 'short',
+
+  // Lengths
+  cropped: 'cropped',
+  waist_length: 'waist',
+  waist: 'waist',
+  hip_length: 'hip',
+  hip: 'hip',
+  tunic: 'thigh',
+  mid_thigh: 'thigh',
+  above_knee: 'thigh',
+  thigh: 'thigh',
+  knee: 'knee',
+  midi: 'midi',
+  calf: 'midi',
+  ankle: 'ankle',
+  floor: 'floor',
+
+  // Silhouettes
+  straight: 'straight',
+  a_line: 'a_line',
+  fit_and_flare: 'flared',
+  flared: 'flared',
+  mermaid: 'fitted',
+  trumpet: 'flared',
+  sheath: 'fitted',
+  empire: 'a_line',
+  wrap: 'wrap',
+  asymmetric: 'flared',
+  fitted: 'fitted',
+  relaxed: 'relaxed',
+
+  // Fits
+  slim: 'slim',
+  regular: 'regular',
+  oversized: 'relaxed',
+  bodycon: 'slim',
+  tailored: 'slim',
+};
+
 /** The engine's view of a saved design selection, or null when its garment isn't a look category. */
 export function toEngineDesign(garmentType: string, selected: Record<string, unknown>): EngineDesign | null {
   let mappedCategory = garmentType;
   if (!(CATEGORY_IDS as readonly string[]).includes(mappedCategory)) {
     // Map known garments from Outfit Categories that are variants of core look categories
     if (garmentType === 'anarkali') mappedCategory = 'kurti';
-    else if (garmentType === 'saree_blouse') mappedCategory = 'kurti';
-    else if (garmentType === 'palazzo') mappedCategory = 'trousers';
-    else if (garmentType === 'blouse' || garmentType === 'tunic') mappedCategory = 'shirt';
+    else if (garmentType === 'saree_blouse') mappedCategory = 'saree';
+    else if (garmentType === 'palazzo' || garmentType === 'dhoti_pants') mappedCategory = 'trousers';
+    else if (garmentType === 'skirt') mappedCategory = 'trousers';
+    else if (garmentType === 'blouse' || garmentType === 'tunic' || garmentType === 'top') mappedCategory = 'shirt';
+    else if (garmentType === 'indo_western_gown' || garmentType === 'jumpsuit') mappedCategory = 'dress';
     else return null;
   }
   const features: EngineDesign['features'] = {};
@@ -62,7 +148,11 @@ export const COMPATIBLE_CATEGORIES: Record<string, readonly Category[]> = {
   kurta: ['kurta', 'kurti'],
   shirt: ['shirt', 't_shirt'],
   t_shirt: ['t_shirt', 'shirt'],
-  trousers: ['trousers'],
+  trousers: ['trousers', 'jeans'],
+  jeans: ['jeans', 'trousers'],
+  dress: ['dress'],
+  lehenga: ['lehenga'],
+  saree: ['saree'],
 };
 
 /** How a look's garments compare with the design. */

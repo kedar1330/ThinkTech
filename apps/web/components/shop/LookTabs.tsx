@@ -38,7 +38,9 @@ export function LookTabs({
                 selected ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:border-plum/60',
               )}
             >
-              <TabPhoto look={look} title={title} department={department} bodyType={bodyType} />
+              <Link href={`/shop?outfitId=${look.id}`} className="block overflow-hidden rounded-xl">
+                <TabPhoto look={look} title={title} department={department} bodyType={bodyType} />
+              </Link>
               <Link
                 href={`/shop?outfitId=${look.id}`}
                 aria-current={selected ? 'page' : undefined}

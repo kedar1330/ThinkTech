@@ -34,7 +34,7 @@ export default async function DesignStudioPage({
         id: detail.id,
         pieces: detail.slots.map((s) => ({
           slotId: s.slotId,
-          label: categoryLabel(s.lookSpec),
+          label: categoryLabel(s.lookSpec, s.searchPhrase),
           details: specHints(s.lookSpec).join(' · '),
           swatches: s.swatches.map((w) => ({ name: w.name, hex: w.hex })),
         })),

@@ -24,6 +24,23 @@ export const slotLabel = (slot: string) => vocabLabel(SLOT_TYPES, slot);
 
 const GARMENT_SLOTS = new Set(['layer', 'one_piece', 'top', 'bottom']);
 
+/** Returns the display name for a garment slot, respecting custom designs like Anarkali, Palazzo, etc. */
+export function slotGarmentName(slot: { searchPhrase?: string; lookSpec: LookSpec }): string {
+  const phrase = slot.searchPhrase?.toLowerCase() ?? '';
+  if (phrase.includes('anarkali')) return 'Anarkali';
+  if (phrase.includes('saree blouse')) return 'Saree Blouse';
+  if (phrase.includes('dhoti')) return 'Dhoti Pants';
+  if (phrase.includes('palazzo')) return 'Palazzo';
+  if (phrase.includes('indo-western gown') || phrase.includes('gown')) return 'Gown';
+  if (phrase.includes('jumpsuit')) return 'Jumpsuit';
+  if (phrase.includes('tunic')) return 'Tunic';
+  if (phrase.includes('cape')) return 'Cape Set';
+  if (phrase.includes('skirt')) return 'Skirt';
+  if (/\bblouse\b/i.test(phrase)) return 'Blouse';
+  if (/\btop\b/i.test(phrase)) return 'Top';
+  return vocabLabel(CATEGORIES, slot.lookSpec.category);
+}
+
 /** The pieces shown for a look: its garments only, without footwear or accessories. */
 export function garmentSlots(look: Pick<Look, 'slots'>): Look['slots'] {
   return look.slots.filter((s) => GARMENT_SLOTS.has(s.slot));
@@ -32,9 +49,7 @@ export function garmentSlots(look: Pick<Look, 'slots'>): Look['slots'] {
 /** E.g. "Navy kurta · Ivory trousers": names every garment with its colour in words. */
 export function lookTitle(look: Pick<Look, 'slots'>): string {
   return garmentSlots(look)
-    .map(
-      (s) => `${vocabLabel(COLORS, s.lookSpec.colorId)} ${vocabLabel(CATEGORIES, s.lookSpec.category).toLowerCase()}`,
-    )
+    .map((s) => `${vocabLabel(COLORS, s.lookSpec.colorId)} ${slotGarmentName(s).toLowerCase()}`)
     .join(' · ');
 }
 
@@ -52,8 +67,11 @@ const SPEC_TERMS: { key: keyof LookSpec; term: string; list: Vocabulary }[] = [
 ];
 
 /** The attributes a slot's specification states, labelled, in a fixed order. */
-export function specAttributes(spec: LookSpec): { term: string; value: string }[] {
+export function specAttributes(spec: LookSpec, slot?: { searchPhrase?: string }): { term: string; value: string }[] {
   return SPEC_TERMS.flatMap(({ key, term, list }) => {
+    if (key === 'category' && slot) {
+      return [{ term, value: slotGarmentName({ searchPhrase: slot.searchPhrase, lookSpec: spec }) }];
+    }
     const id = spec[key];
     return id ? [{ term, value: vocabLabel(list, id) }] : [];
   });

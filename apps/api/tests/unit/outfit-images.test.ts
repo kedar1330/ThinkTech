@@ -96,6 +96,13 @@ describe('design matching', () => {
         pockets: 'pockets_side',
       }),
     ).toEqual({ category: 'kurti', features: { neckline: 'v_neck', fit: 'relaxed' } });
+    expect(
+      toEngineDesign('saree_blouse', {
+        neckline: 'neckline_boat',
+        sleeve: 'sleeve_short',
+        fit: 'fit_regular',
+      }),
+    ).toEqual({ category: 'saree', features: { neckline: 'boat', sleeve: 'short', fit: 'regular' } });
     expect(toEngineDesign('cape_jacket', { neckline: 'neckline_v_neck' })).toBeNull();
   });
 
@@ -117,6 +124,33 @@ describe('design matching', () => {
 });
 
 describe('buildOutfitImagePrompt with garment & custom colors', () => {
+  it('generates a traditional draped saree with saree blouse prompt when saree_blouse design is selected', () => {
+    const prompt = buildOutfitImagePrompt({
+      slots: [
+        {
+          slotId: 'outfit',
+          slot: 'one_piece',
+          searchPhrase: 'rama green floral silk saree with saree blouse',
+          lookSpec: { category: 'saree' },
+          swatches: [{ colorId: 'rama_green', hex: '#1F9E89', name: 'Rama Green' }],
+          alternatives: [],
+        } as unknown as LookSlot,
+      ],
+      occasion: 'party',
+      style: null,
+      department: 'women',
+      design: {
+        category: 'saree',
+        garmentName: 'Saree blouse',
+        features: [{ category: 'neckline', name: 'Off-shoulder neck' }],
+      },
+    });
+    expect(prompt).toContain('traditional elegant draped saree');
+    expect(prompt).toContain('saree blouse');
+    expect(prompt).not.toContain('kurti');
+    expect(prompt).not.toContain('trousers');
+  });
+
   it('generates an anarkali prompt instead of kurti when anarkali design is selected', () => {
     const prompt = buildOutfitImagePrompt({
       slots: [
@@ -176,5 +210,39 @@ describe('buildOutfitImagePrompt with garment & custom colors', () => {
     });
     expect(prompt.toLowerCase()).toContain('emerald');
     expect(prompt.toLowerCase()).toContain('gold');
+  });
+
+  it('enhances ethnic and ambiguous colours for AI image models', () => {
+    const prompt = buildOutfitImagePrompt({
+      slots: [
+        {
+          slotId: 'slot-1',
+          slot: 'top',
+          searchPhrase: 'rama green embroidered rayon anarkali suit',
+          swatches: [{ colorId: 'rama_green', hex: '#1F9E89', name: 'Rama Green' }],
+          alternatives: [],
+        } as unknown as LookSlot,
+      ],
+      occasion: 'wedding',
+      style: null,
+      department: 'women',
+    });
+    expect(prompt).toContain('rama green (rich vibrant teal sea green)');
+
+    const promptWithSea = buildOutfitImagePrompt({
+      slots: [
+        {
+          slotId: 'slot-1',
+          slot: 'top',
+          searchPhrase: 'sea embroidered rayon anarkali suit',
+          swatches: [{ colorId: 'sea', hex: '#3C9992', name: 'Sea' }],
+          alternatives: [],
+        } as unknown as LookSlot,
+      ],
+      occasion: 'festive',
+      style: null,
+      department: 'women',
+    });
+    expect(promptWithSea).toContain('sea green');
   });
 });

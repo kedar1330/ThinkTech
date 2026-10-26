@@ -114,7 +114,8 @@ export function cleanTitle(raw: string | null): string | null {
 
 /** The search query for one garment: its search phrase and the department, nothing else. */
 export function queryFor(slot: LookSlot, department: string | null | undefined): string {
-  return [slot.searchPhrase, department].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  const phrase = (slot.searchPhrase ?? '').replace(/_/g, ' ');
+  return [phrase, department].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
 /** The three searches for one garment and the one store whose listings each of them contributes. */
@@ -217,13 +218,13 @@ export class PriceRangeService {
         return [{ store, listings: prices.length, min: prices[0]!, median: median(prices), max: prices.at(-1)! }];
       });
       // Matches (#133): items the title confirms are for the look's department first, then the best fit
-      // (attributes the title mentions, less a set or another colour), then cheapest. With enough confirmed
-      // items, unconfirmed ones (a "Kurta-Cotton-Peach" that may be a men's kurta) aren't shown at all.
-      const matches: MatchedListing[] = PRICE_RANGE_STORE_IDS.flatMap((store) =>
-        dedupe(listings.filter((l) => l.store === store))
-          .sort(byRelevance)
-          .slice(0, PRODUCTS_PER_STORE),
-      )
+      // (attributes the title mentions, less a set or another colour), then cheapest. Items with conflicting
+      // colours are excluded from matches so they don't appear as matches for a different-coloured look.
+      const matches: MatchedListing[] = PRICE_RANGE_STORE_IDS.flatMap((store) => {
+        const storeListings = dedupe(listings.filter((l) => l.store === store));
+        const colorSafe = storeListings.filter((l) => !l.conflicts.includes('color'));
+        return colorSafe.sort(byRelevance).slice(0, PRODUCTS_PER_STORE);
+      })
         .sort(byRelevance)
         .map(({ store, title, price, link, imageUrl, matched }) => ({ store, title, price, link, imageUrl, matched }));
       // Other styles of the same garment (#133): this garment too, never an item already listed as a match.
@@ -326,8 +327,21 @@ export class PriceRangeService {
     if (!look) throw new AppError('NOT_FOUND');
     if (!this.provider) throw new AppError('PROVIDER_NOT_CONFIGURED', 'Price ranges are not available yet.');
 
-    const garments = look.slots.filter((s) => GARMENT_SLOTS.has(s.slot));
-    const slotsToPrice = garments.length > 0 ? garments : look.slots;
+    const rawSlots = (look.slots ?? []).map((s) => ({
+      ...s,
+      searchPhrase:
+        s.searchPhrase === 'trousers pants'
+          ? 'white straight trousers'
+          : s.searchPhrase === 'cotton shirt top'
+            ? 'white cotton shirt'
+            : s.searchPhrase,
+    }));
+    if (look.slots?.some((s) => s.searchPhrase === 'trousers pants' || s.searchPhrase === 'cotton shirt top')) {
+      await this.models.Outfit.updateOne({ _id: outfitId }, { $set: { slots: rawSlots } });
+    }
+
+    const garments = rawSlots.filter((s) => GARMENT_SLOTS.has(s.slot));
+    const slotsToPrice = garments.length > 0 ? garments : rawSlots;
     const department = look.inputsUsed?.department ?? null;
     return Promise.all(
       slotsToPrice.map(async (slot) => {

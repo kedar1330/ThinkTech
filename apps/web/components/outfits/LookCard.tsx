@@ -5,7 +5,7 @@ import { Camera, ChevronDown } from 'lucide-react';
 import type { Look, ProfileSizes } from '@styleme/contracts';
 import { shopHref } from '@/lib/shop/look-shopper';
 import { Card } from '@/components/ui/card';
-import { garmentSlots } from '@/lib/outfits/look-text';
+import { garmentSlots, slotGarmentName } from '@/lib/outfits/look-text';
 import { DesignMatchBadge } from './DesignMatchBadge';
 import { FeedbackButtons } from './FeedbackButtons';
 import { OutfitImage } from './OutfitImage';
@@ -58,7 +58,7 @@ export function LookCard({ look, position, sizes }: { look: Look; position: numb
                 )}
                 <span className="capitalize">
                   {swatch?.name ? `${swatch.name} ` : ''}
-                  {slot.lookSpec.category.replace('_', ' ')}
+                  {slotGarmentName(slot)}
                 </span>
               </span>
             );

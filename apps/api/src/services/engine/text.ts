@@ -54,8 +54,9 @@ const NECKLINE_PHRASES: Record<string, string> = {
 };
 
 function sleevePhrase(id: string): string {
-  const text = lower(SLEEVE_LENGTHS, id);
-  return id === 'sleeveless' || text.includes('sleeve') ? text : `${text} sleeve`;
+  if (id === 'spaghetti_strap') return 'spaghetti strap';
+  const text = lower(SLEEVE_LENGTHS, id).replace(/_/g, ' ');
+  return id === 'sleeveless' || text.includes('sleeve') || text.includes('strap') ? text : `${text} sleeve`;
 }
 
 /** A generic, copyable phrase such as "navy cotton straight regular-fit kurta" (FR-LOOK-15). */
