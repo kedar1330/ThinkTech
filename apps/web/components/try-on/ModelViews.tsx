@@ -34,12 +34,14 @@ export function ModelViews({
   department,
   items,
   loading,
+  hasPhoto,
 }: {
   outfitId: string;
   department: AvatarDepartment;
   /** The outfit, layered from the body out; empty shows the undressed model. */
   items: readonly TryOnOutfitItem[];
   loading?: boolean;
+  hasPhoto?: boolean;
 }) {
   const [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState<DrapeView>('front');
@@ -216,7 +218,9 @@ export function ModelViews({
           </Button>
         </Alert>
       )}
-      <p className="text-center text-xs text-muted-foreground">{DRAPE_LABEL}</p>
+      <p className="text-center text-xs text-muted-foreground">
+        {hasPhoto ? 'AI-generated try-on preview on your uploaded profile photo.' : DRAPE_LABEL}
+      </p>
     </div>
   );
 }

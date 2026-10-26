@@ -45,15 +45,15 @@ export class TryOnController {
     sendData(res, { deleted: true });
   };
 
-  /** The shared, undressed cartoon avatar (D-138): the same picture for everyone, so it may be cached. */
+  /** The undressed avatar: user's uploaded body photo when available, otherwise the shared department avatar. */
   avatar: RequestHandler = async (req, res) => {
     if (!req.auth) throw new AppError('UNAUTHENTICATED');
     const department = avatarDepartmentSchema.safeParse(req.params.department);
     if (!department.success) throw new AppError('NOT_FOUND');
-    const { data, contentType } = await this.drapes.avatar(department.data);
+    const { data, contentType } = await this.drapes.avatar(department.data, req.auth.user._id);
     res.set({
       'content-type': contentType,
-      'cache-control': 'private, max-age=86400',
+      'cache-control': 'private, no-cache',
       'x-content-type-options': 'nosniff',
     });
     res.send(data);

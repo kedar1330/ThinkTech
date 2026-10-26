@@ -135,8 +135,19 @@ export class DrapeService {
     return this.editor !== null || this.generators.length > 0;
   }
 
-  /** The undressed model for a Clothing Preference, generated on first use (or when the prompts change), then shared. */
-  async avatar(department: AvatarDepartment): Promise<{ data: Buffer; contentType: string }> {
+  /** The undressed model: if the user uploaded their own try-on photo in profile, uses it; otherwise uses the shared department avatar. */
+  async avatar(department: AvatarDepartment, userId?: Types.ObjectId): Promise<{ data: Buffer; contentType: string }> {
+    if (userId) {
+      const userPhoto = await this.models.UserPhoto.findOne({ userId, kind: 'body' })
+        .sort({ uploadedAt: -1 })
+        .select('+data')
+        .lean();
+      const photoBytes = bufferOf(userPhoto?.data);
+      if (userPhoto && photoBytes?.length && userPhoto.contentType) {
+        return { data: photoBytes, contentType: userPhoto.contentType };
+      }
+    }
+
     const stored = await this.models.TryOnAvatar.findOne({ department }).select('+image').lean();
     const data = bufferOf(stored?.image?.data);
     if (data?.length && stored?.image?.contentType && stored.promptVersion === DRAPE_PROMPT_VERSION) {
@@ -181,7 +192,7 @@ export class DrapeService {
       items: request.items,
       notice: TRY_ON_NOTICE_VERSION,
     });
-    const avatar = await this.avatar(request.department);
+    const avatar = await this.avatar(request.department, userId);
     const cacheKey = createHash('sha256')
       .update(
         [

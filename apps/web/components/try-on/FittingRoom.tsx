@@ -386,7 +386,7 @@ export function FittingRoom({
           <div role="tablist" aria-label="Avatar view" className="flex justify-center gap-2">
             {(
               [
-                ['model', 'Model', UserRound],
+                ['model', overview.hasPhoto ? 'My Photo' : 'Model', UserRound],
                 ['3d', '3D mannequin', Box],
               ] as const
             ).map(([id, label, Icon]) => (
@@ -410,7 +410,13 @@ export function FittingRoom({
           </div>
         )}
         {overview.drapeAvailable && view === 'model' ? (
-          <ModelViews outfitId={look.id} department={department} items={aiItems} loading={state.kind === 'loading'} />
+          <ModelViews
+            outfitId={look.id}
+            department={department}
+            items={aiItems}
+            loading={state.kind === 'loading'}
+            hasPhoto={overview.hasPhoto}
+          />
         ) : (
           <>
             <Mannequin3D department={department} proportions={proportions} outfit={dressed} label={description} />
