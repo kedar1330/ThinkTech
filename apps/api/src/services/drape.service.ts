@@ -71,6 +71,25 @@ export function viewPrompt(view: Exclude<DrapeView, 'front'>): string {
   ].join(' ');
 }
 
+export function dressedAvatarPrompt(
+  department: AvatarDepartment,
+  garments: readonly Pick<StoredGarment, 'category' | 'title'>[],
+  view: DrapeView = 'front',
+): string {
+  const garmentsDesc =
+    garments.length > 0 ? garments.map((g) => g.title).join(', ') : 'a stylish Indian outfit';
+  const person = department === 'women' ? 'a young Indian woman' : 'a young Indian man';
+  const turn =
+    view === 'front'
+      ? 'standing straight and facing the camera'
+      : VIEW_TURNS[view];
+  return [
+    `Photorealistic full body 3D render of ${person} ${turn},`,
+    `wearing ${garmentsDesc}.`,
+    'Dark purple-grey studio backdrop with a soft floor shadow, soft studio lighting, whole body visible from head to feet, product turntable style, no text, no logos.',
+  ].join(' ');
+}
+
 type StoredDrape = TryOnDrapeDoc & { _id: Types.ObjectId; createdAt: Date };
 
 function bufferOf(raw: unknown): Buffer | null {
@@ -112,7 +131,7 @@ export class DrapeService {
   ) {}
 
   get available(): boolean {
-    return this.editor !== null && this.generators.length > 0;
+    return this.editor !== null || this.generators.length > 0;
   }
 
   /** The undressed model for a Clothing Preference, generated on first use (or when the prompts change), then shared. */
@@ -154,7 +173,7 @@ export class DrapeService {
   /** Dresses the avatar in the outfit's items, or returns the same dressed avatar made earlier if it is kept. */
   async start(userId: Types.ObjectId, request: StartDrapeRequest): Promise<TryOnDrape> {
     const editor = this.editor;
-    if (!editor || this.generators.length === 0) throw new AppError('PROVIDER_NOT_CONFIGURED', UNAVAILABLE);
+    if (!editor && this.generators.length === 0) throw new AppError('PROVIDER_NOT_CONFIGURED', UNAVAILABLE);
     const outfitId = new Types.ObjectId(request.outfitId);
     const garments = await this.tryOn.garmentsFor(userId, outfitId, {
       outfitId: request.outfitId,
@@ -167,7 +186,7 @@ export class DrapeService {
         [
           request.department,
           createHash('sha256').update(avatar.data).digest('hex'),
-          editor.models.join(','),
+          editor ? editor.models.join(',') : 'generator',
           DRAPE_PROMPT_VERSION,
           ...garments.map((g) => `${g.category}|${g.imageUrl}`),
         ].join('\n'),
@@ -180,23 +199,49 @@ export class DrapeService {
     }).lean<StoredDrape>();
     if (kept) return toDrape(kept);
 
-    // One garment at a time, each on the last result: one edit per garment keeps the avatar unchanged.
-    let current = dataUri(avatar.data, avatar.contentType);
     let picture: { bytes: Buffer; contentType: string; model: string } | null = null;
-    for (const garment of garments) {
+    let providerName = editor?.name ?? this.generators[0]?.name ?? 'cloudflare';
+
+    // 1. Try image editing if editor is configured
+    if (editor) {
       try {
-        const edited = await this.within(this.timeouts.editMs, (signal) =>
-          editor.edit({ prompt: drapePrompt(garment), images: [current, garment.imageUrl] }, signal),
-        );
-        const contentType = detectImageType(edited.bytes);
-        if (!contentType || edited.bytes.length > IMAGE_MAX_BYTES) throw new ImageProviderError('invalid_output');
-        picture = { bytes: edited.bytes, contentType, model: edited.model };
-        current = dataUri(edited.bytes, contentType);
+        let current = dataUri(avatar.data, avatar.contentType);
+        for (const garment of garments) {
+          const edited = await this.within(this.timeouts.editMs, (signal) =>
+            editor.edit({ prompt: drapePrompt(garment), images: [current, garment.imageUrl] }, signal),
+          );
+          const contentType = detectImageType(edited.bytes);
+          if (!contentType || edited.bytes.length > IMAGE_MAX_BYTES) throw new ImageProviderError('invalid_output');
+          picture = { bytes: edited.bytes, contentType, model: edited.model };
+          current = dataUri(edited.bytes, contentType);
+        }
       } catch (err) {
         this.warn('drape', editor.name, err);
         const cause = err instanceof ImageProviderError ? err.cause : 'provider_error';
         throw new AppError(cause === 'rate_limited' ? 'RATE_LIMITED' : 'AI_UNAVAILABLE', FAILED);
       }
+    } else if (this.generators.length > 0) {
+      // 2. Editor is not configured: generate with ImageGenerator (e.g. Cloudflare Flux)
+      const prompt = dressedAvatarPrompt(request.department, garments, 'front');
+      for (const generator of this.generators) {
+        try {
+          const gen = await this.within(this.timeouts.imageMs, (signal) =>
+            generator.generate(prompt, signal),
+          );
+          const contentType = detectImageType(gen.bytes);
+          if (contentType && gen.bytes.length <= IMAGE_MAX_BYTES) {
+            picture = { bytes: gen.bytes, contentType, model: generator.model };
+            providerName = generator.name;
+            break;
+          }
+        } catch (err) {
+          this.warn('drape', generator.name, err);
+        }
+      }
+    }
+
+    if (!picture) {
+      throw new AppError('AI_UNAVAILABLE', FAILED);
     }
 
     const now = this.now();
@@ -206,9 +251,9 @@ export class DrapeService {
       department: request.department,
       cacheKey,
       garments,
-      image: { data: picture!.bytes, contentType: picture!.contentType },
-      provider: editor.name,
-      model: picture!.model,
+      image: { data: picture.bytes, contentType: picture.contentType },
+      provider: providerName,
+      model: picture.model,
       promptVersion: DRAPE_PROMPT_VERSION,
       expiresAt: new Date(now.getTime() + TRY_ON_KEEP_HOURS * 60 * 60 * 1000),
     });
@@ -238,7 +283,7 @@ export class DrapeService {
    */
   async view(userId: Types.ObjectId, id: string, view: Exclude<DrapeView, 'front'>): Promise<TryOnDrape> {
     const editor = this.editor;
-    if (!editor) throw new AppError('PROVIDER_NOT_CONFIGURED', UNAVAILABLE);
+    if (!editor && this.generators.length === 0) throw new AppError('PROVIDER_NOT_CONFIGURED', UNAVAILABLE);
     if (!Types.ObjectId.isValid(id)) throw new AppError('NOT_FOUND');
     const doc = await this.models.TryOnDrape.findOne({ _id: id, userId })
       .select('+image')
@@ -247,19 +292,43 @@ export class DrapeService {
     if (!doc || !front?.length || !doc.image?.contentType) throw new AppError('NOT_FOUND');
     if (doc.viewsReady?.includes(view)) return toDrape(doc);
 
-    let picture: { bytes: Buffer; contentType: string };
-    try {
-      const edited = await this.within(this.timeouts.editMs, (signal) =>
-        editor.edit({ prompt: viewPrompt(view), images: [dataUri(front, doc.image!.contentType!)] }, signal),
-      );
-      const contentType = detectImageType(edited.bytes);
-      if (!contentType || edited.bytes.length > IMAGE_MAX_BYTES) throw new ImageProviderError('invalid_output');
-      picture = { bytes: edited.bytes, contentType };
-    } catch (err) {
-      this.warn('view', editor.name, err);
-      const cause = err instanceof ImageProviderError ? err.cause : 'provider_error';
-      throw new AppError(cause === 'rate_limited' ? 'RATE_LIMITED' : 'AI_UNAVAILABLE', VIEW_FAILED);
+    let picture: { bytes: Buffer; contentType: string } | null = null;
+    if (editor) {
+      try {
+        const edited = await this.within(this.timeouts.editMs, (signal) =>
+          editor.edit({ prompt: viewPrompt(view), images: [dataUri(front, doc.image!.contentType!)] }, signal),
+        );
+        const contentType = detectImageType(edited.bytes);
+        if (!contentType || edited.bytes.length > IMAGE_MAX_BYTES) throw new ImageProviderError('invalid_output');
+        picture = { bytes: edited.bytes, contentType };
+      } catch (err) {
+        this.warn('view', editor.name, err);
+        const cause = err instanceof ImageProviderError ? err.cause : 'provider_error';
+        throw new AppError(cause === 'rate_limited' ? 'RATE_LIMITED' : 'AI_UNAVAILABLE', VIEW_FAILED);
+      }
+    } else if (this.generators.length > 0) {
+      const garments = (doc.garments as StoredGarment[]) ?? [];
+      const prompt = dressedAvatarPrompt(doc.department as AvatarDepartment, garments, view);
+      for (const generator of this.generators) {
+        try {
+          const gen = await this.within(this.timeouts.imageMs, (signal) =>
+            generator.generate(prompt, signal),
+          );
+          const contentType = detectImageType(gen.bytes);
+          if (contentType && gen.bytes.length <= IMAGE_MAX_BYTES) {
+            picture = { bytes: gen.bytes, contentType };
+            break;
+          }
+        } catch (err) {
+          this.warn('view', generator.name, err);
+        }
+      }
     }
+
+    if (!picture) {
+      throw new AppError('AI_UNAVAILABLE', VIEW_FAILED);
+    }
+
     const updated = await this.models.TryOnDrape.findOneAndUpdate(
       { _id: doc._id, userId },
       {

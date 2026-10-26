@@ -167,7 +167,7 @@ export async function startServer(deps: StartServerDeps = {}) {
       designImages: imageGenerators.map((g) => g.name),
       styleAssistantAi: Boolean(assistantProvider),
       tryOn: Boolean(tryOnRenderer),
-      drape: Boolean(imageEditor) && imageGenerators.length > 0,
+      drape: (Boolean(imageEditor) || imageGenerators.length > 0) && config.DRAPE_ENABLED,
     });
   });
 

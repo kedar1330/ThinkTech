@@ -17,7 +17,7 @@ import {
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { garmentSlots, vocabLabel } from '@/lib/outfits/look-text';
+import { garmentSlots, slotGarmentName, vocabLabel } from '@/lib/outfits/look-text';
 import { formatInr } from '@/lib/shop/format';
 import { itemColour } from '@/lib/try-on/colour';
 import type { Department } from '@/lib/try-on/figure';
@@ -54,9 +54,34 @@ function worn(slot: Slot, listing: ProductListing): WornItem {
   };
 }
 
+/** Pre-dresses the mannequin in the look's designed items so it is never naked while store searches load. */
+function defaultOutfit(slots: readonly Slot[]): WornItem[] {
+  let next: WornItem[] = [];
+  for (const slot of slots) {
+    next = wear(
+      next,
+      worn(slot, {
+        store: 'meesho',
+        title: slotGarmentName(slot),
+        price: 0,
+        link: null,
+        imageUrl: null,
+      }),
+    );
+  }
+  return next;
+}
+
 /** A part's items as Shop My Look lists them: matches for the look first, then other styles (#133). */
 function allListings(matches: LookProductMatches, slotId: string): ProductListing[] {
-  const slot = matches.slots.find((s) => s.slotId === slotId);
+  const norm = (id: string) => id.replace(/[-_]/g, '').toLowerCase();
+  const slot = matches.slots.find(
+    (s) =>
+      s.slotId === slotId ||
+      norm(s.slotId) === norm(slotId) ||
+      (norm(slotId) === 'outfit' && (norm(s.slotId) === 'onepiece' || s.slotId === 'one-piece')) ||
+      (norm(s.slotId) === 'outfit' && (norm(slotId) === 'onepiece' || slotId === 'one-piece')),
+  );
   return [...(slot?.listings ?? []), ...(slot?.alternatives ?? [])];
 }
 
@@ -80,8 +105,14 @@ function initialOutfit(
   const parts = start.slotId ? slots.filter((s) => s.slotId === start.slotId) : slots;
   let next: WornItem[] = [];
   for (const slot of parts) {
-    const listing = choose(slot);
-    if (listing) next = wear(next, worn(slot, listing));
+    const listing = choose(slot) ?? {
+      store: 'meesho' as const,
+      title: slotGarmentName(slot),
+      price: 0,
+      link: null,
+      imageUrl: null,
+    };
+    next = wear(next, worn(slot, listing));
   }
   return next;
 }
@@ -109,15 +140,15 @@ export function FittingRoom({
   start: { slotId?: string; item?: TryOnItem };
   overview: TryOnOverview;
 }) {
+  const slots = useMemo(() => garmentSlots(look).filter((s) => isWearable(s.slot)), [look]);
+  const proportions = useMemo(() => proportionsFor(bodyType), [bodyType]);
+
   const [state, setState] = useState<State>({ kind: 'loading' });
-  const [outfit, setOutfit] = useState<WornItem[]>([]);
+  const [outfit, setOutfit] = useState<WornItem[]>(() => defaultOutfit(slots));
   const [tab, setTab] = useState<string | null>(start.slotId ?? null);
   const [colours, setColours] = useState<Record<string, string>>({});
   const [realistic, setRealistic] = useState(false);
   const [view, setView] = useState<'model' | '3d'>('model');
-
-  const slots = useMemo(() => garmentSlots(look).filter((s) => isWearable(s.slot)), [look]);
-  const proportions = useMemo(() => proportionsFor(bodyType), [bodyType]);
 
   // The clothes for this look, from the same store searches as Shop My Look (cached for a day).
   useEffect(() => {

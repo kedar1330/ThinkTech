@@ -252,31 +252,51 @@ export class TryOnService {
       this.products.products(userId, outfitId),
       this.products.picks(userId, outfitId),
     ]);
-    const kindOf = new Map(look.slots.map((s) => [s.slotId, s.slot]));
+    const norm = (id: string) => id.replace(/[-_]/g, '').toLowerCase();
+    const kindOf = new Map<string, string>();
+    for (const s of look.slots) {
+      kindOf.set(s.slotId, s.slot);
+      kindOf.set(norm(s.slotId), s.slot);
+      if (s.slot === 'one_piece') {
+        kindOf.set('outfit', 'one_piece');
+        kindOf.set('onepiece', 'one_piece');
+        kindOf.set('one-piece', 'one_piece');
+        kindOf.set('one_piece', 'one_piece');
+      }
+    }
 
     const choose = (slotId: string): StoredGarment | null => {
-      const layer = LAYER_ORDER[kindOf.get(slotId) ?? ''];
-      // Matches for the look first, then other styles of the same garment (#133); both can be tried on.
-      const found = slots.find((s) => s.slotId === slotId);
-      const listings: ProductListing[] = [...(found?.listings ?? []), ...(found?.alternatives ?? [])];
+      const slotKind = kindOf.get(slotId) ?? kindOf.get(norm(slotId));
+      const layer = LAYER_ORDER[slotKind ?? ''];
       if (!layer) return null;
+      // Matches for the look first, then other styles of the same garment (#133); both can be tried on.
+      const found = slots.find(
+        (s) =>
+          s.slotId === slotId ||
+          norm(s.slotId) === norm(slotId) ||
+          (norm(slotId) === 'outfit' && (norm(s.slotId) === 'onepiece' || s.slotId === 'one-piece')) ||
+          (norm(s.slotId) === 'outfit' && (norm(slotId) === 'onepiece' || slotId === 'one-piece')),
+      );
+      const listings: ProductListing[] = [...(found?.listings ?? []), ...(found?.alternatives ?? [])];
       const item = request.items
-        ? request.items.find((i) => i.slotId === slotId)
-        : request.slotId === slotId
+        ? request.items.find((i) => i.slotId === slotId || norm(i.slotId) === norm(slotId))
+        : request.slotId === slotId || (request.slotId && norm(request.slotId) === norm(slotId))
           ? request.item
           : undefined;
-      const pick = picks.find((p) => p.slotId === slotId);
+      const pick = picks.find((p) => p.slotId === slotId || norm(p.slotId) === norm(slotId));
       const listing = item
         ? listings.find((l) => l.store === item.store && l.title === item.title && l.price === item.price)
         : (listings.find(
             (l) => pick && l.store === pick.store && l.title === pick.title && l.price === pick.price && l.imageUrl,
           ) ?? listings.find((l) => l.imageUrl));
+
       if (!listing?.imageUrl) return null;
       return { ...listing, imageUrl: listing.imageUrl, slotId, category: layer.category };
     };
 
     if (request.slotId) {
-      if (!slots.some((s) => s.slotId === request.slotId) || !LAYER_ORDER[kindOf.get(request.slotId) ?? '']) {
+      const slotKind = kindOf.get(request.slotId) ?? kindOf.get(norm(request.slotId));
+      if (!slotKind || !LAYER_ORDER[slotKind]) {
         throw new AppError('INVALID_REQUEST', 'That part of the look can’t be tried on.');
       }
       const garment = choose(request.slotId);
@@ -294,7 +314,8 @@ export class TryOnService {
       // The outfit put together on the 3D mannequin: exactly those items, each one the search returned.
       const garments: StoredGarment[] = [];
       for (const { slotId } of request.items) {
-        if (!slots.some((s) => s.slotId === slotId) || !LAYER_ORDER[kindOf.get(slotId) ?? '']) {
+        const slotKind = kindOf.get(slotId) ?? kindOf.get(norm(slotId));
+        if (!slotKind || !LAYER_ORDER[slotKind]) {
           throw new AppError('INVALID_REQUEST', 'That part of the look can’t be tried on.');
         }
         const garment = choose(slotId);
@@ -307,13 +328,19 @@ export class TryOnService {
         garments.push(garment);
       }
       return garments.sort(
-        (a, b) => LAYER_ORDER[kindOf.get(a.slotId)!]!.order - LAYER_ORDER[kindOf.get(b.slotId)!]!.order,
+        (a, b) =>
+          LAYER_ORDER[kindOf.get(a.slotId) ?? kindOf.get(norm(a.slotId))!]!.order -
+          LAYER_ORDER[kindOf.get(b.slotId) ?? kindOf.get(norm(b.slotId))!]!.order,
       );
     }
     const garments = slots
       .map((s) => choose(s.slotId))
       .filter((g): g is StoredGarment => g !== null)
-      .sort((a, b) => LAYER_ORDER[kindOf.get(a.slotId)!]!.order - LAYER_ORDER[kindOf.get(b.slotId)!]!.order)
+      .sort(
+        (a, b) =>
+          LAYER_ORDER[kindOf.get(a.slotId) ?? kindOf.get(norm(a.slotId))!]!.order -
+          LAYER_ORDER[kindOf.get(b.slotId) ?? kindOf.get(norm(b.slotId))!]!.order,
+      )
       .slice(0, TRY_ON_MAX_GARMENTS);
     if (garments.length === 0) throw new AppError('CONFLICT', NO_PICTURES);
     return garments;

@@ -278,12 +278,12 @@ export function createApp({
     priceRanges,
     { requestMs: config.TRY_ON_REQUEST_TIMEOUT_MS, stepMs: config.TRY_ON_STEP_TIMEOUT_MS },
     logger,
-    drapeEditor !== null && imageGenerators.length > 0,
+    (drapeEditor !== null || imageGenerators.length > 0) && config.DRAPE_ENABLED,
   );
   const drapes = new DrapeService(
     db.models,
     drapeEditor,
-    imageGenerators,
+    config.DRAPE_ENABLED ? imageGenerators : [],
     tryOn,
     { editMs: config.DRAPE_TIMEOUT_MS, imageMs: config.IMAGE_GENERATION_TIMEOUT_MS },
     logger,
