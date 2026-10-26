@@ -275,4 +275,30 @@ describe('/v1/try-on avatars and drapes (D-138)', () => {
       expect(logs).not.toContain(value);
     }
   });
+
+  it('uses uploaded user profile photo for avatar and try-on when present', async () => {
+    const { app, token, editor } = await signedIn('userphoto@example.com');
+    const me = await request(app).get('/v1/auth/me').set(bearer(token));
+    const userId = me.body.data.id as string;
+    const customPhotoBytes = Buffer.from('my-custom-body-photo-bytes');
+    await env.db.models.UserPhoto.create({
+      userId,
+      kind: 'body',
+      data: customPhotoBytes,
+      contentType: 'image/jpeg',
+      bytes: customPhotoBytes.length,
+      retention: 'keep',
+      uploadedAt: new Date(),
+    });
+
+    const avatarRes = await binary(request(app).get('/v1/try-on/avatars/women').set(bearer(token)));
+    expect(avatarRes.status).toBe(200);
+    expect(avatarRes.body).toEqual(customPhotoBytes);
+    expect(avatarRes.headers['cache-control']).toBe('private, no-cache');
+
+    const { look, items } = await outfit(app, token);
+    const res = await drape(app, token, { outfitId: look.id, department: 'women', items });
+    expect(res.status).toBe(201);
+    expect(editor.edits[0]!.images[0]).toBe(`data:image/jpeg;base64,${customPhotoBytes.toString('base64')}`);
+  });
 });
