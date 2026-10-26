@@ -49,9 +49,7 @@ export function garmentSlots(look: Pick<Look, 'slots'>): Look['slots'] {
 /** E.g. "Navy kurta · Ivory trousers": names every garment with its colour in words. */
 export function lookTitle(look: Pick<Look, 'slots'>): string {
   return garmentSlots(look)
-    .map(
-      (s) => `${vocabLabel(COLORS, s.lookSpec.colorId)} ${slotGarmentName(s).toLowerCase()}`,
-    )
+    .map((s) => `${vocabLabel(COLORS, s.lookSpec.colorId)} ${slotGarmentName(s).toLowerCase()}`)
     .join(' · ');
 }
 

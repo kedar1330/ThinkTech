@@ -80,14 +80,14 @@ export async function startServer(deps: StartServerDeps = {}) {
   // joins the failover chain when its key is set (Cloudflare first, then Pollinations).
   const designAnalysisProvider =
     config.DESIGN_STUDIO_ENABLED && config.GEMINI_API_KEY
-    ? geminiDesignProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
-    : null;
+      ? geminiDesignProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
+      : null;
   // Style Assistant (D-136): Gemini plans and words replies whenever a key is set, unless STYLE_ASSISTANT_AI_ENABLED=false;
   // without it the assistant uses its keyword matcher and fixed wording.
   const assistantProvider =
     config.STYLE_ASSISTANT_AI_ENABLED && config.GEMINI_API_KEY
-    ? geminiAssistantProvider(config.GEMINI_API_KEY, config.GEMINI_MODEL ?? config.GEMINI_VISION_MODEL)
-    : null;
+      ? geminiAssistantProvider(config.GEMINI_API_KEY, config.GEMINI_MODEL ?? config.GEMINI_VISION_MODEL)
+      : null;
   const imageGenerators: ImageGenerator[] = [];
   if (config.CLOUDFLARE_ACCOUNT_ID && config.CLOUDFLARE_API_TOKEN)
     imageGenerators.push(

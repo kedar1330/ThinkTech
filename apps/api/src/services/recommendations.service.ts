@@ -13,6 +13,7 @@ import {
   SILHOUETTE_IDS,
   type AppearanceResponse,
   type Look,
+  type LookSpec,
   type ProfileResponse,
   type RecommendationRequest,
   type RecommendationResponse,
@@ -274,8 +275,7 @@ export class RecommendationsService {
       for (const [key, val] of Object.entries(selectedFeatures)) {
         if (key === 'pattern' || (typeof val === 'string' && val.startsWith('pattern_'))) {
           const raw = val.replace(/^pattern_/, '');
-          const mapped =
-            raw === 'polka_dot' ? 'polka_dots' : raw === 'striped' ? 'stripes' : raw;
+          const mapped = raw === 'polka_dot' ? 'polka_dots' : raw === 'striped' ? 'stripes' : raw;
           if ((PATTERN_IDS as readonly string[]).includes(mapped)) {
             designedPattern = mapped as Pattern;
             break;
@@ -292,13 +292,21 @@ export class RecommendationsService {
         return design?.features?.[attr as keyof typeof design.features];
       };
 
-      const designedNeckline = getFeature('neckline') as any;
-      const designedSleeve = getFeature('sleeve') as any;
-      const designedLength = getFeature('length') as any;
-      const designedSilhouette = getFeature('silhouette') as any;
-      const designedFit = getFeature('fit') as any;
+      const designedNeckline = getFeature('neckline') as LookSpec['neckline'];
+      const designedSleeve = getFeature('sleeve') as LookSpec['sleeve'];
+      const designedLength = getFeature('length') as LookSpec['length'];
+      const designedSilhouette = getFeature('silhouette') as LookSpec['silhouette'];
+      const designedFit = getFeature('fit') as LookSpec['fit'];
 
-      const isOnePiece = ['dress', 'lehenga', 'saree', 'saree_blouse', 'anarkali', 'indo_western_gown', 'jumpsuit'].includes(garmentType);
+      const isOnePiece = [
+        'dress',
+        'lehenga',
+        'saree',
+        'saree_blouse',
+        'anarkali',
+        'indo_western_gown',
+        'jumpsuit',
+      ].includes(garmentType);
       const isBottom = ['trousers', 'jeans', 'palazzo', 'skirt', 'dhoti_pants'].includes(garmentType);
 
       for (const look of result.looks) {
@@ -317,7 +325,7 @@ export class RecommendationsService {
           if (onePieceSlot) {
             const cat =
               garmentType === 'anarkali'
-                 ? 'kurti'
+                ? 'kurti'
                 : garmentType === 'indo_western_gown' || garmentType === 'jumpsuit'
                   ? 'dress'
                   : garmentType === 'saree_blouse'
@@ -336,7 +344,10 @@ export class RecommendationsService {
 
             onePieceSlot.searchPhrase = searchPhrase(onePieceSlot.lookSpec);
             if (garmentType === 'anarkali') {
-              onePieceSlot.searchPhrase = onePieceSlot.searchPhrase.replace(/\b(kurti|kurta)\b/gi, 'flared anarkali suit');
+              onePieceSlot.searchPhrase = onePieceSlot.searchPhrase.replace(
+                /\b(kurti|kurta)\b/gi,
+                'flared anarkali suit',
+              );
             } else if (garmentType === 'saree_blouse') {
               onePieceSlot.searchPhrase = onePieceSlot.searchPhrase.replace(/\bsaree\b/gi, 'saree with saree blouse');
             }

@@ -246,4 +246,3 @@ describe('buildOutfitImagePrompt with garment & custom colors', () => {
     expect(promptWithSea).toContain('sea green');
   });
 });
-

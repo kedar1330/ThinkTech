@@ -2,15 +2,7 @@
 
 import { useState } from 'react';
 import type { OutfitDetail, ProfileSizes, UserShortlistItem } from '@styleme/contracts';
-import {
-  categoryLabel,
-  filterOptions,
-  filterSlots,
-  groupLabel,
-  groupOf,
-  parseMaxPrice,
-  pickableItems,
-} from '@/lib/shop/look-shopper';
+import { filterOptions, filterSlots, groupLabel, groupOf, parseMaxPrice, pickableItems } from '@/lib/shop/look-shopper';
 import { SizeNote } from '@/components/outfits/SizeNote';
 import { SwatchList } from '@/components/outfits/SwatchList';
 import { slotGarmentName } from '@/lib/outfits/look-text';

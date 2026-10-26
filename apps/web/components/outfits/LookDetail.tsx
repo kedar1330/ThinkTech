@@ -1,8 +1,8 @@
-import { CATEGORIES, type Look, type ProfileSizes } from '@styleme/contracts';
+import type { Look, ProfileSizes } from '@styleme/contracts';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { garmentSlots, lookTitle, slotGarmentName, slotLabel, specAttributes, vocabLabel } from '@/lib/outfits/look-text';
+import { garmentSlots, lookTitle, slotGarmentName, slotLabel, specAttributes } from '@/lib/outfits/look-text';
 import { DesignMatchBadge } from './DesignMatchBadge';
 import { FeedbackButtons } from './FeedbackButtons';
 import { OutfitImage } from './OutfitImage';

@@ -41,7 +41,15 @@ const SYNONYMS: Record<string, string[]> = {
   'neckline:scoop': ['scoop', 'scoop neck'],
   'neckline:keyhole': ['keyhole', 'keyhole neck'],
   'sleeve:sleeveless': ['sleeveless'],
-  'sleeve:spaghetti_strap': ['spaghetti strap', 'spaghetti straps', 'spaghetti', 'strap dress', 'strappy', 'sleeveless', 'shoulder strap'],
+  'sleeve:spaghetti_strap': [
+    'spaghetti strap',
+    'spaghetti straps',
+    'spaghetti',
+    'strap dress',
+    'strappy',
+    'sleeveless',
+    'shoulder strap',
+  ],
   'sleeve:off_shoulder': ['off shoulder', 'off-shoulder', 'cold shoulder'],
   'sleeve:cap': ['cap sleeve'],
   'sleeve:short': ['short sleeve', 'half sleeve'],
@@ -307,12 +315,7 @@ export function byRelevance(
 ): number {
   const aColor = a.matched?.includes('color') ? 1 : 0;
   const bColor = b.matched?.includes('color') ? 1 : 0;
-  return (
-    Number(b.confirmed) - Number(a.confirmed) ||
-    bColor - aColor ||
-    b.score - a.score ||
-    a.price - b.price
-  );
+  return Number(b.confirmed) - Number(a.confirmed) || bColor - aColor || b.score - a.score || a.price - b.price;
 }
 
 /** How well a store listing fits one garment of a look. */

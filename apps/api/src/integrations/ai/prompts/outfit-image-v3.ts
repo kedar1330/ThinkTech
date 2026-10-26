@@ -112,17 +112,27 @@ function designed(slot: LookSlot, colour: string | undefined, design: OutfitImag
 }
 
 const TOP_GARMENT_TYPES = new Set([
-  'top', 'blouse', 'shirt', 't_shirt', 'tunic', 'kurti', 'kurta', 'polo', 'short_kurta',
+  'top',
+  'blouse',
+  'shirt',
+  't_shirt',
+  'tunic',
+  'kurti',
+  'kurta',
+  'polo',
+  'short_kurta',
 ]);
-const BOTTOM_GARMENT_TYPES = new Set([
-  'trousers', 'jeans', 'palazzo', 'skirt', 'dhoti_pants', 'churidar', 'shorts',
-]);
+const BOTTOM_GARMENT_TYPES = new Set(['trousers', 'jeans', 'palazzo', 'skirt', 'dhoti_pants', 'churidar', 'shorts']);
 const ONE_PIECE_GARMENT_TYPES = new Set([
-  'dress', 'lehenga', 'anarkali', 'jumpsuit', 'indo_western_gown', 'saree', 'saree_blouse',
+  'dress',
+  'lehenga',
+  'anarkali',
+  'jumpsuit',
+  'indo_western_gown',
+  'saree',
+  'saree_blouse',
 ]);
-const LAYER_GARMENT_TYPES = new Set([
-  'jacket', 'cape_jacket', 'sherwani', 'nehru_jacket', 'bandhgala',
-]);
+const LAYER_GARMENT_TYPES = new Set(['jacket', 'cape_jacket', 'sherwani', 'nehru_jacket', 'bandhgala']);
 
 function isDesignSlot(slot: LookSlot, design: OutfitImageDesign): boolean {
   if (slot.lookSpec?.category === design.category) return true;

@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { DesignSelectionItem, Look, OutfitDetail } from '@styleme/contracts';
+import type { DesignSelectionItem, Look, LookSlot, OutfitDetail } from '@styleme/contracts';
 import { loadStyleLibrary } from '../../src/style-rules';
 import { buildEngineFixtureLibrary } from '../fixtures/style-library';
 import { bearer, login, registerUser, startTestEnv, type TestEnv } from '../helpers';
@@ -192,7 +192,7 @@ describe('saved designs listed for Discover My Style', () => {
     expect(lehengaLooks.length).toBeGreaterThan(0);
     for (const look of lehengaLooks) {
       expect(look.designMatch).toEqual({ level: 'full', differs: [] });
-      const lehengaSlot = look.slots.find((s: any) => s.slot === 'one_piece');
+      const lehengaSlot = look.slots.find((s: LookSlot) => s.slot === 'one_piece');
       expect(lehengaSlot).toBeDefined();
       expect(lehengaSlot.lookSpec.category).toBe('lehenga');
       expect(lehengaSlot.lookSpec.neckline).toBe('square');
@@ -236,7 +236,7 @@ describe('saved designs listed for Discover My Style', () => {
     expect(dressLooks.length).toBeGreaterThan(0);
     for (const look of dressLooks) {
       expect(look.designMatch).toEqual({ level: 'full', differs: [] });
-      const dressSlot = look.slots.find((s: any) => s.slot === 'one_piece');
+      const dressSlot = look.slots.find((s: LookSlot) => s.slot === 'one_piece');
       expect(dressSlot).toBeDefined();
       expect(dressSlot.lookSpec.category).toBe('dress');
       expect(dressSlot.lookSpec.neckline).toBe('sweetheart');
@@ -246,7 +246,7 @@ describe('saved designs listed for Discover My Style', () => {
       expect(dressSlot.lookSpec.silhouette).toBe('a_line');
       expect(dressSlot.searchPhrase).toContain('dress');
       // A dress look must not have a bottom slot (trousers/jeans)
-      expect(look.slots.some((s: any) => s.slot === 'bottom')).toBe(false);
+      expect(look.slots.some((s: LookSlot) => s.slot === 'bottom')).toBe(false);
     }
   });
 });
