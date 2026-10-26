@@ -23,7 +23,7 @@ export {
   type EvaluationSummary,
 } from './evaluate';
 export { AVOIDED_MAX_DISTANCE, LIKED_MAX_DISTANCE, closestOf, nearestColour, vocabularyColours } from './colour-match';
-export { matchDesign, toEngineDesign, type EngineDesign } from './design';
+export { FEATURE_VALUE_MAP, matchDesign, toEngineDesign, type EngineDesign } from './design';
 export { listAllPalettes, rankPalettes } from './palettes';
 export {
   resolvePreferences,

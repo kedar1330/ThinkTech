@@ -22,17 +22,22 @@ const UNSEEN_FEATURES = new Set(['occasion', 'stretch']);
 
 /** The word that makes a bare feature name read as part of a garment ("Curved" → "curved hemline"). */
 const FEATURE_NOUN: Record<string, string> = {
+  neckline: 'neckline',
+  sleeve: 'sleeves',
   silhouette: 'silhouette',
   hemline: 'hemline',
   fabric: 'fabric',
   closure: 'closure',
-  layering: 'layer',
+  layering: 'style layering',
   waistline: 'waistline',
   waistband: 'waistband',
-  leg_shape: 'leg',
+  leg_shape: 'leg shape',
   pleats: 'pleats',
   bottom_hem: 'hem',
   draping: 'drape',
+  pattern: 'pattern',
+  fit: 'fit',
+  length: 'length',
 };
 
 export interface OutfitImageDesign {
@@ -40,6 +45,10 @@ export interface OutfitImageDesign {
   category: string;
   /** The garment's name, e.g. "Kurta". */
   garmentName: string;
+  /** The garment type ID, e.g. "top", "saree_blouse", "anarkali". */
+  garmentType?: string;
+  /** The garment kind: 'top' | 'bottom' | 'one_piece' | 'layer' | 'drape'. */
+  garmentKind?: string;
   /** The chosen features, by design feature category, e.g. `{ category: 'neckline', name: 'Round neck' }`. */
   features: readonly { category: string; name: string }[];
 }
@@ -73,17 +82,75 @@ function inColour(slot: LookSlot, colour: string | undefined): string {
 }
 
 function featurePhrase({ category, name }: { category: string; name: string }): string {
-  const phrase = name.toLowerCase();
+  const phrase = name.toLowerCase().trim();
+  if (category === 'pockets' && (phrase.includes('no') || phrase.includes('none'))) {
+    return '';
+  }
   const noun = FEATURE_NOUN[category];
-  return noun && !phrase.includes(noun) ? `${phrase} ${noun}` : phrase;
+  if (!noun) return phrase;
+  if (phrase.includes(noun)) return phrase;
+  if (category === 'neckline' && phrase.includes('neck')) return phrase;
+  if (category === 'sleeve' && phrase.includes('sleeve')) return phrase;
+  return `${phrase} ${noun}`;
 }
 
 /** The designed garment in the slot's colour, with the features the user chose. */
 function designed(slot: LookSlot, colour: string | undefined, design: OutfitImageDesign): string {
   const shade = (colour ?? slot.swatches[0]?.name ?? '').toLowerCase();
+  const isSareeBlouse = design.garmentName.toLowerCase().includes('saree blouse');
+  const features = design.features
+    .filter((f) => !UNSEEN_FEATURES.has(f.category))
+    .map(featurePhrase)
+    .filter(Boolean);
+  if (isSareeBlouse) {
+    const blouse = [shade, 'saree blouse'].filter(Boolean).join(' ');
+    const blouseWithFeatures = features.length > 0 ? `${blouse} with ${joinList(features)}` : blouse;
+    return `traditional elegant draped saree paired with matching ${blouseWithFeatures}`;
+  }
   const garment = [shade, design.garmentName.toLowerCase()].filter(Boolean).join(' ');
-  const features = design.features.filter((f) => !UNSEEN_FEATURES.has(f.category)).map(featurePhrase);
   return features.length > 0 ? `${garment} with ${joinList(features)}` : garment;
+}
+
+const TOP_GARMENT_TYPES = new Set([
+  'top', 'blouse', 'shirt', 't_shirt', 'tunic', 'kurti', 'kurta', 'polo', 'short_kurta',
+]);
+const BOTTOM_GARMENT_TYPES = new Set([
+  'trousers', 'jeans', 'palazzo', 'skirt', 'dhoti_pants', 'churidar', 'shorts',
+]);
+const ONE_PIECE_GARMENT_TYPES = new Set([
+  'dress', 'lehenga', 'anarkali', 'jumpsuit', 'indo_western_gown', 'saree', 'saree_blouse',
+]);
+const LAYER_GARMENT_TYPES = new Set([
+  'jacket', 'cape_jacket', 'sherwani', 'nehru_jacket', 'bandhgala',
+]);
+
+function isDesignSlot(slot: LookSlot, design: OutfitImageDesign): boolean {
+  if (slot.lookSpec?.category === design.category) return true;
+  if (design.category === 'saree' && (slot.slot === 'one_piece' || slot.lookSpec?.category === 'saree')) return true;
+
+  if (design.garmentKind === 'top' && slot.slot === 'top') return true;
+  if (design.garmentKind === 'bottom' && slot.slot === 'bottom') return true;
+  if ((design.garmentKind === 'one_piece' || design.garmentKind === 'drape') && slot.slot === 'one_piece') return true;
+  if (design.garmentKind === 'layer' && slot.slot === 'layer') return true;
+
+  const type = design.garmentType ?? design.category;
+  if (TOP_GARMENT_TYPES.has(type) && slot.slot === 'top') return true;
+  if (BOTTOM_GARMENT_TYPES.has(type) && slot.slot === 'bottom') return true;
+  if (ONE_PIECE_GARMENT_TYPES.has(type) && slot.slot === 'one_piece') return true;
+  if (LAYER_GARMENT_TYPES.has(type) && slot.slot === 'layer') return true;
+
+  return false;
+}
+
+function enhanceColourForAi(phrase: string): string {
+  return phrase
+    .replace(/\brama green\b/gi, 'rama green (rich vibrant teal sea green)')
+    .replace(/\bsea\b(?!\s*green)/gi, 'sea green')
+    .replace(/\bmehendi green\b/gi, 'mehendi green (warm olive green)')
+    .replace(/\brani pink\b/gi, 'rani pink (vibrant hot magenta pink)')
+    .replace(/\bhaldi yellow\b/gi, 'haldi yellow (warm golden turmeric yellow)')
+    .replace(/\bpista green\b/gi, 'pista green (light pistachio pastel green)')
+    .replace(/\bpeacock blue\b/gi, 'peacock blue (rich royal teal blue)');
 }
 
 export function buildOutfitImagePrompt({
@@ -101,7 +168,7 @@ export function buildOutfitImagePrompt({
     .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot))
     .map((s) => {
       const colour = colours?.get(s.slotId);
-      return design && s.lookSpec?.category === design.category ? designed(s, colour, design) : inColour(s, colour);
+      return design && isDesignSlot(s, design) ? designed(s, colour, design) : inColour(s, colour);
     });
 
   const isAnarkali =
@@ -119,6 +186,25 @@ export function buildOutfitImagePrompt({
       pieces.unshift('flared kalidar anarkali suit');
     }
   }
+
+  const isSaree =
+    design?.garmentName?.toLowerCase().includes('saree') ||
+    slots.some((s) => s.searchPhrase.toLowerCase().includes('saree'));
+
+  if (isSaree) {
+    pieces = pieces.map((p) => {
+      if (/\b(kurti|kurta)\b/i.test(p)) {
+        return p.replace(/\b(kurti|kurta)\b/gi, 'traditional elegant draped saree with tailored saree blouse');
+      }
+      return p;
+    });
+    if (!pieces.some((p) => p.toLowerCase().includes('saree'))) {
+      pieces.unshift('traditional elegant draped saree with tailored saree blouse');
+    }
+  }
+
+  pieces = pieces.map(enhanceColourForAi);
+
   const wear = WEAR_TYPES.find((w) => w.id === wearType)?.label;
   const kind = [occasionLabel(occasion), wear, style ? styleLabel(style) : null]
     .filter(Boolean)

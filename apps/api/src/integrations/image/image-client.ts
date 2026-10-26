@@ -92,8 +92,12 @@ export function cloudflareGenerator(
         {
           method: 'POST',
           headers: { authorization: `Bearer ${apiToken}`, 'content-type': 'application/json' },
-          // FLUX-1-schnell: prompt up to 2048 characters, steps up to 8.
-          body: JSON.stringify({ prompt: prompt.slice(0, 2048), steps: 8, width: WIDTH, height: HEIGHT }),
+          // FLUX-1-schnell: prompt up to 2048 characters, steps up to 8 (no width/height in flux schema).
+          body: JSON.stringify({
+            prompt: prompt.slice(0, 2048),
+            steps: 8,
+            ...(model.includes('flux') ? {} : { width: WIDTH, height: HEIGHT }),
+          }),
         },
         signal,
       );

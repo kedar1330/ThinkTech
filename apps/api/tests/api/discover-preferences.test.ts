@@ -158,4 +158,95 @@ describe('saved designs listed for Discover My Style', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.looks.length).toBeGreaterThan(0);
   });
+
+  it('generates looks matching the custom saved design for lehenga and dress', async () => {
+    const { app, token, userId } = await signedIn('custom-designer@example.com');
+
+    // 1. Save custom lehenga design
+    await env.db.models.UserDesignSelection.create({
+      userId,
+      clothingPreference: 'women',
+      outfitCategory: 'indian',
+      garmentType: 'lehenga',
+      selectedFeatures: {
+        neckline: 'neckline_square_neck',
+        sleeve: 'sleeve_elbow_length',
+        length: 'length_floor',
+        fabric: 'fabric_silk',
+        silhouette: 'silhouette_empire',
+        occasion: 'occasion_wedding',
+      },
+      savedAt: new Date(),
+    });
+
+    const lehengaRes = await request(app)
+      .post('/v1/recommendations')
+      .set(bearer(token))
+      .send({
+        occasion: 'wedding',
+        design: { garmentType: 'lehenga', outfitCategory: 'indian' },
+      });
+
+    expect(lehengaRes.status).toBe(200);
+    const lehengaLooks = lehengaRes.body.data.looks;
+    expect(lehengaLooks.length).toBeGreaterThan(0);
+    for (const look of lehengaLooks) {
+      expect(look.designMatch).toEqual({ level: 'full', differs: [] });
+      const lehengaSlot = look.slots.find((s: any) => s.slot === 'one_piece');
+      expect(lehengaSlot).toBeDefined();
+      expect(lehengaSlot.lookSpec.category).toBe('lehenga');
+      expect(lehengaSlot.lookSpec.neckline).toBe('square');
+      expect(lehengaSlot.lookSpec.sleeve).toBe('elbow');
+      expect(lehengaSlot.lookSpec.length).toBe('floor');
+      expect(lehengaSlot.lookSpec.fabric).toBe('silk');
+      expect(lehengaSlot.lookSpec.silhouette).toBe('a_line');
+      expect(lehengaSlot.searchPhrase).toContain('lehenga');
+      expect(lehengaSlot.searchPhrase).toContain('square neck');
+      expect(lehengaSlot.searchPhrase).toContain('elbow length');
+      expect(lehengaSlot.searchPhrase).toContain('silk');
+    }
+
+    // 2. Save custom dress design
+    await env.db.models.UserDesignSelection.create({
+      userId,
+      clothingPreference: 'women',
+      outfitCategory: 'western',
+      garmentType: 'dress',
+      selectedFeatures: {
+        neckline: 'neckline_sweetheart',
+        sleeve: 'sleeve_short',
+        length: 'length_midi',
+        fabric: 'fabric_velvet',
+        silhouette: 'silhouette_a_line',
+        occasion: 'occasion_party',
+      },
+      savedAt: new Date(),
+    });
+
+    const dressRes = await request(app)
+      .post('/v1/recommendations')
+      .set(bearer(token))
+      .send({
+        occasion: 'work',
+        design: { garmentType: 'dress', outfitCategory: 'western' },
+      });
+
+    expect(dressRes.status).toBe(200);
+    const dressLooks = dressRes.body.data.looks;
+    expect(dressLooks.length).toBeGreaterThan(0);
+    for (const look of dressLooks) {
+      expect(look.designMatch).toEqual({ level: 'full', differs: [] });
+      const dressSlot = look.slots.find((s: any) => s.slot === 'one_piece');
+      expect(dressSlot).toBeDefined();
+      expect(dressSlot.lookSpec.category).toBe('dress');
+      expect(dressSlot.lookSpec.neckline).toBe('sweetheart');
+      expect(dressSlot.lookSpec.sleeve).toBe('short');
+      expect(dressSlot.lookSpec.length).toBe('midi');
+      expect(dressSlot.lookSpec.fabric).toBe('velvet');
+      expect(dressSlot.lookSpec.silhouette).toBe('a_line');
+      expect(dressSlot.searchPhrase).toContain('dress');
+      // A dress look must not have a bottom slot (trousers/jeans)
+      expect(look.slots.some((s: any) => s.slot === 'bottom')).toBe(false);
+    }
+  });
 });

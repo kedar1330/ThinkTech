@@ -26,7 +26,18 @@ const HINTS: [keyof LookSpec, Vocabulary][] = [
 
 const label = (list: Vocabulary, id: string) => list.find((o) => o.id === id)?.label ?? id;
 
-export function categoryLabel(spec: LookSpec): string {
+export function categoryLabel(spec: LookSpec, searchPhrase?: string): string {
+  if (searchPhrase) {
+    const p = searchPhrase.toLowerCase();
+    if (p.includes('anarkali')) return 'Anarkali';
+    if (p.includes('saree blouse')) return 'Saree Blouse';
+    if (p.includes('dhoti')) return 'Dhoti Pants';
+    if (p.includes('palazzo')) return 'Palazzo';
+    if (p.includes('indo-western gown') || p.includes('gown')) return 'Gown';
+    if (p.includes('jumpsuit')) return 'Jumpsuit';
+    if (p.includes('tunic')) return 'Tunic';
+    if (p.includes('cape')) return 'Cape Set';
+  }
   return label(CATEGORIES, spec.category);
 }
 

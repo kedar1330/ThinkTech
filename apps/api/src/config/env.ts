@@ -84,6 +84,8 @@ const envSchema = z.object({
   DESIGN_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(60_000),
   CLOUDFLARE_ACCOUNT_ID: optional,
   CLOUDFLARE_API_TOKEN: optional,
+  CLOUDFLARE_ACCOUNT_ID_2: optional,
+  CLOUDFLARE_API_TOKEN_2: optional,
   CLOUDFLARE_IMAGE_MODEL: z.string().trim().min(1).default('@cf/black-forest-labs/flux-1-schnell'),
   IMAGE_GENERATION_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(45_000),
   // Style Assistant (D-136, approved 2026-10-23). The assistant always answers; with GEMINI_API_KEY set, Gemini
@@ -133,11 +135,14 @@ const envSchema = z.object({
 
 const configSchema = envSchema.superRefine((env, ctx) => {
   if (env.OUTFIT_IMAGES_ENABLED) {
-    if (!env.POLLINATIONS_API_KEY) {
+    const hasCloudflare =
+      (env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN) ||
+      (env.CLOUDFLARE_ACCOUNT_ID_2 && env.CLOUDFLARE_API_TOKEN_2);
+    if (!env.POLLINATIONS_API_KEY && !hasCloudflare) {
       ctx.addIssue({
         code: 'custom',
         path: ['POLLINATIONS_API_KEY'],
-        message: 'required when OUTFIT_IMAGES_ENABLED=true',
+        message: 'required when OUTFIT_IMAGES_ENABLED=true unless Cloudflare is configured',
       });
     }
     if (env.APP_ENV !== 'local') {

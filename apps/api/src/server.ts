@@ -48,11 +48,8 @@ export async function startServer(deps: StartServerDeps = {}) {
     config.PHOTO_ANALYSIS_ENABLED && config.GEMINI_API_KEY
       ? geminiVisionProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
       : null;
-  // AI outfit images: off by default; supports Pollinations with Cloudflare failover when configured.
+  // AI outfit images: Cloudflare primary, Pollinations backup when configured.
   const outfitProviders: OutfitImageProvider[] = [];
-  if (config.OUTFIT_IMAGES_ENABLED && config.POLLINATIONS_API_KEY) {
-    outfitProviders.push(pollinationsImageProvider(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
-  }
   if (config.OUTFIT_IMAGES_ENABLED && config.CLOUDFLARE_ACCOUNT_ID && config.CLOUDFLARE_API_TOKEN) {
     outfitProviders.push(
       cloudflareOutfitImageProvider(
@@ -62,30 +59,46 @@ export async function startServer(deps: StartServerDeps = {}) {
       ),
     );
   }
+  if (config.OUTFIT_IMAGES_ENABLED && config.CLOUDFLARE_ACCOUNT_ID_2 && config.CLOUDFLARE_API_TOKEN_2) {
+    outfitProviders.push(
+      cloudflareOutfitImageProvider(
+        config.CLOUDFLARE_ACCOUNT_ID_2,
+        config.CLOUDFLARE_API_TOKEN_2,
+        config.CLOUDFLARE_IMAGE_MODEL,
+      ),
+    );
+  }
+  if (config.OUTFIT_IMAGES_ENABLED && config.POLLINATIONS_API_KEY) {
+    outfitProviders.push(pollinationsImageProvider(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
+  }
   const outfitImageProvider = outfitProviders.length > 0 ? compositeOutfitImageProvider(outfitProviders, log) : null;
   // Price ranges (#118): live whenever a Serper.dev key is set, and only locally until the founder approves
   // showing store prices (D-77); elsewhere the key is ignored and the tabs say prices are unavailable.
   const shoppingProvider =
     config.SERPER_API_KEY && config.APP_ENV === 'local' ? serperShoppingProvider(config.SERPER_API_KEY) : null;
   // Design Studio (D-134): live whenever a Gemini key is set, unless DESIGN_STUDIO_ENABLED=false. Each image service
-  // joins the failover chain when its key is set (Pollinations first, then Cloudflare).
+  // joins the failover chain when its key is set (Cloudflare first, then Pollinations).
   const designAnalysisProvider =
     config.DESIGN_STUDIO_ENABLED && config.GEMINI_API_KEY
-      ? geminiDesignProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
-      : null;
+    ? geminiDesignProvider(config.GEMINI_API_KEY, config.GEMINI_VISION_MODEL)
+    : null;
   // Style Assistant (D-136): Gemini plans and words replies whenever a key is set, unless STYLE_ASSISTANT_AI_ENABLED=false;
   // without it the assistant uses its keyword matcher and fixed wording.
   const assistantProvider =
     config.STYLE_ASSISTANT_AI_ENABLED && config.GEMINI_API_KEY
-      ? geminiAssistantProvider(config.GEMINI_API_KEY, config.GEMINI_MODEL ?? config.GEMINI_VISION_MODEL)
-      : null;
+    ? geminiAssistantProvider(config.GEMINI_API_KEY, config.GEMINI_MODEL ?? config.GEMINI_VISION_MODEL)
+    : null;
   const imageGenerators: ImageGenerator[] = [];
-  if (config.POLLINATIONS_API_KEY)
-    imageGenerators.push(pollinationsGenerator(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
   if (config.CLOUDFLARE_ACCOUNT_ID && config.CLOUDFLARE_API_TOKEN)
     imageGenerators.push(
       cloudflareGenerator(config.CLOUDFLARE_ACCOUNT_ID, config.CLOUDFLARE_API_TOKEN, config.CLOUDFLARE_IMAGE_MODEL),
     );
+  if (config.CLOUDFLARE_ACCOUNT_ID_2 && config.CLOUDFLARE_API_TOKEN_2)
+    imageGenerators.push(
+      cloudflareGenerator(config.CLOUDFLARE_ACCOUNT_ID_2, config.CLOUDFLARE_API_TOKEN_2, config.CLOUDFLARE_IMAGE_MODEL),
+    );
+  if (config.POLLINATIONS_API_KEY)
+    imageGenerators.push(pollinationsGenerator(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
   // Cartoon avatar drape (D-138): Pollinations image editing whenever its key is set, unless DRAPE_ENABLED=false.
   const imageEditor =
     config.DRAPE_ENABLED && config.POLLINATIONS_API_KEY

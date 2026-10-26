@@ -1,5 +1,6 @@
 import type { LookSlot, ProfileSizes } from '@styleme/contracts';
-import { categoryLabel, specHints } from '@/lib/discover/look-spec';
+import { specHints } from '@/lib/discover/look-spec';
+import { slotGarmentName } from '@/lib/outfits/look-text';
 import { SearchPhrase } from './SearchPhrase';
 import { SizeNote } from './SizeNote';
 import { SlotVisual } from './SlotVisual';
@@ -12,7 +13,7 @@ export function SlotRow({ slot, sizes }: { slot: LookSlot; sizes: ProfileSizes }
   const hints = specHints(spec);
   return (
     <li className="space-y-1.5 border-t border-border pt-3 first:border-t-0 first:pt-0">
-      <p className="text-sm font-medium">{categoryLabel(spec)}</p>
+      <p className="text-sm font-medium">{slotGarmentName(slot)}</p>
       <SlotVisual swatches={slot.swatches} illustration={slot.illustration} />
       {hints.length > 0 && <p className="text-xs text-muted-foreground">{hints.join(' · ')}</p>}
       <SearchPhrase phrase={slot.searchPhrase} />

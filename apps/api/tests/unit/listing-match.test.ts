@@ -143,6 +143,17 @@ describe('relevanceOf (Shop My Look accuracy)', () => {
     expect(relevanceOf('Women Brown Cotton Kurta', khakiKurta, 'women').conflicts).toEqual([]);
   });
 
+  it('flags black as a color conflict for white garments, and white for black garments', () => {
+    const whiteTrousers: LookSpec = {
+      category: 'trousers',
+      colorFamily: 'neutral',
+      colorId: 'white',
+      silhouette: 'straight',
+    };
+    expect(relevanceOf("Women's Black Straight Fit Trousers", whiteTrousers, 'women').conflicts).toContain('color');
+    expect(relevanceOf("Women's White Straight Fit Trousers", whiteTrousers, 'women').conflicts).not.toContain('color');
+  });
+
   it('does not count a blend as the fabric', () => {
     expect(matchedAttributes('Cotton Blend Kurta', khakiKurta)).toEqual(['category']);
     expect(matchedAttributes('Pure Cotton Kurta', khakiKurta)).toEqual(['category', 'fabric']);

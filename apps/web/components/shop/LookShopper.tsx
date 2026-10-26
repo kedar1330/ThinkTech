@@ -13,6 +13,7 @@ import {
 } from '@/lib/shop/look-shopper';
 import { SizeNote } from '@/components/outfits/SizeNote';
 import { SwatchList } from '@/components/outfits/SwatchList';
+import { slotGarmentName } from '@/lib/outfits/look-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -73,7 +74,7 @@ export function LookShopper({
       ) : (
         <ul aria-label="Parts of this look" className="grid gap-4 sm:grid-cols-2">
           {slots.map((slot) => {
-            const name = categoryLabel(slot.lookSpec.category);
+            const name = slotGarmentName(slot);
             return (
               <li key={slot.slotId} id={`slot-${slot.slotId}`} className="scroll-mt-20">
                 <Card

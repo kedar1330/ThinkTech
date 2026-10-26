@@ -60,6 +60,8 @@ export const BASE_CONFIG: Config = {
   DESIGN_ANALYSIS_TIMEOUT_MS: 30_000,
   CLOUDFLARE_ACCOUNT_ID: undefined,
   CLOUDFLARE_API_TOKEN: undefined,
+  CLOUDFLARE_ACCOUNT_ID_2: undefined,
+  CLOUDFLARE_API_TOKEN_2: undefined,
   CLOUDFLARE_IMAGE_MODEL: '@cf/black-forest-labs/flux-1-schnell',
   IMAGE_GENERATION_TIMEOUT_MS: 30_000,
   STYLE_ASSISTANT_AI_ENABLED: true,

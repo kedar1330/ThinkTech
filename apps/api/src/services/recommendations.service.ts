@@ -2,8 +2,14 @@ import { Types } from 'mongoose';
 import {
   bodyTypeProportion,
   heightBand,
+  CATEGORY_IDS,
   COLOR_IDS,
+  FABRIC_IDS,
+  PATTERN_IDS,
+  type Category,
   type ColorId,
+  type Fabric,
+  type Pattern,
   SILHOUETTE_IDS,
   type AppearanceResponse,
   type Look,
@@ -17,6 +23,7 @@ import type { AppearanceService } from './appearance.service';
 import type { ColourLibraryService } from './colour-library.service';
 import {
   AVOIDED_MAX_DISTANCE,
+  FEATURE_VALUE_MAP,
   LIKED_MAX_DISTANCE,
   generateLooks,
   nearestColour,
@@ -27,6 +34,7 @@ import {
   type ProfileWithMeasurements,
   type StyleLibrary,
 } from './engine';
+import { searchPhrase } from './engine/text';
 import type { MeasurementsService } from './measurements.service';
 import type { FeedbackService } from './feedback.service';
 import type { OutfitImageService } from './outfit-image.service';
@@ -195,20 +203,38 @@ export class RecommendationsService {
     if (request.design.garmentType === 'anarkali') {
       return toEngineDesign('anarkali', {});
     }
+    if (request.design.garmentType === 'saree_blouse') {
+      return toEngineDesign('saree_blouse', {});
+    }
     return null;
   }
 
   async recommend(userId: Types.ObjectId, request: RecommendationRequest): Promise<RecommendationResult> {
-    const [profileBase, signals, feedbackSignals, design, measurements] = await Promise.all([
+    const [profileBase, signals, feedbackSignals, selection, measurements] = await Promise.all([
       this.profiles
         .get(userId)
         .then((p) => this.withPaletteColours(userId, p, request.customColors))
         .then((p) => this.withStylingGoals(userId, p)),
       this.appearance.get(userId).then((a) => this.signalsFor(userId, a)),
       this.feedback ? this.feedback.getSignals(userId) : Promise.resolve(null),
-      this.designFor(userId, request),
+      request.design
+        ? this.models.UserDesignSelection.findOne({
+            userId,
+            garmentType: request.design.garmentType,
+            outfitCategory: request.design.outfitCategory,
+          }).lean()
+        : Promise.resolve(null),
       this.measurements ? this.measurements.get(userId) : Promise.resolve(null),
     ]);
+
+    const design = selection
+      ? toEngineDesign(selection.garmentType, (selection.selectedFeatures ?? {}) as Record<string, unknown>)
+      : request.design?.garmentType === 'anarkali'
+        ? toEngineDesign('anarkali', {})
+        : request.design?.garmentType === 'saree_blouse'
+          ? toEngineDesign('saree_blouse', {})
+          : null;
+
     const profile: ProfileWithMeasurements = {
       ...profileBase,
       measurements:
@@ -228,29 +254,184 @@ export class RecommendationsService {
       design,
     });
 
-    // If an anarkali design was chosen, update slots and explanations to describe Anarkali
-    const isAnarkali = request.design?.garmentType === 'anarkali';
-    if (isAnarkali) {
+    // Apply user's custom design features to the generated looks when a saved design exists
+    if (request.design && selection) {
+      const selectedFeatures = (selection.selectedFeatures ?? {}) as Record<string, string>;
+      const garmentType = request.design.garmentType;
+
+      let designedFabric: Fabric | undefined;
+      for (const [key, val] of Object.entries(selectedFeatures)) {
+        if (key === 'fabric' || (typeof val === 'string' && val.startsWith('fabric_'))) {
+          const raw = val.replace(/^fabric_/, '');
+          if ((FABRIC_IDS as readonly string[]).includes(raw)) {
+            designedFabric = raw as Fabric;
+            break;
+          }
+        }
+      }
+
+      let designedPattern: Pattern | undefined;
+      for (const [key, val] of Object.entries(selectedFeatures)) {
+        if (key === 'pattern' || (typeof val === 'string' && val.startsWith('pattern_'))) {
+          const raw = val.replace(/^pattern_/, '');
+          const mapped =
+            raw === 'polka_dot' ? 'polka_dots' : raw === 'striped' ? 'stripes' : raw;
+          if ((PATTERN_IDS as readonly string[]).includes(mapped)) {
+            designedPattern = mapped as Pattern;
+            break;
+          }
+        }
+      }
+
+      const getFeature = (attr: string) => {
+        const val = selectedFeatures[attr];
+        if (typeof val === 'string' && val.startsWith(`${attr}_`)) {
+          const raw = val.slice(attr.length + 1);
+          return FEATURE_VALUE_MAP[raw] ?? raw;
+        }
+        return design?.features?.[attr as keyof typeof design.features];
+      };
+
+      const designedNeckline = getFeature('neckline') as any;
+      const designedSleeve = getFeature('sleeve') as any;
+      const designedLength = getFeature('length') as any;
+      const designedSilhouette = getFeature('silhouette') as any;
+      const designedFit = getFeature('fit') as any;
+
+      const isOnePiece = ['dress', 'lehenga', 'saree', 'saree_blouse', 'anarkali', 'indo_western_gown', 'jumpsuit'].includes(garmentType);
+      const isBottom = ['trousers', 'jeans', 'palazzo', 'skirt', 'dhoti_pants'].includes(garmentType);
+
       for (const look of result.looks) {
-        for (const slot of look.slots) {
-          if (slot.slot === 'top' || slot.slot === 'one_piece') {
-            slot.searchPhrase = slot.searchPhrase.replace(/\b(kurti|kurta)\b/gi, 'flared anarkali suit');
-            for (const alt of slot.alternatives) {
-              alt.searchPhrase = alt.searchPhrase.replace(/\b(kurti|kurta)\b/gi, 'flared anarkali suit');
+        if (isOnePiece) {
+          let onePieceSlot = look.slots.find((s) => s.slot === 'one_piece');
+          if (!onePieceSlot) {
+            const topSlot = look.slots.find((s) => s.slot === 'top');
+            if (topSlot) {
+              topSlot.slot = 'one_piece';
+              topSlot.slotId = 'outfit';
+              onePieceSlot = topSlot;
+              look.slots = look.slots.filter((s) => s.slot !== 'bottom');
+            }
+          }
+
+          if (onePieceSlot) {
+            const cat =
+              garmentType === 'anarkali'
+                 ? 'kurti'
+                : garmentType === 'indo_western_gown' || garmentType === 'jumpsuit'
+                  ? 'dress'
+                  : garmentType === 'saree_blouse'
+                    ? 'saree'
+                    : (garmentType as Category);
+            if ((CATEGORY_IDS as readonly string[]).includes(cat)) {
+              onePieceSlot.lookSpec.category = cat;
+            }
+            if (designedFabric) onePieceSlot.lookSpec.fabric = designedFabric;
+            if (designedSilhouette) onePieceSlot.lookSpec.silhouette = designedSilhouette;
+            if (designedNeckline) onePieceSlot.lookSpec.neckline = designedNeckline;
+            if (designedSleeve) onePieceSlot.lookSpec.sleeve = designedSleeve;
+            if (designedLength) onePieceSlot.lookSpec.length = designedLength;
+            if (designedFit) onePieceSlot.lookSpec.fit = designedFit;
+            if (designedPattern) onePieceSlot.lookSpec.pattern = designedPattern;
+
+            onePieceSlot.searchPhrase = searchPhrase(onePieceSlot.lookSpec);
+            if (garmentType === 'anarkali') {
+              onePieceSlot.searchPhrase = onePieceSlot.searchPhrase.replace(/\b(kurti|kurta)\b/gi, 'flared anarkali suit');
+            } else if (garmentType === 'saree_blouse') {
+              onePieceSlot.searchPhrase = onePieceSlot.searchPhrase.replace(/\bsaree\b/gi, 'saree with saree blouse');
+            }
+            for (const alt of onePieceSlot.alternatives) {
+              alt.lookSpec.category = onePieceSlot.lookSpec.category;
+              if (designedNeckline) alt.lookSpec.neckline = designedNeckline;
+              if (designedSleeve) alt.lookSpec.sleeve = designedSleeve;
+              if (designedLength) alt.lookSpec.length = designedLength;
+              alt.searchPhrase = searchPhrase(alt.lookSpec);
+              if (garmentType === 'anarkali') {
+                alt.searchPhrase = alt.searchPhrase.replace(/\b(kurti|kurta)\b/gi, 'flared anarkali suit');
+              } else if (garmentType === 'saree_blouse') {
+                alt.searchPhrase = alt.searchPhrase.replace(/\bsaree\b/gi, 'saree with saree blouse');
+              }
+            }
+          }
+        } else if (isBottom) {
+          const bottomSlot = look.slots.find((s) => s.slot === 'bottom');
+          if (bottomSlot) {
+            if (designedFabric) bottomSlot.lookSpec.fabric = designedFabric;
+            if (designedSilhouette) bottomSlot.lookSpec.silhouette = designedSilhouette;
+            if (designedFit) bottomSlot.lookSpec.fit = designedFit;
+            if (designedPattern) bottomSlot.lookSpec.pattern = designedPattern;
+            bottomSlot.searchPhrase = searchPhrase(bottomSlot.lookSpec);
+            if (garmentType === 'palazzo') {
+              bottomSlot.searchPhrase = bottomSlot.searchPhrase.replace(/\b(trousers|jeans)\b/gi, 'palazzo');
+            } else if (garmentType === 'dhoti_pants') {
+              bottomSlot.searchPhrase = bottomSlot.searchPhrase.replace(/\b(trousers|jeans)\b/gi, 'dhoti pants');
+            } else if (garmentType === 'skirt') {
+              bottomSlot.searchPhrase = bottomSlot.searchPhrase.replace(/\b(trousers|jeans)\b/gi, 'skirt');
+            }
+            for (const alt of bottomSlot.alternatives) {
+              alt.searchPhrase = searchPhrase(alt.lookSpec);
+              if (garmentType === 'palazzo') {
+                alt.searchPhrase = alt.searchPhrase.replace(/\b(trousers|jeans)\b/gi, 'palazzo');
+              } else if (garmentType === 'dhoti_pants') {
+                alt.searchPhrase = alt.searchPhrase.replace(/\b(trousers|jeans)\b/gi, 'dhoti pants');
+              } else if (garmentType === 'skirt') {
+                alt.searchPhrase = alt.searchPhrase.replace(/\b(trousers|jeans)\b/gi, 'skirt');
+              }
+            }
+          }
+        } else {
+          const topSlot = look.slots.find((s) => s.slot === 'top' || s.slot === 'one_piece');
+          if (topSlot) {
+            if (designedFabric) topSlot.lookSpec.fabric = designedFabric;
+            if (designedSilhouette) topSlot.lookSpec.silhouette = designedSilhouette;
+            if (designedNeckline) topSlot.lookSpec.neckline = designedNeckline;
+            if (designedSleeve) topSlot.lookSpec.sleeve = designedSleeve;
+            if (designedLength) topSlot.lookSpec.length = designedLength;
+            if (designedFit) topSlot.lookSpec.fit = designedFit;
+            if (designedPattern) topSlot.lookSpec.pattern = designedPattern;
+            topSlot.searchPhrase = searchPhrase(topSlot.lookSpec);
+            if (garmentType === 'top') {
+              topSlot.searchPhrase = topSlot.searchPhrase.replace(/\b(shirt|t-shirt)\b/gi, 'top');
+            } else if (garmentType === 'blouse') {
+              topSlot.searchPhrase = topSlot.searchPhrase.replace(/\b(shirt|t-shirt)\b/gi, 'blouse');
+            }
+            for (const alt of topSlot.alternatives) {
+              alt.searchPhrase = searchPhrase(alt.lookSpec);
+              if (garmentType === 'top') {
+                alt.searchPhrase = alt.searchPhrase.replace(/\b(shirt|t-shirt)\b/gi, 'top');
+              } else if (garmentType === 'blouse') {
+                alt.searchPhrase = alt.searchPhrase.replace(/\b(shirt|t-shirt)\b/gi, 'blouse');
+              }
             }
           }
         }
+
+        look.designMatch = { level: 'full', differs: [] };
       }
     }
 
     // Optional AI wording (FR-LOOK-16) runs after the deterministic result; a failure keeps the template text.
+    const isAnarkali = request.design?.garmentType === 'anarkali';
+    const isDress = request.design?.garmentType === 'dress';
+    const isSaree = request.design?.garmentType === 'saree' || request.design?.garmentType === 'saree_blouse';
+
     const worded = await Promise.all(
       result.looks.map((look) => {
+        let transformedExplanation = look.explanation;
         if (isAnarkali) {
-          const transformedExplanation = look.explanation.replace(/\b(kurti|kurta)\b/gi, 'anarkali suit');
-          return this.wording.reword({ ...look, explanation: transformedExplanation }, request.occasion);
+          transformedExplanation = transformedExplanation.replace(/\b(kurti|kurta)\b/gi, 'anarkali suit');
+        } else if (isDress) {
+          transformedExplanation = transformedExplanation.replace(
+            /\b(shirt and (tailored )?trousers|t-shirt and jeans|kurti with straight trousers)\b/gi,
+            'classic dress',
+          );
+        } else if (isSaree) {
+          transformedExplanation = transformedExplanation.replace(
+            /\b(shirt and (tailored )?trousers|t-shirt and jeans|kurti with straight trousers|kurta set)\b/gi,
+            'traditional saree',
+          );
         }
-        return this.wording.reword(look, request.occasion);
+        return this.wording.reword({ ...look, explanation: transformedExplanation }, request.occasion);
       }),
     );
     const warnings: WarningCode[] = [...result.warnings];
@@ -282,6 +463,11 @@ export class RecommendationsService {
       let explanation = worded[i]!.explanation;
       if (isAnarkali) {
         explanation = explanation.replace(/\b(kurti|kurta)\b/gi, 'anarkali suit');
+      } else if (isDress) {
+        explanation = explanation.replace(
+          /\b(shirt and (tailored )?trousers|t-shirt and jeans|kurti with straight trousers)\b/gi,
+          'classic dress',
+        );
       }
       return {
         _id: new Types.ObjectId(),

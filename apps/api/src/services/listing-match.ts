@@ -33,17 +33,58 @@ const SYNONYMS: Record<string, string[]> = {
   'neckline:square': ['square neck'],
   'neckline:sweetheart': ['sweetheart'],
   'neckline:high_neck': ['high neck', 'turtle neck', 'turtleneck'],
+  'neckline:off_shoulder': ['off shoulder', 'off-shoulder', 'bardot', 'shoulderless'],
+  'neckline:one_shoulder': ['one shoulder', 'one-shoulder', 'single shoulder'],
+  'neckline:halter': ['halter', 'halter neck', 'halterneck'],
+  'neckline:cowl': ['cowl', 'cowl neck'],
+  'neckline:strapless': ['strapless', 'tube'],
+  'neckline:scoop': ['scoop', 'scoop neck'],
+  'neckline:keyhole': ['keyhole', 'keyhole neck'],
   'sleeve:sleeveless': ['sleeveless'],
+  'sleeve:spaghetti_strap': ['spaghetti strap', 'spaghetti straps', 'spaghetti', 'strap dress', 'strappy', 'sleeveless', 'shoulder strap'],
+  'sleeve:off_shoulder': ['off shoulder', 'off-shoulder', 'cold shoulder'],
   'sleeve:cap': ['cap sleeve'],
   'sleeve:short': ['short sleeve', 'half sleeve'],
   'sleeve:elbow': ['elbow sleeve', 'elbow length'],
   'sleeve:three_quarter': ['three-quarter', 'three quarter', '3/4'],
   'sleeve:full': ['full sleeve', 'long sleeve'],
+  'sleeve:puff': ['puff sleeve', 'puffed sleeve', 'balloon sleeve'],
+  'sleeve:bell': ['bell sleeve', 'flared sleeve'],
+  'sleeve:flutter': ['flutter sleeve', 'ruffle sleeve'],
+  'sleeve:strapless': ['strapless', 'tube'],
   'pattern:solid': ['plain'],
   'pattern:stripes': ['stripe', 'striped'],
   'pattern:checks': ['check', 'checked', 'checkered'],
   'pattern:polka_dots': ['polka'],
   'fit:relaxed': ['loose'],
+  // Colours commonly written in varied ways by stores
+  'color:powder_blue': ['powder blue', 'light blue', 'sky blue', 'baby blue', 'pastel blue', 'ice blue'],
+  'color:sky_blue': ['sky blue', 'light blue', 'baby blue', 'pastel blue'],
+  'color:navy': ['navy', 'navy blue', 'dark blue'],
+  'color:royal_blue': ['royal blue'],
+  'color:charcoal': ['charcoal', 'charcoal grey', 'dark grey'],
+  'color:ivory': ['ivory', 'off white', 'off-white'],
+  'color:cream': ['cream', 'ivory', 'off white', 'off-white'],
+  'color:rama_green': ['rama green', 'teal', 'sea green', 'turquoise', 'peacock green'],
+  'color:sea_green': ['sea green', 'teal', 'mint', 'mint green', 'aqua'],
+  'color:pista_green': ['pista', 'pista green', 'pistachio', 'mint', 'light green', 'sage green', 'sage'],
+  'color:mehendi_green': ['mehendi green', 'olive', 'olive green', 'mehndi'],
+  'color:olive': ['olive', 'olive green', 'army green'],
+  'color:mustard': ['mustard', 'mustard yellow'],
+  'color:lemon_yellow': ['lemon yellow', 'light yellow'],
+  'color:haldi_yellow': ['haldi yellow', 'golden yellow', 'turmeric yellow'],
+  'color:onion_pink': ['onion pink', 'mauve', 'dusty pink', 'rose pink'],
+  'color:rani_pink': ['rani pink', 'magenta', 'hot pink', 'dark pink', 'fuchsia'],
+  'color:baby_pink': ['baby pink', 'light pink', 'pastel pink', 'blush pink'],
+  'color:wine': ['wine', 'burgundy', 'maroon', 'dark red'],
+  'color:coffee': ['coffee', 'coffee brown', 'dark brown', 'chocolate'],
+  'color:khaki': ['khaki', 'tan', 'camel'],
+  'color:beige': ['beige', 'nude', 'sand'],
+  'color:aubergine': ['aubergine', 'eggplant', 'deep purple'],
+  'color:lavender': ['lavender', 'lilac', 'light purple'],
+  'color:rust': ['rust', 'rust orange', 'terracotta', 'burnt orange'],
+  'color:coral': ['coral', 'coral pink'],
+  'color:peach': ['peach', 'light peach', 'peach pink'],
 };
 
 /**
@@ -151,21 +192,53 @@ const SET_TERMS = [
 
 /** Plain colour words stores use besides the vocabulary's shades, by colour family. */
 const FAMILY_WORDS: Record<string, string[]> = {
-  red: ['red'],
-  pink: ['pink'],
-  orange: ['orange'],
-  yellow: ['yellow'],
-  green: ['green'],
-  blue: ['blue'],
-  purple: ['purple', 'violet'],
-  brown: ['brown'],
+  red: ['red', 'maroon', 'burgundy', 'wine', 'crimson'],
+  pink: ['pink', 'rani', 'magenta', 'fuchsia', 'rose'],
+  orange: ['orange', 'rust', 'peach', 'coral', 'terracotta'],
+  yellow: ['yellow', 'mustard', 'lemon', 'haldi'],
+  green: ['green', 'olive', 'pista', 'mehndi', 'mehendi'],
+  blue: ['blue', 'teal', 'turquoise', 'aqua', 'cyan'],
+  purple: ['purple', 'violet', 'lavender', 'lilac', 'plum', 'mauve', 'aubergine'],
+  brown: ['brown', 'coffee', 'chocolate', 'tan', 'camel', 'khaki'],
+  neutral: ['black', 'white', 'grey', 'gray', 'charcoal', 'beige', 'cream', 'ivory', 'off white', 'off-white'],
 };
 
+const LIGHT_NEUTRALS = new Set(['white', 'ivory', 'cream', 'off_white']);
+const DARK_NEUTRALS = new Set(['black', 'charcoal']);
+const LIGHT_BLUES = new Set(['powder_blue', 'sky_blue']);
+const DARK_BLUES = new Set(['navy', 'royal_blue']);
+const LIGHT_GREENS = new Set(['pista_green', 'sea_green']);
+const DARK_GREENS = new Set(['olive', 'mehendi_green']);
+
 /** Colour words of other families than `family`. Metallics are left out: "gold" is usually zari or work. */
-function otherColourWords(family: string): string[] {
-  const shades = COLORS.filter((c) => c.family !== family && c.family !== 'metallic').map((c) => c.label);
+function otherColourWords(family: string, specColorId?: string): string[] {
+  const shades = COLORS.filter((c) => {
+    if (c.family !== family && c.family !== 'metallic') return true;
+    if (family === 'neutral' && specColorId) {
+      if (LIGHT_NEUTRALS.has(specColorId) && DARK_NEUTRALS.has(c.id)) return true;
+      if (DARK_NEUTRALS.has(specColorId) && LIGHT_NEUTRALS.has(c.id)) return true;
+    }
+    if (family === 'blue' && specColorId) {
+      if (LIGHT_BLUES.has(specColorId) && DARK_BLUES.has(c.id)) return true;
+      if (DARK_BLUES.has(specColorId) && LIGHT_BLUES.has(c.id)) return true;
+    }
+    if (family === 'green' && specColorId) {
+      if (LIGHT_GREENS.has(specColorId) && DARK_GREENS.has(c.id)) return true;
+      if (DARK_GREENS.has(specColorId) && LIGHT_GREENS.has(c.id)) return true;
+    }
+    return false;
+  }).map((c) => c.label.toLowerCase());
+
   const plain = Object.entries(FAMILY_WORDS).flatMap(([f, words]) => (f === family ? [] : words));
-  return [...shades, ...plain].map((w) => w.toLowerCase());
+  const extras: string[] = [];
+  if (family === 'blue' && specColorId && LIGHT_BLUES.has(specColorId)) {
+    extras.push('navy', 'dark blue', 'royal blue');
+  } else if (family === 'blue' && specColorId && DARK_BLUES.has(specColorId)) {
+    extras.push('powder blue', 'light blue', 'sky blue', 'baby blue');
+  } else if (family === 'green' && specColorId && LIGHT_GREENS.has(specColorId)) {
+    extras.push('olive', 'mehendi', 'dark green');
+  }
+  return [...shades, ...plain, ...extras];
 }
 
 /** The reasons a listing doesn't fit the garment and the look's department (`women`, `men` or `any`). */
@@ -192,10 +265,14 @@ export function conflictsOf(title: string, spec: LookSpec, department: string | 
   }
   const slotType = CATEGORIES.find((c) => c.id === spec.category)?.slotType;
   if (slotType !== 'one_piece' && hasAny(text, SET_TERMS)) conflicts.push('set');
-  // Another colour counts only when the title names a colour of another family, and neither the garment's own
-  // colour nor its family.
-  const own = [...termsFor('color', spec.colorId), ...(FAMILY_WORDS[spec.colorFamily] ?? [])];
-  if (!hasAny(text, own) && hasAny(text, otherColourWords(spec.colorFamily))) conflicts.push('color');
+  // Another colour counts when the title names a conflicting colour and not the garment's own colour.
+  const ownTerms = termsFor('color', spec.colorId);
+  const hasOwnSpecific = ownTerms.length > 0 && hasAny(text, ownTerms);
+  const otherColours = otherColourWords(spec.colorFamily, spec.colorId);
+  const hasOther = hasAny(text, otherColours);
+  if (hasOther && !hasOwnSpecific) {
+    conflicts.push('color');
+  }
   return conflicts;
 }
 
@@ -223,12 +300,19 @@ export interface ListingRelevance {
   score: number;
 }
 
-/** Best fit first: confirmed for the department, then the higher score, then the lower price. */
+/** Best fit first: confirmed for the department, then matching colour, then the higher score, then the lower price. */
 export function byRelevance(
-  a: { confirmed: boolean; score: number; price: number },
-  b: { confirmed: boolean; score: number; price: number },
+  a: { confirmed: boolean; score: number; price: number; matched?: LookSpecAttribute[] },
+  b: { confirmed: boolean; score: number; price: number; matched?: LookSpecAttribute[] },
 ): number {
-  return Number(b.confirmed) - Number(a.confirmed) || b.score - a.score || a.price - b.price;
+  const aColor = a.matched?.includes('color') ? 1 : 0;
+  const bColor = b.matched?.includes('color') ? 1 : 0;
+  return (
+    Number(b.confirmed) - Number(a.confirmed) ||
+    bColor - aColor ||
+    b.score - a.score ||
+    a.price - b.price
+  );
 }
 
 /** How well a store listing fits one garment of a look. */

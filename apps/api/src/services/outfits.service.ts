@@ -42,6 +42,12 @@ function toLook(doc: StoredOutfit): Look {
   const cleanSlots = (doc.slots ?? []).map((s) => ({
     ...s,
     slotId: s.slotId === 'one_piece' ? 'one-piece' : s.slotId,
+    searchPhrase:
+      s.searchPhrase === 'trousers pants'
+        ? 'white straight trousers'
+        : s.searchPhrase === 'cotton shirt top'
+          ? 'white cotton shirt'
+          : s.searchPhrase,
     lookSpec: {
       ...s.lookSpec,
       category:

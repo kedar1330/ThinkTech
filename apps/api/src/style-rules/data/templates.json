@@ -940,7 +940,7 @@
     "reviewedAt": "2026-10-19",
     "name": "Work and formal saree",
     "department": "women",
-    "occasions": ["work", "formal"],
+    "occasions": ["work", "formal", "everyday", "date", "travel"],
     "styles": ["classic", "traditional", "minimal"],
     "slots": [
       {
