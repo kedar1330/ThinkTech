@@ -97,7 +97,9 @@ export function ModelViews({
   const srcOf = (view: DrapeView) =>
     drapeId && stateOf(view) === 'ready'
       ? `/api/try-on/drapes/${drapeId}/image?view=${view}`
-      : `/api/try-on/avatars/${department}`;
+      : attempt > 0
+        ? `/api/try-on/avatars/${department}?t=${attempt}`
+        : `/api/try-on/avatars/${department}`;
   // A view that isn't ready shows the front meanwhile.
   const shown: DrapeView = stateOf(selected) === 'ready' ? selected : 'front';
   const garments = items.map((i) => i.title).join(', ');

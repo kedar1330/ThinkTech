@@ -11,8 +11,9 @@ import {
 } from '@styleme/contracts';
 import type { ImageEditor } from '../integrations/image/image-edit-client';
 import { ImageProviderError, type ImageGenerator } from '../integrations/image/image-client';
-import type { Models, TryOnDrapeDoc } from '../models/index';
+import type { Models, TryOnDrapeDoc, UserPhotoDoc } from '../models/index';
 import { AppError } from '../utils/errors';
+import { describeModelPhoto } from '../integrations/ai/vision-client';
 import { detectImageType } from './photo.service';
 import type { StoredGarment, TryOnService } from './try-on.service';
 
@@ -46,9 +47,14 @@ const PART: Record<StoredGarment['category'], string> = {
 };
 
 /** The edit instruction for one garment; it describes only the model and the garment. */
-export function drapePrompt(garment: Pick<StoredGarment, 'category' | 'title'>): string {
+export function drapePrompt(
+  garment: Pick<StoredGarment, 'category' | 'title'>,
+  modelDescription?: string,
+): string {
+  const itemNote = garment.title ? ` The specific garment is: ${garment.title}. Match this exact garment, color, and style.` : '';
+  const modelNote = modelDescription ? ` Model: ${modelDescription}.` : '';
   return [
-    'Dress the person in the first image in the garment shown in the second image (a store product photo).',
+    `Dress the person in the first image in the garment shown in the second image (a store product photo).${itemNote}${modelNote}`,
     `Replace ${PART[garment.category]}.`,
     'Copy the garment’s colour, print, embroidery, neckline, sleeves and length, fitted naturally to the body.',
     'Keep the face, hair, skin, pose, shoes, framing, lighting and the dark studio backdrop exactly the same. Photorealistic. No text, no logos.',
@@ -63,9 +69,15 @@ const VIEW_TURNS: Record<Exclude<DrapeView, 'front'>, string> = {
   back: 'turned around so we see the person from directly behind (back view)',
 };
 
-export function viewPrompt(view: Exclude<DrapeView, 'front'>): string {
+export function viewPrompt(
+  view: Exclude<DrapeView, 'front'>,
+  outfitTitle?: string,
+  modelDescription?: string,
+): string {
+  const note = outfitTitle ? ` (${outfitTitle})` : '';
+  const modelNote = modelDescription ? ` Model: ${modelDescription}.` : '';
   return [
-    `Show the same person, wearing exactly the same outfit, ${VIEW_TURNS[view]}.`,
+    `Show the same person${modelNote}, wearing exactly the same outfit${note}, ${VIEW_TURNS[view]}.`,
     'Same face, hair, skin, outfit colours, print, embroidery and length, same shoes, same dark studio backdrop, framing and lighting.',
     'Full body from head to feet, photorealistic. No text, no logos.',
   ].join(' ');
@@ -115,8 +127,47 @@ export class DrapeService {
     return this.editor !== null && this.generators.length > 0;
   }
 
-  /** The undressed model for a Clothing Preference, generated on first use (or when the prompts change), then shared. */
-  async avatar(department: AvatarDepartment): Promise<{ data: Buffer; contentType: string }> {
+  /** The undressed model for a Clothing Preference, or the user's saved profile photo when available. */
+  async avatar(
+    department: AvatarDepartment,
+    userId?: Types.ObjectId,
+  ): Promise<{ data: Buffer; contentType: string; modelDescription?: string }> {
+    if (userId) {
+      const profile = await this.models.Profile.findOne({ userId }).lean();
+      const tryOnModel = profile?.tryOnModel ?? 'custom_photo';
+
+      if (tryOnModel !== 'dummy_model') {
+        // Prefer user's uploaded 3D model/body reference photo
+        const photo = await this.models.UserPhoto.findOne({ userId, kind: 'body' })
+          .sort({ uploadedAt: -1 })
+          .select('+data +contentType')
+          .lean<UserPhotoDoc & { _id: Types.ObjectId; data?: unknown; description?: string }>();
+        const data = bufferOf(photo?.data);
+        if (data?.length && photo?.contentType) {
+          let modelDescription: string | undefined = photo.description ?? undefined;
+          if (!modelDescription) {
+            try {
+              const generated = await describeModelPhoto({ bytes: data, contentType: photo.contentType });
+              if (generated) {
+                modelDescription = generated;
+                await this.models.UserPhoto.updateOne({ _id: photo._id }, { $set: { description: generated } });
+              }
+            } catch {
+              // fall back below
+            }
+          }
+          if (!modelDescription) {
+            modelDescription = `${department === 'men' ? 'a young man' : 'a young woman'}, slender build, standing straight with a gentle warm smile`;
+          }
+          return {
+            data,
+            contentType: photo.contentType,
+            modelDescription,
+          };
+        }
+      }
+    }
+
     const stored = await this.models.TryOnAvatar.findOne({ department }).select('+image').lean();
     const data = bufferOf(stored?.image?.data);
     if (data?.length && stored?.image?.contentType && stored.promptVersion === DRAPE_PROMPT_VERSION) {
@@ -161,15 +212,17 @@ export class DrapeService {
       items: request.items,
       notice: TRY_ON_NOTICE_VERSION,
     });
-    const avatar = await this.avatar(request.department);
+    const avatar = await this.avatar(request.department, userId);
+    const modelDescription = avatar.modelDescription;
     const cacheKey = createHash('sha256')
       .update(
         [
           request.department,
           createHash('sha256').update(avatar.data).digest('hex'),
-          editor.models.join(','),
+          editor ? editor.models.join(',') : this.generators.map((g) => g.model).join(','),
           DRAPE_PROMPT_VERSION,
-          ...garments.map((g) => `${g.category}|${g.imageUrl}`),
+          modelDescription ?? '',
+          ...garments.map((g) => `${g.category}|${g.imageUrl}|${g.title}`),
         ].join('\n'),
       )
       .digest('hex');
@@ -182,15 +235,15 @@ export class DrapeService {
 
     // One garment at a time, each on the last result: one edit per garment keeps the avatar unchanged.
     let current = dataUri(avatar.data, avatar.contentType);
-    let picture: { bytes: Buffer; contentType: string; model: string } | null = null;
+    let picture: { bytes: Buffer; contentType: string; model: string; provider: string } | null = null;
     for (const garment of garments) {
       try {
         const edited = await this.within(this.timeouts.editMs, (signal) =>
-          editor.edit({ prompt: drapePrompt(garment), images: [current, garment.imageUrl] }, signal),
+          editor.edit({ prompt: drapePrompt(garment, modelDescription), images: [current, garment.imageUrl] }, signal),
         );
         const contentType = detectImageType(edited.bytes);
         if (!contentType || edited.bytes.length > IMAGE_MAX_BYTES) throw new ImageProviderError('invalid_output');
-        picture = { bytes: edited.bytes, contentType, model: edited.model };
+        picture = { bytes: edited.bytes, contentType, model: edited.model, provider: editor.name };
         current = dataUri(edited.bytes, contentType);
       } catch (err) {
         this.warn('drape', editor.name, err);
@@ -199,16 +252,19 @@ export class DrapeService {
       }
     }
 
+    if (!picture) throw new AppError('AI_UNAVAILABLE', FAILED);
+
     const now = this.now();
     const doc = await this.models.TryOnDrape.create({
       userId,
       outfitId,
       department: request.department,
       cacheKey,
+      modelDescription,
       garments,
-      image: { data: picture!.bytes, contentType: picture!.contentType },
-      provider: editor.name,
-      model: picture!.model,
+      image: { data: picture.bytes, contentType: picture.contentType },
+      provider: picture.provider,
+      model: picture.model,
       promptVersion: DRAPE_PROMPT_VERSION,
       expiresAt: new Date(now.getTime() + TRY_ON_KEEP_HOURS * 60 * 60 * 1000),
     });
@@ -242,15 +298,20 @@ export class DrapeService {
     if (!Types.ObjectId.isValid(id)) throw new AppError('NOT_FOUND');
     const doc = await this.models.TryOnDrape.findOne({ _id: id, userId })
       .select('+image')
-      .lean<StoredDrape & { image?: { data?: unknown; contentType?: string } }>();
+      .lean<StoredDrape & { image?: { data?: unknown; contentType?: string }; modelDescription?: string }>();
     const front = bufferOf(doc?.image?.data);
     if (!doc || !front?.length || !doc.image?.contentType) throw new AppError('NOT_FOUND');
     if (doc.viewsReady?.includes(view)) return toDrape(doc);
 
+    const outfitTitle = (doc.garments as StoredGarment[])?.map((g) => g.title).filter(Boolean).join(', ');
+    const modelDescription = doc.modelDescription || undefined;
     let picture: { bytes: Buffer; contentType: string };
     try {
       const edited = await this.within(this.timeouts.editMs, (signal) =>
-        editor.edit({ prompt: viewPrompt(view), images: [dataUri(front, doc.image!.contentType!)] }, signal),
+        editor.edit({
+          prompt: viewPrompt(view, outfitTitle || undefined, modelDescription),
+          images: [dataUri(front, doc.image!.contentType!)],
+        }, signal),
       );
       const contentType = detectImageType(edited.bytes);
       if (!contentType || edited.bytes.length > IMAGE_MAX_BYTES) throw new ImageProviderError('invalid_output');
@@ -260,6 +321,7 @@ export class DrapeService {
       const cause = err instanceof ImageProviderError ? err.cause : 'provider_error';
       throw new AppError(cause === 'rate_limited' ? 'RATE_LIMITED' : 'AI_UNAVAILABLE', VIEW_FAILED);
     }
+
     const updated = await this.models.TryOnDrape.findOneAndUpdate(
       { _id: doc._id, userId },
       {

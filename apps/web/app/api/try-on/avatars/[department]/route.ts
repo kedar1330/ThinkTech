@@ -13,7 +13,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ dep
   return new Response(image.bytes, {
     headers: {
       'content-type': image.contentType,
-      'cache-control': 'private, max-age=86400',
+      'cache-control': 'private, no-cache, no-store, must-revalidate',
       'x-content-type-options': 'nosniff',
     },
   });

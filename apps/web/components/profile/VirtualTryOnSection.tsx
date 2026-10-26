@@ -31,12 +31,10 @@ export function VirtualTryOnSection({ profile, photos }: { profile: ProfileRespo
   function handleModelSelect(choice: TryOnModel) {
     setSelectedModel(choice);
     setStatus(null);
-    if (choice === 'dummy_model') {
-      startTransition(async () => {
-        const res = await saveTryOnModelAction('dummy_model');
-        setStatus(res ? { error: res.error, success: res.success } : null);
-      });
-    }
+    startTransition(async () => {
+      const res = await saveTryOnModelAction(choice);
+      setStatus(res ? { error: res.error, success: res.success } : null);
+    });
   }
 
   function handleFileSelect(next: File | undefined) {

@@ -117,7 +117,7 @@ const envSchema = z.object({
   DRAPE_MODELS: z
     .string()
     .trim()
-    .default('black-forest-labs/flux.2-klein-4b,openai/gpt-image-1-mini')
+    .default('community/scriptsnsenses-sys/flux-2-dev-free,black-forest-labs/flux.2-klein-4b,openai/gpt-image-1-mini')
     .transform((v) =>
       v
         .split(',')

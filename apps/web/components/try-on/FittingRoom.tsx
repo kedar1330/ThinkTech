@@ -7,6 +7,7 @@ import {
   PRICE_RANGE_STORES,
   lookProductMatchesSchema,
   type BodyType,
+  type Design,
   type Look,
   type LookPick,
   type LookProductMatches,
@@ -31,6 +32,7 @@ import {
   takeOff,
   wear,
   type WornItem,
+  type WornListing,
 } from '@/lib/try-on/garments';
 import { cn } from '@/lib/utils';
 import { ModelViews } from './ModelViews';
@@ -40,11 +42,14 @@ import { TryOnStudio } from './TryOnStudio';
 type Slot = Look['slots'][number];
 type State = { kind: 'loading' } | { kind: 'ready'; matches: LookProductMatches } | { kind: 'unavailable' };
 
-const storeName = (id: string) => PRICE_RANGE_STORES.find((s) => s.id === id)?.label ?? id;
+const storeName = (id: string) => {
+  if (id === 'styleme' || id === 'original_look' || id === 'design_studio') return 'Original Look';
+  return PRICE_RANGE_STORES.find((s) => s.id === id)?.label ?? id;
+};
 const slotName = (slot: Slot) => vocabLabel(CATEGORIES, slot.lookSpec.category);
 
 /** A worn item for a listing, in the look's colour for that part until the picture's own colour is read. */
-function worn(slot: Slot, listing: ProductListing): WornItem {
+function worn(slot: Slot, listing: WornListing): WornItem {
   return {
     slotId: slot.slotId,
     slot: slot.slot,
@@ -54,34 +59,62 @@ function worn(slot: Slot, listing: ProductListing): WornItem {
   };
 }
 
+/** The original look garment specification for a slot */
+export function originalListingFor(slot: Slot, lookId: string, design?: Design): WornListing {
+  const swatch = slot.swatches[0];
+  const colorName = swatch?.name ? `${swatch.name} ` : '';
+  const categoryName = vocabLabel(CATEGORIES, slot.lookSpec.category);
+  const title = design ? design.title : `Original ${colorName}${categoryName}`.trim();
+  const imageUrl = design
+    ? `/api/design-studio/designs/${design.id}/image`
+    : `/api/outfits/${lookId}/image`;
+
+  return {
+    store: design ? 'styleme' : 'original_look',
+    title,
+    price: 0,
+    imageUrl,
+  };
+}
+
 /** A part's items as Shop My Look lists them: matches for the look first, then other styles (#133). */
 function allListings(matches: LookProductMatches, slotId: string): ProductListing[] {
   const slot = matches.slots.find((s) => s.slotId === slotId);
   return [...(slot?.listings ?? []), ...(slot?.alternatives ?? [])];
 }
 
-/** The first outfit: the item clicked in Shop My Look, or each part's saved item, else its first with a picture. */
-function initialOutfit(
-  matches: LookProductMatches,
+/** The first outfit: the original look/dress first! Only if opened with a specific clicked item from Shop My Look, that item is worn. */
+export function initialOutfit(
+  matches: LookProductMatches | null,
   slots: readonly Slot[],
   picks: readonly LookPick[],
   start: { slotId?: string; item?: TryOnItem },
+  lookId: string,
+  design?: Design,
 ): WornItem[] {
-  const listingsOf = (slotId: string) => allListings(matches, slotId).filter((l) => l.imageUrl);
-  const choose = (slot: Slot) => {
-    const listings = listingsOf(slot.slotId);
-    const pick = picks.find((p) => p.slotId === slot.slotId);
-    return (
-      (start.item && start.slotId === slot.slotId && listings.find((l) => sameListing(l, start.item!))) ||
-      (pick && listings.find((l) => sameListing(l, pick))) ||
-      listings[0]
-    );
-  };
-  const parts = start.slotId ? slots.filter((s) => s.slotId === start.slotId) : slots;
+  // If the user clicked a specific store item in Shop My Look to try on:
+  if (start.item && start.slotId) {
+    const targetSlot = slots.find((s) => s.slotId === start.slotId);
+    if (targetSlot) {
+      const matchInMatches = matches
+        ? allListings(matches, start.slotId).find((l) => l.imageUrl && sameListing(l, start.item!))
+        : undefined;
+      const chosenListing: WornListing = matchInMatches ?? {
+        store: start.item.store,
+        title: start.item.title,
+        link: (start.item as { link?: string }).link ?? '',
+        price: start.item.price,
+        imageUrl: start.item.imageUrl,
+      };
+      return [worn(targetSlot, chosenListing)];
+    }
+  }
+
+  // DEFAULT FLOW (from Discover My Look, Shop My Look, or Design Studio):
+  // Put the ORIGINAL look/dress on FIRST!
   let next: WornItem[] = [];
-  for (const slot of parts) {
-    const listing = choose(slot);
-    if (listing) next = wear(next, worn(slot, listing));
+  for (const slot of slots) {
+    next = wear(next, worn(slot, originalListingFor(slot, lookId, design)));
   }
   return next;
 }
@@ -100,6 +133,7 @@ export function FittingRoom({
   picks,
   start,
   overview,
+  design,
 }: {
   look: Pick<Look, 'id' | 'slots'>;
   department: Department;
@@ -108,16 +142,20 @@ export function FittingRoom({
   /** What was clicked in Shop My Look: one item, one part of the look, or (neither) the whole look. */
   start: { slotId?: string; item?: TryOnItem };
   overview: TryOnOverview;
+  design?: Design;
 }) {
   const [state, setState] = useState<State>({ kind: 'loading' });
-  const [outfit, setOutfit] = useState<WornItem[]>([]);
+  const slots = useMemo(() => garmentSlots(look).filter((s) => isWearable(s.slot)), [look]);
+  const proportions = useMemo(() => proportionsFor(bodyType), [bodyType]);
+
+  // Start with the original look/dress right away
+  const [outfit, setOutfit] = useState<WornItem[]>(() =>
+    initialOutfit(null, slots, picks, start, look.id, design),
+  );
   const [tab, setTab] = useState<string | null>(start.slotId ?? null);
   const [colours, setColours] = useState<Record<string, string>>({});
   const [realistic, setRealistic] = useState(false);
   const [view, setView] = useState<'model' | '3d'>('model');
-
-  const slots = useMemo(() => garmentSlots(look).filter((s) => isWearable(s.slot)), [look]);
-  const proportions = useMemo(() => proportionsFor(bodyType), [bodyType]);
 
   // The clothes for this look, from the same store searches as Shop My Look (cached for a day).
   useEffect(() => {
@@ -129,7 +167,10 @@ export function FittingRoom({
         if (cancelled) return;
         if (!parsed?.success) return setState({ kind: 'unavailable' });
         setState({ kind: 'ready', matches: parsed.data });
-        setOutfit(initialOutfit(parsed.data, slots, picks, start));
+        // Only update outfit if the user specifically requested a start item from shop
+        if (start.item && start.slotId) {
+          setOutfit(initialOutfit(parsed.data, slots, picks, start, look.id, design));
+        }
       } catch {
         if (!cancelled) setState({ kind: 'unavailable' });
       }
@@ -160,7 +201,7 @@ export function FittingRoom({
   const activeTab = tab ?? slots[0]?.slotId ?? null;
   const activeSlot = slots.find((s) => s.slotId === activeTab);
   const tabListings = state.kind === 'ready' && activeSlot ? allListings(state.matches, activeSlot.slotId) : [];
-  const isWorn = (slotId: string, listing: ProductListing) =>
+  const isWorn = (slotId: string, listing: WornListing) =>
     outfit.some((w) => w.slotId === slotId && sameListing(w.listing, listing));
   const total = outfit.reduce((sum, w) => sum + w.listing.price, 0);
   const aiItems = layered(outfit).map((w) => ({
@@ -168,10 +209,11 @@ export function FittingRoom({
     store: w.listing.store,
     title: w.listing.title,
     price: w.listing.price,
+    imageUrl: w.listing.imageUrl,
   }));
   const outfitKey = aiItems.map((i) => `${i.slotId}|${i.store}|${i.title}|${i.price}`).join('\n');
 
-  function toggle(slot: Slot, listing: ProductListing) {
+  function toggle(slot: Slot, listing: WornListing) {
     setRealistic(false);
     setOutfit((current) =>
       isWorn(slot.slotId, listing) ? takeOff(current, slot.slotId) : wear(current, worn(slot, listing)),
@@ -224,8 +266,66 @@ export function FittingRoom({
             aria-label={`${slotName(activeSlot)} items`}
             className="grid max-h-[36rem] grid-cols-2 gap-2 overflow-y-auto pr-1"
           >
+            {/* The Original Look dress piece */}
+            {(() => {
+              const orig = originalListingFor(activeSlot, look.id, design);
+              const on = isWorn(activeSlot.slotId, orig);
+              return (
+                <li key={`original-${activeSlot.slotId}`} className="col-span-2">
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggle(activeSlot, orig)}
+                    className={cn(
+                      'relative flex w-full items-center gap-2.5 rounded-xl border p-2 text-left text-xs transition-all',
+                      on
+                        ? 'border-plum bg-accent-soft/50 ring-2 ring-plum/40 shadow-xs'
+                        : 'border-border bg-surface hover:border-plum/60',
+                    )}
+                  >
+                    <div className="relative size-12 shrink-0 overflow-hidden rounded-lg border border-border/80 bg-surface-muted flex items-center justify-center">
+                      {orig.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- outfit/design preview image
+                        <img
+                          src={orig.imageUrl}
+                          alt=""
+                          loading="lazy"
+                          className="size-full object-cover object-top"
+                          onError={(e) => {
+                            e.currentTarget.hidden = true;
+                          }}
+                        />
+                      ) : (
+                        <span
+                          className="size-6 rounded-full border border-black/10"
+                          style={{ backgroundColor: hexOrNull(activeSlot.swatches[0]?.hex) ?? '#9a9a9a' }}
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="rounded-full bg-plum/10 px-2 py-0.5 text-[10px] font-semibold text-plum">
+                          {design ? 'Design Studio Dress' : 'Original Dress'}
+                        </span>
+                        {on && (
+                          <span className="flex items-center gap-1 text-[11px] font-medium text-plum">
+                            <Check className="size-3" /> Worn on model
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-medium text-foreground line-clamp-1">{orig.title}</p>
+                      <p className="text-[11px] text-muted-foreground">Original style from look</p>
+                    </div>
+                  </button>
+                  <p className="mt-2 text-[11px] font-medium text-muted-foreground">
+                    Or try on recommendations from stores:
+                  </p>
+                </li>
+              );
+            })()}
+
             {tabListings.length === 0 && (
-              <li className="col-span-2 text-sm text-muted-foreground">No items found for this part of the look.</li>
+              <li className="col-span-2 text-sm text-muted-foreground">No store items found for this part of the look.</li>
             )}
             {tabListings.map((listing) => {
               const on = isWorn(activeSlot.slotId, listing);
@@ -351,8 +451,14 @@ export function FittingRoom({
                         className="inline-block size-3 rounded-full border border-border"
                         style={{ backgroundColor: w.colour }}
                       />
-                      <span className="font-medium">{formatInr(w.listing.price)}</span>
-                      <span className="text-muted-foreground">· {storeName(w.listing.store)}</span>
+                      {w.listing.price > 0 ? (
+                        <>
+                          <span className="font-medium">{formatInr(w.listing.price)}</span>
+                          <span className="text-muted-foreground">· {storeName(w.listing.store)}</span>
+                        </>
+                      ) : (
+                        <span className="font-medium text-plum">{storeName(w.listing.store)}</span>
+                      )}
                     </p>
                     {w.listing.link && (
                       <a
@@ -381,7 +487,7 @@ export function FittingRoom({
             })}
           </ul>
         )}
-        {outfit.length > 0 && (
+        {outfit.length > 0 && total > 0 && (
           <p className="border-t border-border pt-2 text-sm">
             Total: <span className="font-medium">{formatInr(total)}</span>
             <span className="block text-xs text-muted-foreground">

@@ -11,6 +11,8 @@ const SEARCH: Record<PriceRangeStore, (q: string) => string> = {
 };
 
 /** The store's own search for an item's title, e.g. `https://www.amazon.in/s?k=Women%20White%20Shirt`. */
-export function storeSearchUrl(store: PriceRangeStore, title: string): string {
-  return SEARCH[store](encodeURIComponent(title.trim()));
+export function storeSearchUrl(store: PriceRangeStore | string, title: string): string {
+  const fn = (SEARCH as Record<string, (q: string) => string>)[store];
+  if (!fn) return `https://www.google.com/search?q=${encodeURIComponent(title.trim())}`;
+  return fn(encodeURIComponent(title.trim()));
 }

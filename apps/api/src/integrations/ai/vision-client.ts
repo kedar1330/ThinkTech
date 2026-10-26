@@ -36,6 +36,7 @@ export interface PhotoAnalysisProvider {
     heightCm: number | null,
     signal: AbortSignal,
   ): Promise<unknown>;
+  describeModel?(photo: PhotoInput, signal: AbortSignal): Promise<string | null>;
 }
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -120,5 +121,70 @@ export function geminiVisionProvider(
     analyzeFace: (photo, signal) => generate(photo, buildFacePrompt(), signal),
     analyzeBody: (photo, department, heightCm, signal) =>
       generate(photo, buildBodyPrompt(department, heightCm), signal),
+    describeModel: (photo, signal) => describeModelPhoto(photo, apiKey, model, signal, fetchImpl),
   };
 }
+
+/** Cleans model description for turntable prompt insertion. */
+export function cleanModelDescription(raw: string): string {
+  let cleaned = raw
+    .replace(/^(A|An)\s+(full-length\s+)?(photo|picture|image|portrait)\s+of\s+/i, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+  cleaned = cleaned.replace(/\.+$/, '').trim();
+  return cleaned;
+}
+
+/** Describes a person in an uploaded body photo for the 3D Virtual Try-On studio. */
+export async function describeModelPhoto(
+  photo: PhotoInput,
+  apiKey?: string,
+  model = 'gemini-3.5-flash-lite',
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  const key = apiKey || process.env.GEMINI_API_KEY;
+  if (!key) return null;
+
+  const prompt =
+    'Describe this person for an image generation prompt in 15-20 words: their apparent gender, ethnicity or skin tone, hair style and color, facial expression (e.g. warm smile), and body build. Do NOT describe any clothing or outfit they are wearing. Output ONLY the concise description text.';
+
+  const candidateModels = [model, ...VISION_FALLBACKS].filter((m, idx, arr) => arr.indexOf(m) === idx);
+
+  for (const targetModel of candidateModels) {
+    if (signal?.aborted) return null;
+    try {
+      const res = await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(targetModel)}:generateContent`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType: photo.contentType, data: photo.bytes.toString('base64') } },
+                { text: prompt },
+              ],
+            },
+          ],
+          generationConfig: { temperature: 0.2 },
+        }),
+        signal,
+      });
+
+      if (!res.ok) continue;
+
+      const body = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+      const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (typeof text === 'string' && text.trim().length > 0) {
+        return cleanModelDescription(text);
+      }
+    } catch {
+      if (signal?.aborted) return null;
+      continue;
+    }
+  }
+
+  return null;
+}
+

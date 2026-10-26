@@ -38,12 +38,16 @@ export const TRY_ON_3D_STATUSES = ['pending', 'ready', 'failed'] as const;
 export const tryOn3dStatusSchema = z.enum(TRY_ON_3D_STATUSES);
 export type TryOn3dStatus = z.infer<typeof tryOn3dStatusSchema>;
 
+export const tryOnStoreSchema = priceRangeStoreSchema.or(z.literal('styleme')).or(z.literal('original_look'));
+export type TryOnStore = z.infer<typeof tryOnStoreSchema>;
+
 /** One of the listings Shop My Look returned for a garment, named by its store, title and price. */
 export const tryOnItemSchema = z
   .object({
-    store: priceRangeStoreSchema,
+    store: tryOnStoreSchema,
     title: z.string().trim().min(1).max(200),
     price: z.coerce.number().nonnegative(),
+    imageUrl: z.string().nullable().optional(),
   })
   .strict();
 export type TryOnItem = z.infer<typeof tryOnItemSchema>;
@@ -77,8 +81,17 @@ export const startTryOnRequestSchema = z
   });
 export type StartTryOnRequest = z.infer<typeof startTryOnRequestSchema>;
 
-/** A garment being tried on: the listing as the search returned it, and the part of the look it is for. */
-export const tryOnGarmentSchema = productListingSchema.extend({ slotId: slotIdSchema }).strict();
+/** A garment being tried on: the listing or original look item, and the part of the look it is for. */
+export const tryOnGarmentSchema = z
+  .object({
+    slotId: slotIdSchema,
+    store: tryOnStoreSchema,
+    title: z.string().trim().min(1).max(200),
+    price: z.number().nonnegative(),
+    link: z.string().nullable(),
+    imageUrl: z.string().nullable(),
+  })
+  .strict();
 export type TryOnGarment = z.infer<typeof tryOnGarmentSchema>;
 
 /** A try-on. The picture and model are fetched separately, and only by their owner. */

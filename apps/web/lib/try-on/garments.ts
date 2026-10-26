@@ -1,4 +1,4 @@
-import type { BodyType, LookSlot, ProductListing } from '@styleme/contracts';
+import type { BodyType, LookSlot, ProductListing, TryOnStore } from '@styleme/contracts';
 
 // The 3D mannequin's outfit (D-137): which items from Shop My Look are worn, and the 3D garment each becomes.
 // A garment is drawn from its category and the look's cut (sleeve, length, silhouette) in the item's colour;
@@ -19,11 +19,21 @@ export type GarmentShape =
   | { kind: 'saree'; sleeve: SleeveLength }
   | { kind: 'lehenga'; sleeve: SleeveLength };
 
+export type WornListing =
+  | ProductListing
+  | {
+      store: TryOnStore;
+      title: string;
+      price: number;
+      link?: string | null;
+      imageUrl?: string | null;
+    };
+
 /** A worn item: the listing from Shop My Look, the part of the look it is for, its 3D shape and colour. */
 export interface WornItem {
   slotId: string;
   slot: LookSlot['slot'];
-  listing: ProductListing;
+  listing: WornListing;
   shape: GarmentShape;
   /** `#rrggbb`: read from the item's picture, else the look's colour for that part. */
   colour: string;
@@ -137,8 +147,10 @@ export function layered(outfit: readonly WornItem[]): WornItem[] {
   return [...outfit].sort((a, b) => order(a) - order(b));
 }
 
-export const sameListing = (a: Pick<ProductListing, 'store' | 'title' | 'price'>, b: typeof a) =>
-  a.store === b.store && a.title === b.title && a.price === b.price;
+export const sameListing = (
+  a: { store: string; title: string; price: number },
+  b: { store: string; title: string; price: number },
+) => a.store === b.store && a.title === b.title && a.price === b.price;
 
 /** Body proportions of the mannequin, relative to a straight figure, by body type. */
 export interface Proportions {

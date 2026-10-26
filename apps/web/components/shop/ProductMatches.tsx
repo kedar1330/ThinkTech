@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 type State = { kind: 'loading' } | { kind: 'ready'; matches: LookProductMatches } | { kind: 'unavailable' };
 type StoreFilter = 'all' | PriceRangeStore;
 
-const storeName = (id: PriceRangeStore) => PRICE_RANGE_STORES.find((s) => s.id === id)!.label;
+const storeName = (id: string) => PRICE_RANGE_STORES.find((s) => s.id === id)?.label ?? id;
 
 /** Items shown at first in each list, and how many more each "Show more" adds. */
 const SHOWN_AT_FIRST = 8;

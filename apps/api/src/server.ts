@@ -11,8 +11,12 @@ import {
   type OutfitImageProvider,
 } from './integrations/ai/image-client';
 import { serperShoppingProvider } from './integrations/shopping/serper-client';
-import { falTryOnRenderer, openSourceTryOnRenderer } from './integrations/tryon/fal-client';
-import { pollinationsImageEditor } from './integrations/image/image-edit-client';
+import {
+  cloudflareImageEditor,
+  compositeImageEditor,
+  pollinationsImageEditor,
+  type ImageEditor,
+} from './integrations/image/image-edit-client';
 import { geminiVisionProvider } from './integrations/ai/vision-client';
 import { cloudflareGenerator, pollinationsGenerator, type ImageGenerator } from './integrations/image/image-client';
 import { geminiWordingProvider } from './integrations/ai/wording-client';
@@ -20,6 +24,7 @@ import { googleVerifier } from './services/google';
 import { createEmailSender, createSmsSender } from './services/messaging';
 import { assertNoFixtureDocuments } from './startup/fixture-check';
 import { SHIPPED_LIBRARY, loadStyleLibrary } from './style-rules';
+import { falTryOnRenderer, openSourceTryOnRenderer } from './integrations/tryon/fal-client';
 import type { Logger } from 'pino';
 
 const logger = createLogger();
@@ -80,17 +85,27 @@ export async function startServer(deps: StartServerDeps = {}) {
       ? geminiAssistantProvider(config.GEMINI_API_KEY, config.GEMINI_MODEL ?? config.GEMINI_VISION_MODEL)
       : null;
   const imageGenerators: ImageGenerator[] = [];
-  if (config.POLLINATIONS_API_KEY)
-    imageGenerators.push(pollinationsGenerator(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
   if (config.CLOUDFLARE_ACCOUNT_ID && config.CLOUDFLARE_API_TOKEN)
     imageGenerators.push(
       cloudflareGenerator(config.CLOUDFLARE_ACCOUNT_ID, config.CLOUDFLARE_API_TOKEN, config.CLOUDFLARE_IMAGE_MODEL),
     );
-  // Cartoon avatar drape (D-138): Pollinations image editing whenever its key is set, unless DRAPE_ENABLED=false.
-  const imageEditor =
-    config.DRAPE_ENABLED && config.POLLINATIONS_API_KEY
-      ? pollinationsImageEditor(config.POLLINATIONS_API_KEY, config.DRAPE_MODELS)
-      : null;
+  if (config.POLLINATIONS_API_KEY)
+    imageGenerators.push(pollinationsGenerator(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
+  // Model drape (D-138): Image editing with fast Cloudflare FLUX and Pollinations failover.
+  const editors: ImageEditor[] = [];
+  if (config.CLOUDFLARE_ACCOUNT_ID && config.CLOUDFLARE_API_TOKEN) {
+    editors.push(
+      cloudflareImageEditor(
+        config.CLOUDFLARE_ACCOUNT_ID,
+        config.CLOUDFLARE_API_TOKEN,
+        config.CLOUDFLARE_IMAGE_MODEL,
+      ),
+    );
+  }
+  if (config.POLLINATIONS_API_KEY) {
+    editors.push(pollinationsImageEditor(config.POLLINATIONS_API_KEY, config.DRAPE_MODELS));
+  }
+  const imageEditor = config.DRAPE_ENABLED && editors.length > 0 ? compositeImageEditor(editors) : null;
   // 3D Virtual Try-On (D-137, Pillar 1): live whenever TRIPOSR_URL or FAL_KEY is set, unless TRY_ON_ENABLED=false.
   const tryOnRenderer =
     config.TRY_ON_ENABLED && (config.TRIPOSR_URL || config.FAL_KEY)
@@ -154,7 +169,7 @@ export async function startServer(deps: StartServerDeps = {}) {
       designImages: imageGenerators.map((g) => g.name),
       styleAssistantAi: Boolean(assistantProvider),
       tryOn: Boolean(tryOnRenderer),
-      drape: Boolean(imageEditor) && imageGenerators.length > 0,
+      drape: (Boolean(imageEditor) || imageGenerators.length > 0) && imageGenerators.length > 0,
     });
   });
 

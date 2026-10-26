@@ -8,7 +8,7 @@ export function SiteFooter() {
         <div className="space-y-3 md:col-span-2">
           <Logo light />
           <p className="max-w-sm text-sm text-primary-foreground/75">
-            Discover the style that is you — personal styling for India, with a reason behind every suggestion.
+            Discover the style that is you — personal styling, with a reason behind every suggestion.
           </p>
         </div>
         <nav aria-label="Explore" className="space-y-2 text-sm">

@@ -12,6 +12,7 @@ import {
   type TryOnModel,
   type TryOnOverview,
   type TryOnStage,
+  type TryOnStore,
 } from '@styleme/contracts';
 import {
   TryOnProviderError,
@@ -56,7 +57,10 @@ const LAYER_ORDER: Record<string, { order: number; category: GarmentCategory }> 
   layer: { order: 3, category: 'tops' },
 };
 
-export type StoredGarment = ProductListing & { slotId: string; imageUrl: string; category: GarmentCategory };
+export type StoredGarment = (
+  | ProductListing
+  | { store: TryOnStore; title: string; price: number; link?: string | null }
+) & { slotId: string; imageUrl: string; category: GarmentCategory };
 type StoredJob = TryOnJobDoc & { _id: Types.ObjectId; createdAt: Date };
 
 function bufferOf(raw: unknown): Buffer | null {
@@ -107,15 +111,17 @@ export class TryOnService {
   ) {}
 
   async overview(userId: Types.ObjectId): Promise<TryOnOverview> {
-    const [profile, photo] = await Promise.all([
+    const [profile, hasBody, hasAny] = await Promise.all([
       this.models.Profile.findOne({ userId }, { tryOnModel: 1 }).lean(),
       this.models.UserPhoto.exists({ userId, kind: 'body' }),
+      this.models.UserPhoto.exists({ userId }),
     ]);
+    const photoExists = hasBody !== null || hasAny !== null;
     return {
       available: this.renderer !== null,
       drapeAvailable: this.drapeAvailable,
-      tryOnModel: this.modelChoice(profile?.tryOnModel, photo !== null),
-      hasPhoto: photo !== null,
+      tryOnModel: this.modelChoice(profile?.tryOnModel, photoExists),
+      hasPhoto: photoExists,
     };
   }
 
@@ -123,10 +129,12 @@ export class TryOnService {
   async start(userId: Types.ObjectId, request: StartTryOnRequest): Promise<TryOnJob> {
     const renderer = this.renderer;
     if (!renderer) throw new AppError('PROVIDER_NOT_CONFIGURED', UNAVAILABLE);
-    const [profile, photo] = await Promise.all([
+    const [profile, bodyPhoto, anyPhoto] = await Promise.all([
       this.models.Profile.findOne({ userId }, { tryOnModel: 1 }).lean(),
       this.models.UserPhoto.findOne({ userId, kind: 'body' }).sort({ uploadedAt: -1 }).select('+data').lean(),
+      this.models.UserPhoto.findOne({ userId }).sort({ uploadedAt: -1 }).select('+data').lean(),
     ]);
+    const photo = bodyPhoto ?? anyPhoto;
     if (this.modelChoice(profile?.tryOnModel, photo !== null) === 'dummy_model') {
       throw new AppError('CONFLICT', photo ? DUMMY_NOT_READY : NEEDS_PHOTO);
     }
@@ -244,8 +252,9 @@ export class TryOnService {
     outfitId: Types.ObjectId,
     request: StartTryOnRequest,
   ): Promise<StoredGarment[]> {
-    const look = await this.models.Outfit.findOne({ _id: outfitId, userId }, { slots: 1 }).lean<{
+    const look = await this.models.Outfit.findOne({ _id: outfitId, userId }, { slots: 1, explanation: 1 }).lean<{
       slots: LookSlot[];
+      explanation?: string;
     }>();
     if (!look) throw new AppError('NOT_FOUND');
     const [{ slots }, picks] = await Promise.all([
@@ -254,17 +263,46 @@ export class TryOnService {
     ]);
     const kindOf = new Map(look.slots.map((s) => [s.slotId, s.slot]));
 
-    const choose = (slotId: string): StoredGarment | null => {
+    const choose = async (slotId: string): Promise<StoredGarment | null> => {
       const layer = LAYER_ORDER[kindOf.get(slotId) ?? ''];
-      // Matches for the look first, then other styles of the same garment (#133); both can be tried on.
-      const found = slots.find((s) => s.slotId === slotId);
-      const listings: ProductListing[] = [...(found?.listings ?? []), ...(found?.alternatives ?? [])];
       if (!layer) return null;
       const item = request.items
         ? request.items.find((i) => i.slotId === slotId)
         : request.slotId === slotId
           ? request.item
           : undefined;
+
+      if (item && (item.store === 'styleme' || item.store === 'original_look')) {
+        let imageUrl = item.imageUrl ?? '';
+        if (!imageUrl || imageUrl.startsWith('/')) {
+          const outfitImage = await this.models.OutfitImage.findOne({ outfitId, userId }).select('+data').lean();
+          const imgData = bufferOf(outfitImage?.data);
+          if (imgData && outfitImage?.contentType) {
+            imageUrl = `data:${outfitImage.contentType};base64,${imgData.toString('base64')}`;
+          }
+        }
+        if (!imageUrl) {
+          const found = slots.find((s) => s.slotId === slotId);
+          const firstWithPic = [...(found?.listings ?? []), ...(found?.alternatives ?? [])].find((l) => l.imageUrl);
+          if (firstWithPic?.imageUrl) {
+            return { ...firstWithPic, slotId, category: layer.category, imageUrl: firstWithPic.imageUrl };
+          }
+        }
+        const richTitle = look.explanation ? `${item.title}: ${look.explanation}` : item.title;
+        return {
+          store: item.store,
+          title: richTitle,
+          price: item.price ?? 0,
+          link: null,
+          imageUrl: imageUrl || `https://placehold.co/400x400?text=${encodeURIComponent(item.title)}`,
+          slotId,
+          category: layer.category,
+        };
+      }
+
+      // Matches for the look first, then other styles of the same garment (#133); both can be tried on.
+      const found = slots.find((s) => s.slotId === slotId);
+      const listings: ProductListing[] = [...(found?.listings ?? []), ...(found?.alternatives ?? [])];
       const pick = picks.find((p) => p.slotId === slotId);
       const listing = item
         ? listings.find((l) => l.store === item.store && l.title === item.title && l.price === item.price)
@@ -279,7 +317,7 @@ export class TryOnService {
       if (!slots.some((s) => s.slotId === request.slotId) || !LAYER_ORDER[kindOf.get(request.slotId) ?? '']) {
         throw new AppError('INVALID_REQUEST', 'That part of the look can’t be tried on.');
       }
-      const garment = choose(request.slotId);
+      const garment = await choose(request.slotId);
       if (!garment) {
         throw new AppError(
           'NOT_FOUND',
@@ -297,7 +335,7 @@ export class TryOnService {
         if (!slots.some((s) => s.slotId === slotId) || !LAYER_ORDER[kindOf.get(slotId) ?? '']) {
           throw new AppError('INVALID_REQUEST', 'That part of the look can’t be tried on.');
         }
-        const garment = choose(slotId);
+        const garment = await choose(slotId);
         if (!garment) {
           throw new AppError(
             'NOT_FOUND',
@@ -310,8 +348,7 @@ export class TryOnService {
         (a, b) => LAYER_ORDER[kindOf.get(a.slotId)!]!.order - LAYER_ORDER[kindOf.get(b.slotId)!]!.order,
       );
     }
-    const garments = slots
-      .map((s) => choose(s.slotId))
+    const garments = (await Promise.all(slots.map((s) => choose(s.slotId))))
       .filter((g): g is StoredGarment => g !== null)
       .sort((a, b) => LAYER_ORDER[kindOf.get(a.slotId)!]!.order - LAYER_ORDER[kindOf.get(b.slotId)!]!.order)
       .slice(0, TRY_ON_MAX_GARMENTS);

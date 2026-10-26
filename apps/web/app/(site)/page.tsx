@@ -113,10 +113,6 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       <section className="relative overflow-hidden mesh-ambient-warm py-6">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
           <div className="space-y-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-plum/30 bg-plum/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-plum">
-              <Sparkles className="size-3 text-plum animate-pulse-subtle" />
-              Personal styling for India
-            </div>
             <h1 className="font-display text-5xl leading-[1.05] text-primary sm:text-6xl tracking-tight">
               Discover the Style That Is <span className="italic text-accent">You</span>.
             </h1>

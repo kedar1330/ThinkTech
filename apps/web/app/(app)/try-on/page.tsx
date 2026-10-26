@@ -40,11 +40,12 @@ export default async function TryOnPage({
   const { accessToken: token } = await requireOnboarded();
   const params = await searchParams;
   let targetOutfitId = params.outfitId;
-  if (!targetOutfitId && params.designId) {
+  let design: Design | null = null;
+  if (params.designId) {
     const dId = objectIdSchema.safeParse(params.designId);
     if (dId.success) {
-      const design = await apiRequest<Design>(`/v1/design-studio/designs/${dId.data}`, { token }).catch(() => null);
-      if (design?.lookId) targetOutfitId = design.lookId;
+      design = await apiRequest<Design>(`/v1/design-studio/designs/${dId.data}`, { token }).catch(() => null);
+      if (design?.lookId && !targetOutfitId) targetOutfitId = design.lookId;
     }
   }
   if (!targetOutfitId) {
@@ -110,6 +111,7 @@ export default async function TryOnPage({
           item: item?.success ? item.data : undefined,
         }}
         overview={overview}
+        design={design ?? undefined}
       />
     </div>
   );

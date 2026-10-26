@@ -291,6 +291,7 @@ const userPhotoSchema = new Schema(
     storage: { type: String, enum: ['mongodb', 'object_storage'], default: 'mongodb', required: true },
     // Mixed (stored as BSON binary): the bytes go only to the analysis provider and back to their owner.
     data: { type: Schema.Types.Mixed, select: false },
+    description: { type: String, default: null },
     storageKey: { type: String, default: undefined },
     contentType: { type: String, enum: ['image/jpeg', 'image/png', 'image/webp'], required: true },
     bytes: { type: Number, required: true },
@@ -445,6 +446,8 @@ const tryOnDrapeSchema = new Schema(
     outfitId: { type: Schema.Types.ObjectId, required: true },
     department: { type: String, enum: ['women', 'men'], required: true },
     cacheKey: { type: String, required: true },
+    modelDescription: { type: String, default: null },
+    outfitDescription: { type: String, default: null },
     garments: { type: [tryOnGarmentSchema], required: true },
     /** The dressed front. */
     image: { type: designImageSchema, required: true, select: false },

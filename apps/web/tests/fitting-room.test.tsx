@@ -108,9 +108,17 @@ describe('FittingRoom (D-137)', () => {
     expect(fetch).toHaveBeenCalledWith(`/api/outfits/${ID}/products`, { cache: 'no-store' });
   });
 
-  it('opened from a look, puts each part’s first item on', async () => {
+  it('opened from a look, puts the original look on first and allows switching to recommendations', async () => {
     room();
-    await screen.findByRole('button', { name: /Kurta M/, pressed: true });
+    expect(await screen.findByRole('button', { name: /Original Navy Kurta/, pressed: true })).toBeInTheDocument();
+    expect((await wears()).map((li) => li.textContent).sort()).toEqual(['Original Navy Kurta', 'Original Navy Trousers']);
+
+    // Clicking a recommendation swaps to that store item
+    await userEvent.click(await screen.findByRole('button', { name: /Kurta M/, pressed: false }));
+    expect((await wears()).map((li) => li.textContent).sort()).toEqual(['Kurta M', 'Original Navy Trousers']);
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Trousers' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Trousers F/, pressed: false }));
     expect((await wears()).map((li) => li.textContent).sort()).toEqual(['Kurta M', 'Trousers F']);
     expect(screen.getByText('₹798', { exact: false })).toBeInTheDocument();
   });
@@ -121,7 +129,7 @@ describe('FittingRoom (D-137)', () => {
     expect((await wears()).map((li) => li.textContent)).toEqual(['Kurta M']);
     // Other styles are listed after the matches and can be worn as well.
     const tops = within(screen.getByRole('list', { name: 'Kurta items' })).getAllByRole('button');
-    expect(tops.map((b) => b.textContent?.match(/Kurta \w+/)?.[0])).toEqual(['Kurta M', 'Kurta A', 'Kurta Printed']);
+    expect(tops.map((b) => b.textContent?.match(/Kurta \w+/)?.[0]).filter(Boolean)).toEqual(['Kurta M', 'Kurta A', 'Kurta Printed']);
     await userEvent.click(screen.getByRole('button', { name: /Kurta Printed/ }));
     expect((await wears()).map((li) => li.textContent)).toEqual(['Kurta Printed']);
     await userEvent.click(screen.getByRole('button', { name: /Kurta M/, pressed: false }));
@@ -145,15 +153,18 @@ describe('FittingRoom (D-137)', () => {
 
   it('“Make it realistic” tries the same outfit on with AI', async () => {
     room();
-    await screen.findByRole('button', { name: /Kurta M/, pressed: true });
+    await screen.findByRole('button', { name: /Original Navy Kurta/, pressed: true });
+    await userEvent.click(await screen.findByRole('button', { name: /Kurta M/, pressed: false }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Trousers' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Trousers F/, pressed: false }));
     await userEvent.click(screen.getByRole('button', { name: /Make it realistic with AI/ }));
     expect(screen.getByText('AI try-on panel')).toBeInTheDocument();
     expect(studio).toHaveBeenLastCalledWith(
       expect.objectContaining({
         outfitId: ID,
         items: [
-          { slotId: 'bottom', store: 'flipkart', title: 'Trousers F', price: 499 },
-          { slotId: 'top', store: 'meesho', title: 'Kurta M', price: 299 },
+          expect.objectContaining({ slotId: 'bottom', store: 'flipkart', title: 'Trousers F', price: 499 }),
+          expect.objectContaining({ slotId: 'top', store: 'meesho', title: 'Kurta M', price: 299 }),
         ],
       }),
     );
@@ -176,7 +187,14 @@ describe('FittingRoom (D-137)', () => {
       expect.objectContaining({
         outfitId: ID,
         department: 'women',
-        items: [{ slotId: 'top', store: 'amazon', title: 'Kurta A', price: 699 }],
+        items: [
+          expect.objectContaining({
+            slotId: 'top',
+            store: 'amazon',
+            title: 'Kurta A',
+            price: 699,
+          }),
+        ],
       }),
     );
     await userEvent.click(screen.getByRole('tab', { name: '3D mannequin' }));

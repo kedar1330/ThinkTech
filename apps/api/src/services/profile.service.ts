@@ -86,7 +86,10 @@ export class ProfileService {
     if (input.budgetPreference !== undefined) set.budgetPreference = input.budgetPreference;
     if (input.ageGroup !== undefined) set.ageGroup = input.ageGroup;
     if (input.heightCm !== undefined) set.heightCm = input.heightCm;
-    if (input.tryOnModel !== undefined) set.tryOnModel = input.tryOnModel;
+    if (input.tryOnModel !== undefined) {
+      set.tryOnModel = input.tryOnModel;
+      await this.models.TryOnDrape.deleteMany({ userId });
+    }
 
     const doc = await this.models.Profile.findOneAndUpdate(
       { userId },

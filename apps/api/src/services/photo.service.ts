@@ -22,7 +22,7 @@ import {
 } from '@styleme/contracts';
 import { z } from 'zod';
 import { PHOTO_ANALYSIS_PROMPT_VERSION } from '../integrations/ai/prompts/photo-analysis-v2';
-import { VisionProviderError, type PhotoAnalysisProvider, type PhotoInput } from '../integrations/ai/vision-client';
+import { VisionProviderError, describeModelPhoto, type PhotoAnalysisProvider, type PhotoInput } from '../integrations/ai/vision-client';
 import type { Models, UserPhotoDoc } from '../models/index';
 import { AppError } from '../utils/errors';
 import type { AppearanceService } from './appearance.service';
@@ -108,6 +108,7 @@ export class PhotoService {
     const result = await this.models.UserPhoto.deleteOne({ _id: photoId, userId });
     if (result.deletedCount === 0) throw new AppError('NOT_FOUND');
     await this.models.TryOnJob.deleteMany({ userId, photoId });
+    await this.models.TryOnDrape.deleteMany({ userId });
   }
 
   /** Stores a full-body photo for 3D Virtual Try-On without running AI analysis on it. */
@@ -118,6 +119,23 @@ export class PhotoService {
     const contentType = detectImageType(bytes);
     if (!contentType) throw new AppError('INVALID_REQUEST', 'Choose a JPEG, PNG or WebP photo under 8 MB.');
 
+    let description: string | null = null;
+    try {
+      if (this.provider?.describeModel) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+        try {
+          description = await this.provider.describeModel({ bytes, contentType }, controller.signal);
+        } finally {
+          clearTimeout(timer);
+        }
+      } else {
+        description = await describeModelPhoto({ bytes, contentType });
+      }
+    } catch (err) {
+      this.logger.warn({ event: 'model_photo_description_failed', err });
+    }
+
     const now = new Date();
     const photo = await this.models.UserPhoto.create({
       userId,
@@ -125,6 +143,7 @@ export class PhotoService {
       angle: 'front',
       storage: 'mongodb',
       data: bytes,
+      description,
       contentType,
       bytes: bytes.length,
       retention: 'keep',
@@ -136,6 +155,10 @@ export class PhotoService {
 
     // Mark 3D Virtual Try-On preference as custom_photo in the user's profile
     await this.models.Profile.updateOne({ userId }, { $set: { tryOnModel: 'custom_photo' } }, { upsert: true });
+
+    // Invalidate cached try-on drapes and jobs so the new model is used immediately
+    await this.models.TryOnDrape.deleteMany({ userId });
+    await this.models.TryOnJob.deleteMany({ userId });
 
     return toPhoto(photo.toObject() as UserPhotoDoc & { _id: Types.ObjectId });
   }
@@ -163,6 +186,25 @@ export class PhotoService {
     const result: FaceAnalysisResult | BodyAnalysisResult = parsed.result;
     const confidence: ConfidenceLabel = parsed.confidence;
 
+    let description: string | null = null;
+    if (query.kind === 'body') {
+      try {
+        if (this.provider?.describeModel) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+          try {
+            description = await this.provider.describeModel({ bytes, contentType }, controller.signal);
+          } finally {
+            clearTimeout(timer);
+          }
+        } else {
+          description = await describeModelPhoto({ bytes, contentType });
+        }
+      } catch (err) {
+        this.logger.warn({ event: 'model_photo_description_failed', err });
+      }
+    }
+
     const now = new Date();
     const photo = await this.models.UserPhoto.create({
       userId,
@@ -170,6 +212,7 @@ export class PhotoService {
       angle: query.kind === 'body' ? 'front' : null,
       storage: 'mongodb',
       data: bytes,
+      description,
       contentType,
       bytes: bytes.length,
       retention: 'keep',
@@ -178,6 +221,11 @@ export class PhotoService {
     });
     // Keep only the newest photo of each kind.
     await this.models.UserPhoto.deleteMany({ userId, kind: query.kind, _id: { $ne: photo._id } });
+
+    if (query.kind === 'body') {
+      await this.models.TryOnDrape.deleteMany({ userId });
+      await this.models.TryOnJob.deleteMany({ userId });
+    }
 
     const analysisKind = query.kind === 'face' ? 'skin_tone' : 'body_shape';
     const analysis = await this.models.AppearanceAnalysis.create({

@@ -21,7 +21,7 @@ const playfair = localFont({
 export const metadata: Metadata = {
   title: { default: 'StyleMe — Discover the Style That Is You', template: '%s · StyleMe' },
   description:
-    'Personal styling for India: a style profile, your colours and fit, and outfit ideas within your budget — each with a reason.',
+    'Personal styling: a style profile, your colours and fit, and outfit ideas within your budget — each with a reason.',
 };
 
 export const viewport: Viewport = { themeColor: '#4a1f45' };

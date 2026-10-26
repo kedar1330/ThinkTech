@@ -123,7 +123,7 @@ describe('/v1/try-on avatars and drapes (D-138)', () => {
       const listing = products.slots.find((s) => s.slotId === garment.slotId)!.listings[0]!;
       expect(edit.images[1]).toBe(listing.imageUrl);
       expect(edit.prompt).toBe(
-        drapePrompt({ category: edit.prompt.includes('trousers, jeans') ? 'bottoms' : 'tops', title: '' }),
+        drapePrompt({ category: edit.prompt.includes('trousers, jeans') ? 'bottoms' : 'tops', title: garment.title }),
       );
       expect(edit.prompt).not.toMatch(/drape@example|budget|height/i);
     }
@@ -218,7 +218,7 @@ describe('/v1/try-on avatars and drapes (D-138)', () => {
     expect(tryOnDrapeSchema.parse(side.body.data).views).toEqual(['front', 'side']);
     // Only the dressed front goes to the editor, with the turn.
     expect(editor.edits[1]).toEqual({
-      prompt: viewPrompt('side'),
+      prompt: viewPrompt('side', items[0]!.title),
       images: [`data:image/png;base64,${front.toString('base64')}`],
     });
     const image = await binary(request(app).get(`/v1/try-on/drapes/${dressed.id}/image?view=side`).set(bearer(token)));
