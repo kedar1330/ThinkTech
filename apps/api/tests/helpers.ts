@@ -76,6 +76,7 @@ export const BASE_CONFIG: Config = {
   DRAPE_ENABLED: true,
   DRAPE_MODELS: ['test-edit-model'],
   DRAPE_TIMEOUT_MS: 5000,
+  POLLINATIONS_TRY_ON_ONLY: false,
 };
 
 /**

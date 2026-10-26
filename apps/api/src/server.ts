@@ -68,7 +68,7 @@ export async function startServer(deps: StartServerDeps = {}) {
       ),
     );
   }
-  if (config.OUTFIT_IMAGES_ENABLED && config.POLLINATIONS_API_KEY) {
+  if (config.OUTFIT_IMAGES_ENABLED && config.POLLINATIONS_API_KEY && !config.POLLINATIONS_TRY_ON_ONLY) {
     outfitProviders.push(pollinationsImageProvider(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
   }
   const outfitImageProvider = outfitProviders.length > 0 ? compositeOutfitImageProvider(outfitProviders, log) : null;
@@ -97,7 +97,7 @@ export async function startServer(deps: StartServerDeps = {}) {
     imageGenerators.push(
       cloudflareGenerator(config.CLOUDFLARE_ACCOUNT_ID_2, config.CLOUDFLARE_API_TOKEN_2, config.CLOUDFLARE_IMAGE_MODEL),
     );
-  if (config.POLLINATIONS_API_KEY)
+  if (config.POLLINATIONS_API_KEY && !config.POLLINATIONS_TRY_ON_ONLY)
     imageGenerators.push(pollinationsGenerator(config.POLLINATIONS_API_KEY, config.POLLINATIONS_IMAGE_MODEL));
   // Cartoon avatar drape (D-138): Pollinations image editing whenever its key is set, unless DRAPE_ENABLED=false.
   const imageEditor =
@@ -167,7 +167,7 @@ export async function startServer(deps: StartServerDeps = {}) {
       designImages: imageGenerators.map((g) => g.name),
       styleAssistantAi: Boolean(assistantProvider),
       tryOn: Boolean(tryOnRenderer),
-      drape: Boolean(imageEditor) && imageGenerators.length > 0,
+      drape: (Boolean(imageEditor) || imageGenerators.length > 0) && config.DRAPE_ENABLED,
     });
   });
 

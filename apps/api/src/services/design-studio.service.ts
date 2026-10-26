@@ -147,6 +147,110 @@ export function describeSlot(slot: LookSlot): string {
   return `${label(slot.slot)}: ${label(spec.category)} in ${colours}${details.length ? ` (${details.join(', ')})` : ''}`;
 }
 
+function detectColorFromText(text: string): {
+  colorId: ColorId;
+  colorFamily: ColorFamily;
+  colorHex: string;
+  colorName: string;
+  colorQuery: string;
+} {
+  const t = text.toLowerCase();
+  if (/\b(baby\s*pink|light\s*pink|pastel\s*pink|blush)\b/i.test(t)) {
+    return { colorId: 'blush', colorFamily: 'pink', colorHex: '#F4C2C2', colorName: 'Baby Pink', colorQuery: 'pink' };
+  }
+  if (/\b(rani\s*pink|fuchsia|magenta)\b/i.test(t)) {
+    return { colorId: 'fuchsia', colorFamily: 'pink', colorHex: '#C2185B', colorName: 'Rani Pink', colorQuery: 'rani pink' };
+  }
+  if (/\b(rose|pink)\b/i.test(t)) {
+    return { colorId: 'rose_pink', colorFamily: 'pink', colorHex: '#E75480', colorName: 'Rose Pink', colorQuery: 'pink' };
+  }
+  if (/\bnavy\b/i.test(t)) {
+    return { colorId: 'navy', colorFamily: 'blue', colorHex: '#1F2A44', colorName: 'Navy', colorQuery: 'navy' };
+  }
+  if (/\b(sky\s*blue|powder\s*blue|light\s*blue)\b/i.test(t)) {
+    return { colorId: 'sky_blue', colorFamily: 'blue', colorHex: '#87CEEB', colorName: 'Sky Blue', colorQuery: 'sky blue' };
+  }
+  if (
+    /\b(medium\s*wash|light\s*wash|dark\s*wash|denim\s*blue|indigo|denim)\b/i.test(t) &&
+    !/\bwhite\s*denim\b/i.test(t) &&
+    !/\bblack\s*denim\b/i.test(t)
+  ) {
+    return { colorId: 'denim_blue', colorFamily: 'blue', colorHex: '#3B5B8C', colorName: 'Denim Blue', colorQuery: 'denim' };
+  }
+  if (/\b(blue|ocean)\b/i.test(t)) {
+    return { colorId: 'sky_blue', colorFamily: 'blue', colorHex: '#87CEEB', colorName: 'Blue', colorQuery: 'blue' };
+  }
+  if (/\b(white|off\s*white|ivory|cream)\b/i.test(t)) {
+    return { colorId: 'white', colorFamily: 'neutral', colorHex: '#FFFFFF', colorName: 'White', colorQuery: 'white' };
+  }
+  if (/\b(black|charcoal)\b/i.test(t)) {
+    return { colorId: 'black', colorFamily: 'neutral', colorHex: '#1A1A1A', colorName: 'Black', colorQuery: 'black' };
+  }
+  if (/\b(maroon|wine|burgundy)\b/i.test(t)) {
+    return { colorId: 'maroon', colorFamily: 'red', colorHex: '#800020', colorName: 'Maroon', colorQuery: 'maroon' };
+  }
+  if (/\b(red|ruby|crimson)\b/i.test(t)) {
+    return { colorId: 'red', colorFamily: 'red', colorHex: '#C8102E', colorName: 'Red', colorQuery: 'red' };
+  }
+  if (/\b(mint|sage)\b/i.test(t)) {
+    return { colorId: 'mint', colorFamily: 'green', colorHex: '#A8E6CF', colorName: 'Mint', colorQuery: 'mint' };
+  }
+  if (/\b(olive|mehendi)\b/i.test(t)) {
+    return { colorId: 'olive', colorFamily: 'green', colorHex: '#708238', colorName: 'Olive', colorQuery: 'olive' };
+  }
+  if (/\b(green|emerald|bottle\s*green)\b/i.test(t)) {
+    return { colorId: 'emerald', colorFamily: 'green', colorHex: '#046A38', colorName: 'Emerald', colorQuery: 'green' };
+  }
+  if (/\bmustard\b/i.test(t)) {
+    return { colorId: 'mustard', colorFamily: 'yellow', colorHex: '#D4A017', colorName: 'Mustard', colorQuery: 'mustard' };
+  }
+  if (/\b(yellow|haldi|lemon)\b/i.test(t)) {
+    return { colorId: 'pastel_yellow', colorFamily: 'yellow', colorHex: '#F5E28C', colorName: 'Pastel Yellow', colorQuery: 'yellow' };
+  }
+  if (/\bgold\b/i.test(t)) {
+    return { colorId: 'gold', colorFamily: 'metallic', colorHex: '#C9A227', colorName: 'Gold', colorQuery: 'gold' };
+  }
+  if (/\b(lavender|lilac)\b/i.test(t)) {
+    return { colorId: 'lavender', colorFamily: 'purple', colorHex: '#C7B8E0', colorName: 'Lavender', colorQuery: 'lavender' };
+  }
+  if (/\b(plum|purple|violet)\b/i.test(t)) {
+    return { colorId: 'plum', colorFamily: 'purple', colorHex: '#6E2C5E', colorName: 'Plum', colorQuery: 'plum' };
+  }
+  if (/\b(peach|coral)\b/i.test(t)) {
+    return { colorId: 'peach', colorFamily: 'orange', colorHex: '#F6B98D', colorName: 'Peach', colorQuery: 'peach' };
+  }
+  if (/\b(orange|saffron|rust)\b/i.test(t)) {
+    return { colorId: 'orange', colorFamily: 'orange', colorHex: '#E87722', colorName: 'Orange', colorQuery: 'orange' };
+  }
+  if (/\b(grey|gray|silver)\b/i.test(t)) {
+    return { colorId: 'light_grey', colorFamily: 'neutral', colorHex: '#C9C9C9', colorName: 'Grey', colorQuery: 'grey' };
+  }
+  if (/\b(beige|tan|brown|khaki|chocolate)\b/i.test(t)) {
+    return { colorId: 'beige', colorFamily: 'brown', colorHex: '#D4C4A8', colorName: 'Beige', colorQuery: 'beige' };
+  }
+  return { colorId: 'white', colorFamily: 'neutral', colorHex: '#FFFFFF', colorName: 'White', colorQuery: '' };
+}
+
+function extractTargetContext(text: string, targetType: 'top' | 'bottom'): string {
+  if (/on top/i.test(text) && /below/i.test(text)) {
+    const parts = text.split(/below,?/i);
+    return targetType === 'top' ? parts[0]! : (parts[1] || '');
+  }
+
+  const chunks = text.split(/[.;\n]|(?:\bwith\b|\band\b)/i);
+  const topRegex = /\b(shirt|top|t-shirt|tshirt|tee|blouse|kurti|kurta|tunic|crop\s*top|camisole|tank|polo)\b/i;
+  const bottomRegex = /\b(jeans?|denim\s*pants?|pants?|trousers?|skirt|palazzo|shorts?|churidar|salwar|dhoti|leggings?)\b/i;
+  const targetRegex = targetType === 'top' ? topRegex : bottomRegex;
+
+  const relevant: string[] = [];
+  for (const chunk of chunks) {
+    if (targetRegex.test(chunk)) {
+      relevant.push(chunk.trim());
+    }
+  }
+  return relevant.join(' ');
+}
+
 export interface CreateDesignInput {
   source: DesignSource;
   description: string;
@@ -305,183 +409,199 @@ export class DesignStudioService {
   ): Promise<Types.ObjectId> {
     const spec = design.tailorSpec as TailorSpec | undefined;
     const garmentName = (spec?.garment || design.title || 'outfit').toLowerCase();
-    const isOnePiece = /dress|saree|sari|lehenga|anarkali|jumpsuit|gown|maxi|robe|suit|romper/i.test(garmentName);
-    const isBottom = /pant|trouser|skirt|jean|palazzo|short|churidar|salwar|dhoti/i.test(garmentName);
-    const isLayer = /jacket|blazer|shrug|coat|cardigan|dupatta|cape/i.test(garmentName);
+    const fullText =
+      `${design.imagePrompt || ''} ${design.description || ''} ${spec?.garment || ''} ${spec?.fabric?.primary || ''} ${design.title || ''} ${design.summary || ''}`.toLowerCase();
 
-    const primarySlotType = isOnePiece ? 'one_piece' : isBottom ? 'bottom' : isLayer ? 'layer' : 'top';
-    const primarySlotId = isOnePiece ? 'one-piece' : isBottom ? 'bottom' : isLayer ? 'layer' : 'top';
-    const primaryCategory = isOnePiece
-      ? garmentName.includes('saree') || garmentName.includes('sari')
-        ? 'saree'
-        : garmentName.includes('lehenga')
-          ? 'lehenga'
-          : 'dress'
-      : isBottom
-        ? garmentName.includes('jean')
-          ? 'jeans'
-          : 'trousers'
-        : isLayer
-          ? 'shirt'
-          : garmentName.includes('kurti')
-            ? 'kurti'
-            : garmentName.includes('kurta')
-              ? 'kurta'
-              : garmentName.includes('t-shirt') || garmentName.includes('tee')
-                ? 't_shirt'
-                : 'shirt';
+    const isOnePiece =
+      /dress|saree|sari|lehenga|anarkali|jumpsuit|gown|maxi|robe|romper/i.test(garmentName) &&
+      !/(?:two-piece|set|and|with)/i.test(garmentName);
+    const hasTop = /\b(shirt|top|t-shirt|tshirt|tee|blouse|kurti|kurta|tunic|crop\s*top|camisole|tank|polo)\b/i.test(fullText);
+    const hasBottom = /\b(jeans?|denim\s*pants?|pants?|trousers?|skirt|palazzo|shorts?|churidar|salwar|dhoti|leggings?)\b/i.test(fullText);
 
-    const textToScan =
-      `${design.title} ${spec?.garment || ''} ${spec?.fabric?.primary || ''} ${spec?.embellishment?.join(' ') || ''} ${design.description || ''}`.toLowerCase();
-    let colorId: ColorId = 'black';
-    let colorFamily: ColorFamily = 'neutral';
-    let colorHex = '#1A1A1A';
-    let colorName = 'Black';
-    let colorQuery = '';
+    let slots: LookSlot[];
 
-    if (/navy/i.test(textToScan)) {
-      colorId = 'navy';
-      colorFamily = 'blue';
-      colorHex = '#1F2A44';
-      colorName = 'Navy';
-      colorQuery = 'navy';
-    } else if (/sky\s*blue|sky/i.test(textToScan)) {
-      colorId = 'sky_blue';
-      colorFamily = 'blue';
-      colorHex = '#87CEEB';
-      colorName = 'Sky Blue';
-      colorQuery = 'sky blue';
-    } else if (/blue|ocean/i.test(textToScan)) {
-      colorId = 'sky_blue';
-      colorFamily = 'blue';
-      colorHex = '#87CEEB';
-      colorName = 'Blue';
-      colorQuery = 'blue';
-    } else if (/pink|rose|blush|magenta/i.test(textToScan)) {
-      colorId = 'rose_pink';
-      colorFamily = 'pink';
-      colorHex = '#E75480';
-      colorName = 'Rose Pink';
-      colorQuery = 'pink';
-    } else if (/maroon|wine/i.test(textToScan)) {
-      colorId = 'maroon';
-      colorFamily = 'red';
-      colorHex = '#800020';
-      colorName = 'Maroon';
-      colorQuery = 'maroon';
-    } else if (/red|ruby/i.test(textToScan)) {
-      colorId = 'red';
-      colorFamily = 'red';
-      colorHex = '#C8102E';
-      colorName = 'Red';
-      colorQuery = 'red';
-    } else if (/green|mint|sage|emerald/i.test(textToScan)) {
-      colorId = /mint/i.test(textToScan) ? 'mint' : 'emerald';
-      colorFamily = 'green';
-      colorHex = colorId === 'mint' ? '#A8E6CF' : '#046A38';
-      colorName = colorId === 'mint' ? 'Mint' : 'Emerald';
-      colorQuery = 'green';
-    } else if (/yellow|mustard|gold/i.test(textToScan)) {
-      colorId = 'gold';
-      colorFamily = 'metallic';
-      colorHex = '#C9A227';
-      colorName = 'Gold';
-      colorQuery = 'gold';
-    } else if (/purple|plum|lavender/i.test(textToScan)) {
-      colorId = 'plum';
-      colorFamily = 'purple';
-      colorHex = '#6E2C5E';
-      colorName = 'Plum';
-      colorQuery = 'plum';
-    } else if (/white|ivory|cream/i.test(textToScan)) {
-      colorId = 'white';
-      colorFamily = 'neutral';
-      colorHex = '#FFFFFF';
-      colorName = 'White';
-      colorQuery = 'white';
-    }
+    if (hasTop && hasBottom && !isOnePiece) {
+      // Two-piece outfit (Top + Bottom)
+      const topCtx = `${extractTargetContext(design.imagePrompt || '', 'top')} ${extractTargetContext(design.description || '', 'top')} ${extractTargetContext(spec?.garment || '', 'top')} ${spec?.fabric?.primary || ''}`;
+      const bottomCtx = `${extractTargetContext(design.imagePrompt || '', 'bottom')} ${extractTargetContext(design.description || '', 'bottom')} ${extractTargetContext(spec?.garment || '', 'bottom')} ${spec?.fabric?.primary || ''}`;
 
-    const fabricMatch = (FABRIC_IDS as readonly string[]).find((f) => spec?.fabric?.primary?.toLowerCase().includes(f));
-    const silhouetteMatch = (SILHOUETTE_IDS as readonly string[]).find((s) =>
-      spec?.silhouette?.toLowerCase().includes(s),
-    );
-    const necklineMatch = (NECKLINE_IDS as readonly string[]).find((n) => spec?.neckline?.toLowerCase().includes(n));
-    const sleeveMatch = (SLEEVE_LENGTH_IDS as readonly string[]).find((s) => spec?.sleeves?.toLowerCase().includes(s));
-    const lengthMatch = (GARMENT_LENGTH_IDS as readonly string[]).find((l) => spec?.length?.toLowerCase().includes(l));
+      const topColor = detectColorFromText(topCtx);
+      const bottomColor = detectColorFromText(bottomCtx);
 
-    const rawGarment = (spec?.garment || design.title || (isOnePiece ? 'dress' : 'shirt'))
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .trim();
-    const garmentKeywords = rawGarment
-      .split(/\s+/)
-      .filter((w) => !['outfit', 'piece', 'set', 'ensemble', 'and', 'with', 'for'].includes(w))
-      .slice(-3)
-      .join(' ');
-    const catTerm = primaryCategory === 't_shirt' ? 't-shirt' : primaryCategory;
-    const baseGarment = garmentKeywords.includes(catTerm) ? garmentKeywords : `${garmentKeywords} ${catTerm}`;
-    const primarySearchPhrase = [colorQuery, baseGarment].filter(Boolean).join(' ').trim();
+      const topCategory: Category = /\bkurti\b/i.test(topCtx)
+        ? 'kurti'
+        : /\bkurta\b/i.test(topCtx)
+          ? 'kurta'
+          : /\b(t-shirt|tshirt|tee)\b/i.test(topCtx)
+            ? 't_shirt'
+            : 'shirt';
 
-    const primarySlot: LookSlot = {
-      slotId: primarySlotId,
-      slot: primarySlotType as SlotType,
-      lookSpec: {
-        category: primaryCategory as Category,
-        colorFamily,
-        colorId,
-        ...(fabricMatch ? { fabric: fabricMatch as Fabric } : {}),
-        ...(silhouetteMatch
-          ? { silhouette: silhouetteMatch as Silhouette }
-          : isOnePiece
-            ? { silhouette: 'a_line' as const }
-            : {}),
-        ...(necklineMatch ? { neckline: necklineMatch as Neckline } : {}),
-        ...(sleeveMatch ? { sleeve: sleeveMatch as SleeveLength } : {}),
-        ...(lengthMatch ? { length: lengthMatch as GarmentLength } : isOnePiece ? { length: 'midi' as const } : {}),
-      },
-      swatches: [{ colorId, name: colorName, hex: colorHex }],
-      searchPhrase: primarySearchPhrase,
-      sizeNote: 'Tailored or standard fit',
-      alternatives: [],
-    };
+      const bottomCategory: Category = /\b(jeans?|denim)\b/i.test(bottomCtx)
+        ? 'jeans'
+        : 'trousers';
 
-    const slots: LookSlot[] = [primarySlot];
-    if (primarySlotType === 'top') {
-      slots.push({
-        slotId: 'bottom',
-        slot: 'bottom',
-        lookSpec: {
-          category: 'trousers',
-          colorFamily: 'neutral',
-          colorId: 'white',
-          silhouette: 'straight',
-          length: 'ankle',
-          fabric: 'cotton',
+      const topFabric = (FABRIC_IDS as readonly string[]).find((f) => topCtx.toLowerCase().includes(f));
+      const bottomFabric = (FABRIC_IDS as readonly string[]).find((f) => bottomCtx.toLowerCase().includes(f));
+      const silhouetteMatch = (SILHOUETTE_IDS as readonly string[]).find((s) => spec?.silhouette?.toLowerCase().includes(s));
+      const necklineMatch = (NECKLINE_IDS as readonly string[]).find((n) => spec?.neckline?.toLowerCase().includes(n));
+      const sleeveMatch = (SLEEVE_LENGTH_IDS as readonly string[]).find((s) => spec?.sleeves?.toLowerCase().includes(s));
+      const lengthMatch = (GARMENT_LENGTH_IDS as readonly string[]).find((l) => spec?.length?.toLowerCase().includes(l));
+
+      const topSearchPhrase = `${topColor.colorQuery || ''} ${topFabric ? topFabric : ''} ${topCategory === 't_shirt' ? 't-shirt' : topCategory}`.replace(/\s+/g, ' ').trim();
+      const bottomSearchPhrase = bottomCategory === 'jeans'
+        ? (bottomColor.colorQuery === 'denim' ? 'blue denim jeans' : `${bottomColor.colorQuery || 'blue'} denim jeans`.trim())
+        : `${bottomColor.colorQuery || ''} ${bottomCategory}`.trim();
+
+      slots = [
+        {
+          slotId: 'top',
+          slot: 'top',
+          lookSpec: {
+            category: topCategory,
+            colorFamily: topColor.colorFamily,
+            colorId: topColor.colorId,
+            ...(topFabric ? { fabric: topFabric as Fabric } : { fabric: 'cotton' as const }),
+            ...(silhouetteMatch ? { silhouette: silhouetteMatch as Silhouette } : {}),
+            ...(necklineMatch ? { neckline: necklineMatch as Neckline } : {}),
+            ...(sleeveMatch ? { sleeve: sleeveMatch as SleeveLength } : {}),
+            ...(lengthMatch ? { length: lengthMatch as GarmentLength } : {}),
+          },
+          swatches: [{ colorId: topColor.colorId, name: topColor.colorName, hex: topColor.colorHex }],
+          searchPhrase: topSearchPhrase,
+          sizeNote: 'Standard fit',
+          alternatives: [],
         },
-        swatches: [{ colorId: 'white', name: 'White', hex: '#FFFFFF' }],
-        searchPhrase: 'white straight trousers',
-        sizeNote: 'Standard fit',
-        alternatives: [],
-      });
-    } else if (primarySlotType === 'bottom') {
-      slots.unshift({
-        slotId: 'top',
-        slot: 'top',
-        lookSpec: {
-          category: 'shirt',
-          colorFamily: 'neutral',
-          colorId: 'white',
-          silhouette: 'straight',
-          neckline: 'round',
-          sleeve: 'short',
-          length: 'waist',
-          fabric: 'cotton',
+        {
+          slotId: 'bottom',
+          slot: 'bottom',
+          lookSpec: {
+            category: bottomCategory,
+            colorFamily: bottomColor.colorFamily,
+            colorId: bottomColor.colorId,
+            fabric: (bottomFabric as Fabric) || ('cotton' as const),
+            ...(silhouetteMatch ? { silhouette: silhouetteMatch as Silhouette } : { silhouette: 'straight' as const }),
+          },
+          swatches: [{ colorId: bottomColor.colorId, name: bottomColor.colorName, hex: bottomColor.colorHex }],
+          searchPhrase: bottomSearchPhrase,
+          sizeNote: 'Tailored or standard fit',
+          alternatives: [],
         },
-        swatches: [{ colorId: 'white', name: 'White', hex: '#FFFFFF' }],
-        searchPhrase: 'white cotton shirt',
-        sizeNote: 'Standard fit',
+      ];
+    } else {
+      const isBottom = /pant|trouser|skirt|jean|palazzo|short|churidar|salwar|dhoti/i.test(garmentName);
+      const isLayer = /jacket|blazer|shrug|coat|cardigan|dupatta|cape/i.test(garmentName);
+
+      const primarySlotType = isOnePiece ? 'one_piece' : isBottom ? 'bottom' : isLayer ? 'layer' : 'top';
+      const primarySlotId = isOnePiece ? 'one-piece' : isBottom ? 'bottom' : isLayer ? 'layer' : 'top';
+      const primaryCategory = isOnePiece
+        ? garmentName.includes('saree') || garmentName.includes('sari')
+          ? 'saree'
+          : garmentName.includes('lehenga')
+            ? 'lehenga'
+            : 'dress'
+        : isBottom
+          ? garmentName.includes('jean')
+            ? 'jeans'
+            : 'trousers'
+          : isLayer
+            ? 'shirt'
+            : garmentName.includes('kurti')
+              ? 'kurti'
+              : garmentName.includes('kurta')
+                ? 'kurta'
+                : garmentName.includes('t-shirt') || garmentName.includes('tee')
+                  ? 't_shirt'
+                  : 'shirt';
+
+      const detected = detectColorFromText(fullText);
+      const colorId = detected.colorId;
+      const colorFamily = detected.colorFamily;
+      const colorHex = detected.colorHex;
+      const colorName = detected.colorName;
+      const colorQuery = detected.colorQuery;
+
+      const fabricMatch = (FABRIC_IDS as readonly string[]).find((f) => spec?.fabric?.primary?.toLowerCase().includes(f));
+      const silhouetteMatch = (SILHOUETTE_IDS as readonly string[]).find((s) =>
+        spec?.silhouette?.toLowerCase().includes(s),
+      );
+      const necklineMatch = (NECKLINE_IDS as readonly string[]).find((n) => spec?.neckline?.toLowerCase().includes(n));
+      const sleeveMatch = (SLEEVE_LENGTH_IDS as readonly string[]).find((s) => spec?.sleeves?.toLowerCase().includes(s));
+      const lengthMatch = (GARMENT_LENGTH_IDS as readonly string[]).find((l) => spec?.length?.toLowerCase().includes(l));
+
+      const rawGarment = (spec?.garment || design.title || (isOnePiece ? 'dress' : 'shirt'))
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .trim();
+      const garmentKeywords = rawGarment
+        .split(/\s+/)
+        .filter((w) => !['outfit', 'piece', 'set', 'ensemble', 'and', 'with', 'for'].includes(w))
+        .slice(-3)
+        .join(' ');
+      const catTerm = primaryCategory === 't_shirt' ? 't-shirt' : primaryCategory;
+      const baseGarment = garmentKeywords.includes(catTerm) ? garmentKeywords : `${garmentKeywords} ${catTerm}`;
+      const primarySearchPhrase = [colorQuery, baseGarment].filter(Boolean).join(' ').trim();
+
+      const primarySlot: LookSlot = {
+        slotId: primarySlotId,
+        slot: primarySlotType as SlotType,
+        lookSpec: {
+          category: primaryCategory as Category,
+          colorFamily,
+          colorId,
+          ...(fabricMatch ? { fabric: fabricMatch as Fabric } : {}),
+          ...(silhouetteMatch
+            ? { silhouette: silhouetteMatch as Silhouette }
+            : isOnePiece
+              ? { silhouette: 'a_line' as const }
+              : {}),
+          ...(necklineMatch ? { neckline: necklineMatch as Neckline } : {}),
+          ...(sleeveMatch ? { sleeve: sleeveMatch as SleeveLength } : {}),
+          ...(lengthMatch ? { length: lengthMatch as GarmentLength } : isOnePiece ? { length: 'midi' as const } : {}),
+        },
+        swatches: [{ colorId, name: colorName, hex: colorHex }],
+        searchPhrase: primarySearchPhrase,
+        sizeNote: 'Tailored or standard fit',
         alternatives: [],
-      });
+      };
+
+      slots = [primarySlot];
+      if (primarySlotType === 'top') {
+        slots.push({
+          slotId: 'bottom',
+          slot: 'bottom',
+          lookSpec: {
+            category: 'trousers',
+            colorFamily: 'neutral',
+            colorId: 'white',
+            silhouette: 'straight',
+            length: 'ankle',
+            fabric: 'cotton',
+          },
+          swatches: [{ colorId: 'white', name: 'White', hex: '#FFFFFF' }],
+          searchPhrase: 'white straight trousers',
+          sizeNote: 'Standard fit',
+          alternatives: [],
+        });
+      } else if (primarySlotType === 'bottom') {
+        slots.unshift({
+          slotId: 'top',
+          slot: 'top',
+          lookSpec: {
+            category: 'shirt',
+            colorFamily: 'neutral',
+            colorId: 'white',
+            silhouette: 'straight',
+            neckline: 'round',
+            sleeve: 'short',
+            length: 'waist',
+            fabric: 'cotton',
+          },
+          swatches: [{ colorId: 'white', name: 'White', hex: '#FFFFFF' }],
+          searchPhrase: 'white cotton shirt',
+          sizeNote: 'Standard fit',
+          alternatives: [],
+        });
+      }
     }
 
     if (design.lookId) {

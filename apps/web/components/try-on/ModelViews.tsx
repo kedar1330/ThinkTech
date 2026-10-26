@@ -49,15 +49,18 @@ export function ModelViews({
   const [result, setResult] = useState<{ key: string; dressed: Dressed } | null>(null);
   const [views, setViews] = useState<{ id: string; states: Partial<Record<DrapeView, ViewState>> } | null>(null);
 
-  const dressing = items.length > 0 && result?.key !== key;
-  const dressed = items.length > 0 && result?.key === key ? result.dressed : null;
+  const isOriginalOnly =
+    items.length === 0 ||
+    items.every((i) => !i.price || i.title.startsWith('Original ') || (i.store === 'meesho' && !i.price));
+  const dressing = !isOriginalOnly && result?.key !== key;
+  const dressed = !isOriginalOnly && result?.key === key ? result.dressed : null;
   const drapeId = dressed?.kind === 'dressed' ? dressed.id : null;
   const viewStates = drapeId && views?.id === drapeId ? views.states : {};
 
   // Dress the model whenever the outfit changes.
   useEffect(() => {
     const request = ++latest.current;
-    if (items.length === 0) return;
+    if (isOriginalOnly) return;
     const timer = setTimeout(async () => {
       const res = await drapeAction({ outfitId, department, items: [...items] });
       if (request !== latest.current) return;
@@ -69,7 +72,7 @@ export function ModelViews({
     return () => clearTimeout(timer);
     // `key` stands for `items`, the department and the retry count.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, outfitId]);
+  }, [key, outfitId, isOriginalOnly]);
 
   // Then draw the other angles from the dressed front, all at once.
   useEffect(() => {
@@ -115,7 +118,7 @@ export function ModelViews({
           }
         }}
       >
-        <div className="flex flex-col items-center gap-1.5 rounded-xl bg-surface-muted p-1.5">
+        <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-surface-muted/60 p-2">
           <button
             type="button"
             aria-label="Previous view"
@@ -136,8 +139,8 @@ export function ModelViews({
                   aria-label={`${DRAPE_VIEW_LABELS[view]} view${state === 'drawing' ? ' (drawing…)' : ''}`}
                   onClick={() => setSelected(view)}
                   className={cn(
-                    'relative aspect-3/4 w-full overflow-hidden rounded-md border-2 bg-[#3b3550]',
-                    selected === view ? 'border-primary' : 'border-transparent hover:border-plum/50',
+                    'relative aspect-3/4 w-full overflow-hidden rounded-lg border-2 bg-[#2d2538]',
+                    selected === view ? 'border-primary ring-1 ring-primary/40' : 'border-transparent hover:border-plum/50',
                   )}
                 >
                   {state === 'ready' || (view === 'front' && state === 'base') ? (
@@ -145,10 +148,10 @@ export function ModelViews({
                     <img src={srcOf(view)} alt="" className="size-full object-cover" />
                   ) : (
                     <span className="flex size-full items-center justify-center text-white/80">
-                      {state === 'drawing' ? <Spinner /> : state === 'failed' ? '!' : null}
+                      {state === 'drawing' ? <Spinner /> : null}
                     </span>
                   )}
-                  <span className="absolute inset-x-0 bottom-0 bg-black/45 px-0.5 text-[10px] leading-4 text-white">
+                  <span className="absolute inset-x-0 bottom-0 bg-black/55 px-0.5 py-0.5 text-center text-[10px] leading-3 text-white">
                     {DRAPE_VIEW_LABELS[view]}
                   </span>
                 </button>
@@ -165,7 +168,7 @@ export function ModelViews({
           </button>
         </div>
 
-        <div className="relative aspect-3/4 w-full overflow-hidden rounded-xl bg-[#3b3550]">
+        <div className="relative aspect-3/4 w-full overflow-hidden rounded-2xl bg-[#2a2236]">
           {/* eslint-disable-next-line @next/next/no-img-element -- our own model picture, served by the API */}
           <img
             src={srcOf(shown)}

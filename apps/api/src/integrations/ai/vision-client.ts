@@ -39,7 +39,7 @@ export interface PhotoAnalysisProvider {
 }
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const VISION_FALLBACKS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+const VISION_FALLBACKS = ['gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview'];
 
 /** Gemini `generateContent` with the photo inline (D-129). */
 export function geminiVisionProvider(
@@ -48,7 +48,11 @@ export function geminiVisionProvider(
   fetchImpl: typeof fetch = fetch,
 ): PhotoAnalysisProvider {
   async function generate(photo: PhotoInput, prompt: string, signal: AbortSignal): Promise<unknown> {
-    const candidateModels = [model, ...VISION_FALLBACKS].filter((m, idx, arr) => arr.indexOf(m) === idx);
+    const candidateModels = [
+      ...(model !== 'gemini-3.8-flash' ? [model] : []),
+      ...VISION_FALLBACKS,
+      ...(model === 'gemini-3.8-flash' ? [model] : []),
+    ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
     let res: Response | undefined;
     let details: string | undefined;
@@ -56,6 +60,11 @@ export function geminiVisionProvider(
 
     for (const targetModel of candidateModels) {
       if (signal.aborted) throw new VisionProviderError('timeout');
+      const attemptController = new AbortController();
+      const timeoutId = setTimeout(() => attemptController.abort(), 18000);
+      const onParentAbort = () => attemptController.abort();
+      signal.addEventListener('abort', onParentAbort, { once: true });
+
       try {
         res = await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(targetModel)}:generateContent`, {
           method: 'POST',
@@ -72,11 +81,14 @@ export function geminiVisionProvider(
             ],
             generationConfig: { responseMimeType: 'application/json', temperature: 0 },
           }),
-          signal,
+          signal: attemptController.signal,
         });
       } catch {
         if (signal.aborted) throw new VisionProviderError('timeout');
         continue;
+      } finally {
+        clearTimeout(timeoutId);
+        signal.removeEventListener('abort', onParentAbort);
       }
 
       if (res.ok) {

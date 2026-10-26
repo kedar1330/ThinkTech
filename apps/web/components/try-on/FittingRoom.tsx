@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Box, Check, RotateCcw, Shirt, Sparkles, UserRound, X } from 'lucide-react';
 import {
   CATEGORIES,
+  COLORS,
   PRICE_RANGE_STORES,
   lookProductMatchesSchema,
   type BodyType,
@@ -17,7 +18,7 @@ import {
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { garmentSlots, vocabLabel } from '@/lib/outfits/look-text';
+import { garmentSlots, slotGarmentName, vocabLabel } from '@/lib/outfits/look-text';
 import { formatInr } from '@/lib/shop/format';
 import { itemColour } from '@/lib/try-on/colour';
 import type { Department } from '@/lib/try-on/figure';
@@ -43,6 +44,12 @@ type State = { kind: 'loading' } | { kind: 'ready'; matches: LookProductMatches 
 const storeName = (id: string) => PRICE_RANGE_STORES.find((s) => s.id === id)?.label ?? id;
 const slotName = (slot: Slot) => vocabLabel(CATEGORIES, slot.lookSpec.category);
 
+/** Returns the display title for the original look item of a slot (e.g. "Original Sky Blue Dress"). */
+function originalSlotTitle(slot: Slot): string {
+  const color = vocabLabel(COLORS, slot.lookSpec.colorId);
+  return `Original ${color} ${slotGarmentName(slot)}`;
+}
+
 /** A worn item for a listing, in the look's colour for that part until the picture's own colour is read. */
 function worn(slot: Slot, listing: ProductListing): WornItem {
   return {
@@ -54,13 +61,38 @@ function worn(slot: Slot, listing: ProductListing): WornItem {
   };
 }
 
+/** Pre-dresses the mannequin in the look's designed items so it is never naked while store searches load. */
+function defaultOutfit(slots: readonly Slot[]): WornItem[] {
+  let next: WornItem[] = [];
+  for (const slot of slots) {
+    next = wear(
+      next,
+      worn(slot, {
+        store: 'meesho',
+        title: originalSlotTitle(slot),
+        price: 0,
+        link: null,
+        imageUrl: null,
+      }),
+    );
+  }
+  return next;
+}
+
 /** A part's items as Shop My Look lists them: matches for the look first, then other styles (#133). */
 function allListings(matches: LookProductMatches, slotId: string): ProductListing[] {
-  const slot = matches.slots.find((s) => s.slotId === slotId);
+  const norm = (id: string) => id.replace(/[-_]/g, '').toLowerCase();
+  const slot = matches.slots.find(
+    (s) =>
+      s.slotId === slotId ||
+      norm(s.slotId) === norm(slotId) ||
+      (norm(slotId) === 'outfit' && (norm(s.slotId) === 'onepiece' || s.slotId === 'one-piece')) ||
+      (norm(s.slotId) === 'outfit' && (norm(slotId) === 'onepiece' || slotId === 'one-piece')),
+  );
   return [...(slot?.listings ?? []), ...(slot?.alternatives ?? [])];
 }
 
-/** The first outfit: the item clicked in Shop My Look, or each part's saved item, else its first with a picture. */
+/** The first outfit: the item clicked in Shop My Look, or saved item, else starts with the original look item. */
 function initialOutfit(
   matches: LookProductMatches,
   slots: readonly Slot[],
@@ -71,17 +103,28 @@ function initialOutfit(
   const choose = (slot: Slot) => {
     const listings = listingsOf(slot.slotId);
     const pick = picks.find((p) => p.slotId === slot.slotId);
-    return (
-      (start.item && start.slotId === slot.slotId && listings.find((l) => sameListing(l, start.item!))) ||
-      (pick && listings.find((l) => sameListing(l, pick))) ||
-      listings[0]
-    );
+    if (start.item && start.slotId === slot.slotId) {
+      const match = listings.find((l) => sameListing(l, start.item!));
+      if (match) return match;
+    }
+    if (pick) {
+      const match = listings.find((l) => sameListing(l, pick));
+      if (match) return match;
+    }
+    // Default to wearing the original designed look item
+    return null;
   };
   const parts = start.slotId ? slots.filter((s) => s.slotId === start.slotId) : slots;
   let next: WornItem[] = [];
   for (const slot of parts) {
-    const listing = choose(slot);
-    if (listing) next = wear(next, worn(slot, listing));
+    const listing = choose(slot) ?? {
+      store: 'meesho' as const,
+      title: originalSlotTitle(slot),
+      price: 0,
+      link: null,
+      imageUrl: null,
+    };
+    next = wear(next, worn(slot, listing));
   }
   return next;
 }
@@ -109,15 +152,15 @@ export function FittingRoom({
   start: { slotId?: string; item?: TryOnItem };
   overview: TryOnOverview;
 }) {
+  const slots = useMemo(() => garmentSlots(look).filter((s) => isWearable(s.slot)), [look]);
+  const proportions = useMemo(() => proportionsFor(bodyType), [bodyType]);
+
   const [state, setState] = useState<State>({ kind: 'loading' });
-  const [outfit, setOutfit] = useState<WornItem[]>([]);
+  const [outfit, setOutfit] = useState<WornItem[]>(() => defaultOutfit(slots));
   const [tab, setTab] = useState<string | null>(start.slotId ?? null);
   const [colours, setColours] = useState<Record<string, string>>({});
   const [realistic, setRealistic] = useState(false);
   const [view, setView] = useState<'model' | '3d'>('model');
-
-  const slots = useMemo(() => garmentSlots(look).filter((s) => isWearable(s.slot)), [look]);
-  const proportions = useMemo(() => proportionsFor(bodyType), [bodyType]);
 
   // The clothes for this look, from the same store searches as Shop My Look (cached for a day).
   useEffect(() => {
@@ -163,13 +206,35 @@ export function FittingRoom({
   const isWorn = (slotId: string, listing: ProductListing) =>
     outfit.some((w) => w.slotId === slotId && sameListing(w.listing, listing));
   const total = outfit.reduce((sum, w) => sum + w.listing.price, 0);
-  const aiItems = layered(outfit).map((w) => ({
-    slotId: w.slotId,
-    store: w.listing.store,
-    title: w.listing.title,
-    price: w.listing.price,
-  }));
+  const aiItems = layered(outfit)
+    .filter((w) => Boolean(w.listing.imageUrl && !w.listing.title.startsWith('Original ')))
+    .map((w) => ({
+      slotId: w.slotId,
+      store: w.listing.store,
+      title: w.listing.title,
+      price: w.listing.price,
+    }));
   const outfitKey = aiItems.map((i) => `${i.slotId}|${i.store}|${i.title}|${i.price}`).join('\n');
+
+  const isOriginalWorn = (slotId: string) => {
+    const norm = (id: string) => id.replace(/[-_]/g, '').toLowerCase();
+    const item = outfit.find((w) => w.slotId === slotId || norm(w.slotId) === norm(slotId));
+    return Boolean(
+      item && (!item.listing.imageUrl || item.listing.price === 0 || item.listing.title.startsWith('Original ')),
+    );
+  };
+
+  function putOnOriginal(slot: Slot) {
+    setRealistic(false);
+    const originalListing: ProductListing = {
+      store: 'meesho',
+      title: originalSlotTitle(slot),
+      price: 0,
+      link: null,
+      imageUrl: null,
+    };
+    setOutfit((current) => wear(current, worn(slot, originalListing)));
+  }
 
   function toggle(slot: Slot, listing: ProductListing) {
     setRealistic(false);
@@ -211,6 +276,47 @@ export function FittingRoom({
             </button>
           ))}
         </div>
+
+        {/* The Original Look Item Card */}
+        {activeSlot && (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => putOnOriginal(activeSlot)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                putOnOriginal(activeSlot);
+              }
+            }}
+            className={cn(
+              'relative flex cursor-pointer items-center gap-3 rounded-xl border p-2.5 text-left transition-all',
+              isOriginalWorn(activeSlot.slotId)
+                ? 'border-plum/60 bg-plum/[0.04] ring-1 ring-plum/30'
+                : 'border-border/80 bg-surface hover:border-plum/40 hover:bg-surface-muted/50',
+            )}
+          >
+            <div
+              className="size-12 shrink-0 rounded-lg border border-border/60 bg-[#efe9e3]"
+              style={{ backgroundColor: hexOrNull(activeSlot.swatches[0]?.hex) ?? '#efe9e3' }}
+            />
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="rounded-full bg-[#f3e7ea] px-2 py-0.5 text-[11px] font-medium text-plum">
+                  Original {slotName(activeSlot)}
+                </span>
+                {isOriginalWorn(activeSlot.slotId) && (
+                  <span className="flex items-center gap-1 text-[11px] font-medium text-plum">
+                    <Check aria-hidden className="size-3" /> Worn on model
+                  </span>
+                )}
+              </div>
+              <p className="line-clamp-1 text-xs font-medium text-foreground">{originalSlotTitle(activeSlot)}</p>
+              <p className="text-[11px] text-muted-foreground">Original style from look</p>
+            </div>
+          </div>
+        )}
+
         {state.kind === 'loading' && (
           <p role="status" className="text-sm text-muted-foreground">
             Finding the clothes for this look…
@@ -220,54 +326,57 @@ export function FittingRoom({
           <Alert>The clothes for this look couldn’t be loaded. Please go back to Shop My Look and try again.</Alert>
         )}
         {state.kind === 'ready' && activeSlot && (
-          <ul
-            aria-label={`${slotName(activeSlot)} items`}
-            className="grid max-h-[36rem] grid-cols-2 gap-2 overflow-y-auto pr-1"
-          >
-            {tabListings.length === 0 && (
-              <li className="col-span-2 text-sm text-muted-foreground">No items found for this part of the look.</li>
-            )}
-            {tabListings.map((listing) => {
-              const on = isWorn(activeSlot.slotId, listing);
-              return (
-                <li key={`${listing.store}|${listing.title}|${listing.price}`}>
-                  <button
-                    type="button"
-                    aria-pressed={on}
-                    disabled={!listing.imageUrl}
-                    onClick={() => toggle(activeSlot, listing)}
-                    className={cn(
-                      'relative flex w-full flex-col gap-1 rounded-lg border p-1.5 text-left text-[11px] transition-colors disabled:opacity-50',
-                      on ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:border-plum/60',
-                    )}
-                  >
-                    {listing.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- the store's Google-hosted thumbnail
-                      <img
-                        src={listing.imageUrl}
-                        alt=""
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="aspect-square w-full rounded-md bg-surface-muted object-contain"
-                      />
-                    ) : (
-                      <span aria-hidden className="block aspect-square w-full rounded-md bg-surface-muted" />
-                    )}
-                    {on && (
-                      <span className="absolute right-2 top-2 rounded-full bg-primary p-0.5 text-primary-foreground">
-                        <Check aria-hidden className="size-3" />
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Or try on recommendations from stores:</p>
+            <ul
+              aria-label={`${slotName(activeSlot)} items`}
+              className="grid max-h-[30rem] grid-cols-2 gap-2 overflow-y-auto pr-1"
+            >
+              {tabListings.length === 0 && (
+                <li className="col-span-2 text-sm text-muted-foreground">No items found for this part of the look.</li>
+              )}
+              {tabListings.map((listing) => {
+                const on = isWorn(activeSlot.slotId, listing);
+                return (
+                  <li key={`${listing.store}|${listing.title}|${listing.price}`}>
+                    <button
+                      type="button"
+                      aria-pressed={on}
+                      disabled={!listing.imageUrl}
+                      onClick={() => toggle(activeSlot, listing)}
+                      className={cn(
+                        'relative flex w-full flex-col gap-1 rounded-lg border p-1.5 text-left text-[11px] transition-colors disabled:opacity-50',
+                        on ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:border-plum/60',
+                      )}
+                    >
+                      {listing.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- the store's Google-hosted thumbnail
+                        <img
+                          src={listing.imageUrl}
+                          alt=""
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          className="aspect-square w-full rounded-md bg-surface-muted object-contain"
+                        />
+                      ) : (
+                        <span aria-hidden className="block aspect-square w-full rounded-md bg-surface-muted" />
+                      )}
+                      {on && (
+                        <span className="absolute right-2 top-2 rounded-full bg-primary p-0.5 text-primary-foreground">
+                          <Check aria-hidden className="size-3" />
+                        </span>
+                      )}
+                      <span className="line-clamp-2">{listing.title}</span>
+                      <span>
+                        <span className="font-medium">{formatInr(listing.price)}</span>{' '}
+                        <span className="text-muted-foreground">· {storeName(listing.store)}</span>
                       </span>
-                    )}
-                    <span className="line-clamp-2">{listing.title}</span>
-                    <span>
-                      <span className="font-medium">{formatInr(listing.price)}</span>{' '}
-                      <span className="text-muted-foreground">· {storeName(listing.store)}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
       </Card>
 
@@ -288,10 +397,10 @@ export function FittingRoom({
                 aria-selected={view === id}
                 onClick={() => setView(id)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm',
+                  'inline-flex items-center gap-1.5 rounded-full border px-4 py-1 text-sm transition-colors',
                   view === id
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border hover:border-plum/60',
+                    ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                    : 'border-border bg-surface text-foreground hover:border-plum/60',
                 )}
               >
                 <Icon aria-hidden className="size-4" />
@@ -331,38 +440,58 @@ export function FittingRoom({
           <ul className="space-y-2">
             {layered(dressed).map((w) => {
               const slot = slots.find((s) => s.slotId === w.slotId)!;
+              const isOriginal =
+                !w.listing.imageUrl || w.listing.price === 0 || w.listing.title.startsWith('Original ');
               return (
-                <li key={w.slotId} className="flex gap-2 rounded-lg border border-border p-2 text-xs">
-                  {w.listing.imageUrl && (
+                <li key={w.slotId} className="flex items-center gap-2.5 rounded-lg border border-border p-2 text-xs">
+                  {w.listing.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- the store's Google-hosted thumbnail
                     <img
                       src={w.listing.imageUrl}
                       alt=""
                       referrerPolicy="no-referrer"
-                      className="size-14 shrink-0 rounded-md bg-surface-muted object-contain"
+                      className="size-12 shrink-0 rounded-md bg-surface-muted object-contain"
+                    />
+                  ) : (
+                    <div
+                      className="size-12 shrink-0 rounded-lg border border-border/60 bg-[#efe9e3]"
+                      style={{ backgroundColor: w.colour || '#efe9e3' }}
                     />
                   )}
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    <p className="text-muted-foreground">{slotName(slot)}</p>
-                    <p className="line-clamp-2">{w.listing.title}</p>
-                    <p className="flex items-center gap-1.5">
-                      <span
-                        aria-hidden
-                        className="inline-block size-3 rounded-full border border-border"
-                        style={{ backgroundColor: w.colour }}
-                      />
-                      <span className="font-medium">{formatInr(w.listing.price)}</span>
-                      <span className="text-muted-foreground">· {storeName(w.listing.store)}</span>
-                    </p>
-                    {w.listing.link && (
-                      <a
-                        href={w.listing.link}
-                        target="_blank"
-                        rel="noopener noreferrer nofollow"
-                        className="text-plum underline underline-offset-2"
-                      >
-                        View on Google Shopping
-                      </a>
+                    <p className="text-xs text-muted-foreground">{slotName(slot)}</p>
+                    <p className="line-clamp-1 text-xs font-medium text-foreground">{w.listing.title}</p>
+                    {isOriginal ? (
+                      <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                        <span
+                          aria-hidden
+                          className="inline-block size-2 rounded-full"
+                          style={{ backgroundColor: w.colour || '#38bdf8' }}
+                        />
+                        <span>Original Look</span>
+                      </p>
+                    ) : (
+                      <>
+                        <p className="flex items-center gap-1.5 text-[11px]">
+                          <span
+                            aria-hidden
+                            className="inline-block size-2.5 rounded-full border border-border"
+                            style={{ backgroundColor: w.colour }}
+                          />
+                          <span className="font-medium">{formatInr(w.listing.price)}</span>
+                          <span className="text-muted-foreground">· {storeName(w.listing.store)}</span>
+                        </p>
+                        {w.listing.link && (
+                          <a
+                            href={w.listing.link}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="text-[11px] text-plum underline underline-offset-2"
+                          >
+                            View on Google Shopping
+                          </a>
+                        )}
+                      </>
                     )}
                   </div>
                   <button
@@ -381,7 +510,7 @@ export function FittingRoom({
             })}
           </ul>
         )}
-        {outfit.length > 0 && (
+        {total > 0 && (
           <p className="border-t border-border pt-2 text-sm">
             Total: <span className="font-medium">{formatInr(total)}</span>
             <span className="block text-xs text-muted-foreground">
@@ -390,8 +519,14 @@ export function FittingRoom({
           </p>
         )}
         {outfit.length > 0 && !realistic && (
-          <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => setRealistic(true)}>
-            <Sparkles aria-hidden /> Make it realistic with AI
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full rounded-full border-border/80 bg-surface py-2 text-xs font-medium hover:bg-surface-muted"
+            onClick={() => setRealistic(true)}
+          >
+            <Sparkles aria-hidden className="size-3.5 text-plum" /> Make it realistic with AI
           </Button>
         )}
       </Card>
