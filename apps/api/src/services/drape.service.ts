@@ -25,7 +25,7 @@ import type { StoredGarment, TryOnService } from './try-on.service';
 // No consent is needed: no personal data is sent. Pictures, prompts and replies are never logged.
 
 /** Bumped when the prompts change; a stored model made with older prompts is drawn again. */
-export const DRAPE_PROMPT_VERSION = 'model-drape-v2';
+export const DRAPE_PROMPT_VERSION = 'model-drape-v3';
 const IMAGE_MAX_BYTES = 4 * 1024 * 1024;
 
 const UNAVAILABLE = 'The try-on model isn’t available right now.';
@@ -40,7 +40,7 @@ const AVATAR_PROMPTS: Record<AvatarDepartment, string> = {
 };
 
 const PART: Record<StoredGarment['category'], string> = {
-  tops: 'the top (shirt or kurta) only; keep the trousers or skirt as they are',
+  tops: 'the top garment only (shirt, blouse or top, waist-length, not a kurta); keep the trousers or skirt as they are',
   bottoms: 'the trousers, jeans or skirt only; keep the top as it is',
   'one-pieces': 'the whole outfit (top and bottom) with this one-piece garment',
 };
@@ -50,7 +50,8 @@ export function drapePrompt(garment: Pick<StoredGarment, 'category' | 'title'>):
   return [
     'Dress the person in the first image in the garment shown in the second image (a store product photo).',
     `Replace ${PART[garment.category]}.`,
-    'Copy the garment’s colour, print, embroidery, neckline, sleeves and length, fitted naturally to the body.',
+    'Precisely copy the garment’s exact style, neckline, collar, buttons, sleeve length, hemline, colour and print, fitted naturally to the body.',
+    'Do not add any embroidery, golden work, or ethnic patterns unless clearly visible in the product photo.',
     'Keep the face, hair, skin, pose, shoes, framing, lighting and the dark studio backdrop exactly the same. Photorealistic. No text, no logos.',
   ].join(' ');
 }

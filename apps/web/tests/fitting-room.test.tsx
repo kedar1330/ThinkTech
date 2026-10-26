@@ -95,7 +95,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-const room = (start: { slotId?: string; item?: { store: 'amazon'; title: string; price: number } } = {}) =>
+const room = (start: { slotId?: string; item?: { store: ProductListing['store']; title: string; price: number } } = {}) =>
   render(<FittingRoom look={look} department="women" bodyType={null} picks={[]} start={start} overview={READY} />);
 const wears = async () =>
   within(await screen.findByRole('list', { name: 'Mannequin wears' })).queryAllByRole('listitem');
@@ -108,11 +108,11 @@ describe('FittingRoom (D-137)', () => {
     expect(fetch).toHaveBeenCalledWith(`/api/outfits/${ID}/products`, { cache: 'no-store' });
   });
 
-  it('opened from a look, puts each part’s first item on', async () => {
+  it('opened from a look, wears the original look items first', async () => {
     room();
-    await screen.findByRole('button', { name: /Kurta M/, pressed: true });
-    expect((await wears()).map((li) => li.textContent).sort()).toEqual(['Kurta M', 'Trousers F']);
-    expect(screen.getByText('₹798', { exact: false })).toBeInTheDocument();
+    expect(await screen.findByText('Worn on model')).toBeInTheDocument();
+    expect((await wears()).map((li) => li.textContent).sort()).toEqual(['Original Navy Kurta', 'Original Navy Trousers']);
+    expect(screen.getAllByText('Original Look')[0]).toBeInTheDocument();
   });
 
   it('swaps an item for the same part, takes items off, and resets', async () => {
@@ -144,17 +144,14 @@ describe('FittingRoom (D-137)', () => {
   });
 
   it('“Make it realistic” tries the same outfit on with AI', async () => {
-    room();
+    room({ slotId: 'top', item: { store: 'meesho', title: 'Kurta M', price: 299 } });
     await screen.findByRole('button', { name: /Kurta M/, pressed: true });
     await userEvent.click(screen.getByRole('button', { name: /Make it realistic with AI/ }));
     expect(screen.getByText('AI try-on panel')).toBeInTheDocument();
     expect(studio).toHaveBeenLastCalledWith(
       expect.objectContaining({
         outfitId: ID,
-        items: [
-          { slotId: 'bottom', store: 'flipkart', title: 'Trousers F', price: 499 },
-          { slotId: 'top', store: 'meesho', title: 'Kurta M', price: 299 },
-        ],
+        items: [{ slotId: 'top', store: 'meesho', title: 'Kurta M', price: 299 }],
       }),
     );
   });

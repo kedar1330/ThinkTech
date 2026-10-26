@@ -36,37 +36,57 @@ export function geminiDesignProvider(
       parts.push({ text: buildDesignPrompt(brief, image !== null) });
 
       const tryCall = async (targetModel: string) => {
-        return await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(targetModel)}:generateContent`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts }],
-            generationConfig: { responseMimeType: 'application/json', temperature: 0.4 },
-          }),
-          signal,
-        });
+        const attemptController = new AbortController();
+        const timeoutId = setTimeout(() => attemptController.abort(), 18000);
+        const onParentAbort = () => attemptController.abort();
+        signal.addEventListener('abort', onParentAbort, { once: true });
+
+        try {
+          return await fetchImpl(`${GEMINI_URL}/${encodeURIComponent(targetModel)}:generateContent`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts }],
+              generationConfig: { responseMimeType: 'application/json', temperature: 0.4 },
+            }),
+            signal: attemptController.signal,
+          });
+        } finally {
+          clearTimeout(timeoutId);
+          signal.removeEventListener('abort', onParentAbort);
+        }
       };
 
-      let res: Response;
-      try {
-        res = await tryCall(model);
-        if (res.status === 429 && model !== 'gemini-3.5-flash-lite') {
-          // Automatic fallback to lightweight model if primary hits rate limit
-          try {
-            const fallbackRes = await tryCall('gemini-3.5-flash-lite');
-            if (fallbackRes.ok) res = fallbackRes;
-          } catch {
-            // Keep original res
-          }
+      const candidateModels = [
+        ...(model !== 'gemini-3.8-flash' ? [model] : []),
+        'gemini-3-flash-preview',
+        'gemini-3.1-flash-lite-preview',
+        ...(model === 'gemini-3.8-flash' ? [model] : []),
+      ].filter((m, idx, arr) => arr.indexOf(m) === idx);
+
+      let res: Response | undefined;
+      for (const targetModel of candidateModels) {
+        if (signal.aborted) throw new VisionProviderError('timeout');
+        try {
+          res = await tryCall(targetModel);
+          if (res.ok) break;
+          // Fallback if the model is unavailable, rate limited, or not found
+          if (![404, 429, 500, 502, 503, 504].includes(res.status)) break;
+        } catch {
+          if (signal.aborted) throw new VisionProviderError('timeout');
         }
-      } catch {
-        throw new VisionProviderError(signal.aborted ? 'timeout' : 'provider_error');
       }
+
+      if (!res) throw new VisionProviderError(signal.aborted ? 'timeout' : 'provider_error');
       if (res.status === 429) throw new VisionProviderError('rate_limited');
       if (!res.ok) throw new VisionProviderError('provider_error', `status ${res.status}`);
       try {
         const body = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-        const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
+        const parts = body.candidates?.[0]?.content?.parts ?? [];
+        const textPart =
+          parts.find((p) => typeof p.text === 'string' && p.text.includes('{')) ??
+          parts.find((p) => typeof p.text === 'string');
+        const text = textPart?.text;
         if (typeof text !== 'string') throw new Error('no text');
         const json = text.match(/\{[\s\S]*\}/)?.[0] ?? text;
         return JSON.parse(json) as unknown;

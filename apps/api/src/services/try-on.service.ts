@@ -313,7 +313,9 @@ export class TryOnService {
     if (request.items) {
       // The outfit put together on the 3D mannequin: exactly those items, each one the search returned.
       const garments: StoredGarment[] = [];
-      for (const { slotId } of request.items) {
+      for (const item of request.items) {
+        if (!item || item.title?.startsWith('Original ') || item.price === 0) continue;
+        const slotId = item.slotId;
         const slotKind = kindOf.get(slotId) ?? kindOf.get(norm(slotId));
         if (!slotKind || !LAYER_ORDER[slotKind]) {
           throw new AppError('INVALID_REQUEST', 'That part of the look can’t be tried on.');
