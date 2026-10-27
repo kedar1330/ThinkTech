@@ -9,10 +9,14 @@ import { getCurrentUser, pathForStep } from '@/lib/auth/session';
 
 export const metadata: Metadata = { title: 'Sign up' };
 
-export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ google?: string; detail?: string }>;
+}) {
   const current = await getCurrentUser();
   if (current) redirect(pathForStep(current.user.onboardingStep));
-  const { google } = await searchParams;
+  const { google, detail } = await searchParams;
   return (
     <AuthSplitLayout
       title="Create your account"
@@ -25,7 +29,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         </>
       }
     >
-      <GoogleMessage reason={google} />
+      <GoogleMessage reason={google} detail={detail} />
       <RegisterForm googleEnabled={googleConfigured()} />
     </AuthSplitLayout>
   );

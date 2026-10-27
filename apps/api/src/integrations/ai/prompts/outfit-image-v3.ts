@@ -213,6 +213,27 @@ export function buildOutfitImagePrompt({
     }
   }
 
+  const isBallgownOrTiered =
+    design?.garmentName?.toLowerCase().includes('gown') ||
+    slots.some(
+      (s) =>
+        /\b(gown|ballgown|ball gown|tiered|ruffle|ruffles|ruffled|princess|barbie)\b/i.test(s.searchPhrase) ||
+        s.lookSpec?.silhouette === 'flared' ||
+        s.lookSpec?.silhouette === 'a_line',
+    );
+
+  if (isBallgownOrTiered) {
+    pieces = pieces.map((p) => {
+      if (/\b(dress|gown)\b/i.test(p) && !/\b(voluminous|ballgown|flared)\b/i.test(p)) {
+        return p.replace(
+          /\b(dress|gown)\b/gi,
+          'voluminous flared ballgown with cascading ruffled tiers and full puffed skirt flare',
+        );
+      }
+      return p;
+    });
+  }
+
   pieces = pieces.map(enhanceColourForAi);
 
   const wear = WEAR_TYPES.find((w) => w.id === wearType)?.label;
@@ -222,6 +243,7 @@ export function buildOutfitImagePrompt({
     .join(' ');
   return [
     `Full-length fashion lookbook photograph of ${figure} wearing ${/^[aeiou]/.test(kind) ? 'an' : 'a'} ${kind} outfit: ${joinList(pieces)}.`,
+    'Ensure complete modesty and full bodily coverage: fully clothed with opaque fabric and proper lining, strictly no bare torso, no exposed chest, no exposed back, no blouseless drape, no sheer transparency, no nudity.',
     'Standing upright facing the camera, whole body visible from head to shoes, natural relaxed pose.',
     'Plain light grey studio background, soft even lighting, realistic fabric texture and true colours.',
     'One person only. No text, no logos, no watermark, no brand names.',

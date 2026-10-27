@@ -47,7 +47,10 @@ const slotName = (slot: Slot) => vocabLabel(CATEGORIES, slot.lookSpec.category);
 /** Returns the display title for the original look item of a slot (e.g. "Original Sky Blue Dress"). */
 function originalSlotTitle(slot: Slot): string {
   const color = vocabLabel(COLORS, slot.lookSpec.colorId);
-  return `Original ${color} ${slotGarmentName(slot)}`;
+  const phrase = slot.searchPhrase?.toLowerCase() ?? '';
+  let garmentName = slotGarmentName(slot);
+  if (phrase.includes('ballgown') || phrase.includes('ball gown')) garmentName = 'Ballgown';
+  return `Original ${color} ${garmentName}`;
 }
 
 /** A worn item for a listing, in the look's colour for that part until the picture's own colour is read. */

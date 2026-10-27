@@ -25,7 +25,7 @@ import type { StoredGarment, TryOnService } from './try-on.service';
 // No consent is needed: no personal data is sent. Pictures, prompts and replies are never logged.
 
 /** Bumped when the prompts change; a stored model made with older prompts is drawn again. */
-export const DRAPE_PROMPT_VERSION = 'model-drape-v3';
+export const DRAPE_PROMPT_VERSION = 'model-drape-v4';
 const IMAGE_MAX_BYTES = 4 * 1024 * 1024;
 
 const UNAVAILABLE = 'The try-on model isn’t available right now.';
@@ -47,13 +47,42 @@ const PART: Record<StoredGarment['category'], string> = {
 
 /** The edit instruction for one garment; it describes only the model and the garment. */
 export function drapePrompt(garment: Pick<StoredGarment, 'category' | 'title'>): string {
-  return [
+  const isSaree = /\bsaree\b/i.test(garment.title);
+  const isVoluminous =
+    /\b(gown|ballgown|ball gown|tiered|ruffle|ruffles|ruffled|princess|barbie|anarkali|lehenga|flared)\b/i.test(
+      garment.title,
+    );
+
+  const parts = [
     'Dress the person in the first image in the garment shown in the second image (a store product photo).',
     `Replace ${PART[garment.category]}.`,
-    'Precisely copy the garment’s exact style, neckline, collar, buttons, sleeve length, hemline, colour and print, fitted naturally to the body.',
+  ];
+
+  if (isVoluminous) {
+    parts.push(
+      'Crucial silhouette requirement: Faithfully preserve the garment’s exact structural silhouette, cut, volume, flare, tiers, and ruffles as seen in the product photo.',
+      'If the garment has a ballgown, flared A-line, princess, or tiered ruffled skirt, maintain its full wide voluminous flare and cascading ruffled tiers intact; NEVER flatten or turn it into a tight, bodycon, sheath, or pencil dress.',
+    );
+  } else {
+    parts.push(
+      'Precisely copy the garment’s exact style, structural silhouette, neckline, collar, buttons, sleeve length, hemline, colour and print, draping naturally on the body without altering the intended cut or volume.',
+    );
+  }
+
+  if (isSaree) {
+    parts.push(
+      'Ethnic wear & blouse requirement: The saree must always be worn over a complete, matching, fully opaque tailored saree blouse (choli) that covers the chest, shoulders, and upper back with sleeves.',
+      'The blouse must NEVER be omitted, missing, or strapless. Do NOT show bare shoulders or a bare back.',
+    );
+  }
+
+  parts.push(
+    'Ensure complete modesty and full garment coverage: The person must be fully and decently clothed. Strictly no bare torso, no exposed chest, no exposed back, no sheer transparency disclosing skin or undergarments, no nudity, and no inappropriate body disclosure.',
     'Do not add any embroidery, golden work, or ethnic patterns unless clearly visible in the product photo.',
     'Keep the face, hair, skin, pose, shoes, framing, lighting and the dark studio backdrop exactly the same. Photorealistic. No text, no logos.',
-  ].join(' ');
+  );
+
+  return parts.join(' ');
 }
 
 /** How to turn the dressed model for each view; the outfit must not change. */
@@ -68,8 +97,48 @@ export function viewPrompt(view: Exclude<DrapeView, 'front'>): string {
   return [
     `Show the same person, wearing exactly the same outfit, ${VIEW_TURNS[view]}.`,
     'Same face, hair, skin, outfit colours, print, embroidery and length, same shoes, same dark studio backdrop, framing and lighting.',
+    'Maintain complete modesty and full bodily coverage from this angle: The outfit remains completely intact with all required components. For sarees and ethnic wear, the tailored blouse (choli) must cover the upper back, shoulders, and chest completely; the blouse must NEVER disappear, be removed, or omitted from this angle. Strictly no bare back, no bare shoulders, and no blouseless drape.',
+    'Faithfully maintain the garment’s exact silhouette, cut, volume, flare, tiers, and ruffles from this angle; do NOT flatten, narrow, or alter into a tight bodycon shape.',
+    'Strict modesty: fully clothed, fully opaque fabric, no bare torso, no exposed chest, no exposed back, no sheer transparency disclosing skin, no nudity, family-safe.',
     'Full body from head to feet, photorealistic. No text, no logos.',
   ].join(' ');
+}
+
+function formatGarmentDesc(
+  garment: Pick<StoredGarment, 'category' | 'title'>,
+  extraSlotDetails?: string,
+): string {
+  const title = garment.title.trim();
+  const context = `${title} ${extraSlotDetails ?? ''}`.toLowerCase();
+
+  const isSaree = /\bsaree\b/i.test(context);
+  const isVoluminousGown =
+    /\b(gown|ballgown|ball gown|tiered|ruffle|ruffles|ruffled|princess|barbie)\b/i.test(context) ||
+    (garment.category === 'one-pieces' && /\b(dress|gown|flared)\b/i.test(context));
+  const isAnarkali = /\banarkali\b/i.test(context);
+  const isLehenga = /\blehenga\b/i.test(context);
+
+  if (isSaree) {
+    return `${title} (traditional elegant draped saree worn with a matching tailored, fully opaque saree blouse with sleeves covering the shoulders, chest, and upper back; the blouse is fully visible and covers the back and shoulders completely from all angles, never blouseless, never bare back, never bare shoulders)`;
+  }
+
+  if (isVoluminousGown) {
+    return `${title} (voluminous flared ballgown featuring its authentic structural silhouette with an expansive wide bell-shaped skirt flare, cascading multi-layered ruffled tiers, and puffed skirt with dramatic full volume extending outward from the waist; strictly NOT bodycon, NOT a tight pencil or sheath dress, but a wide voluminous flared tiered ballgown)`;
+  }
+
+  if (isAnarkali) {
+    return `${title} (flared kalidar anarkali suit with voluminous kalidar umbrella flare, wide flared skirt, and modest neckline with sleeves)`;
+  }
+
+  if (isLehenga) {
+    return `${title} (traditional elegant lehenga with wide flared voluminous skirt and matching tailored choli blouse covering the chest, shoulders, and upper back)`;
+  }
+
+  if (/\b(kurti|kurta)\b/i.test(context)) {
+    return `${title} (tailored modest ethnic tunic with sleeves and modest neckline)`;
+  }
+
+  return `${title} (fitted naturally and comfortably to the body according to its cut, maintaining true garment shape and fullness)`;
 }
 
 export function dressedAvatarPrompt(
@@ -77,13 +146,18 @@ export function dressedAvatarPrompt(
   garments: readonly Pick<StoredGarment, 'category' | 'title'>[],
   view: DrapeView = 'front',
   modelDescription?: string,
+  extraSlotDetails?: readonly string[],
 ): string {
-  const garmentsDesc = garments.length > 0 ? garments.map((g) => g.title).join(', ') : 'a stylish Indian outfit';
+  const garmentsDesc =
+    garments.length > 0
+      ? garments.map((g, i) => formatGarmentDesc(g, extraSlotDetails?.[i])).join(', ')
+      : 'a stylish Indian outfit';
   const person = modelDescription ?? (department === 'women' ? 'a young Indian woman' : 'a young Indian man');
   const turn = view === 'front' ? 'standing straight and facing the camera' : VIEW_TURNS[view];
   return [
     `Photorealistic full body studio portrait of ${person} ${turn},`,
     `wearing and dressed in ${garmentsDesc}.`,
+    'Ensure complete modesty and full bodily coverage from this angle: The model is fully, decently, and modestly clothed in completely opaque fabric. Strictly no bare torso, no exposed chest, no exposed back, no blouseless drape, no sheer transparency disclosing undergarments or skin, no nudity, and no inappropriate body disclosure. Family-safe and retail-ready.',
     'Dark purple-grey studio backdrop with a soft floor shadow, soft studio lighting, whole body visible from head to feet, product turntable style, high fashion, no text, no logos.',
   ].join(' ');
 }
@@ -216,9 +290,19 @@ export class DrapeService {
       try {
         let current = dataUri(avatar.data, avatar.contentType);
         for (const garment of garments) {
-          if (!garment.imageUrl || garment.imageUrl.startsWith('/api/')) continue;
+          let garmentUrl = garment.imageUrl;
+          if (garmentUrl.startsWith('/api/')) {
+            const outfitImageDoc = await this.models.OutfitImage.findOne({ userId, outfitId })
+              .select('+image')
+              .lean<{ image?: { data?: unknown; contentType?: string } }>();
+            const imgData = bufferOf(outfitImageDoc?.image?.data);
+            if (imgData?.length && outfitImageDoc?.image?.contentType) {
+              garmentUrl = dataUri(imgData, outfitImageDoc.image.contentType);
+            }
+          }
+          if (!garmentUrl || garmentUrl.startsWith('/api/')) continue;
           const edited = await this.within(this.timeouts.editMs, (signal) =>
-            editor.edit({ prompt: drapePrompt(garment), images: [current, garment.imageUrl] }, signal),
+            editor.edit({ prompt: drapePrompt(garment), images: [current, garmentUrl] }, signal),
           );
           const contentType = detectImageType(edited.bytes);
           if (!contentType || edited.bytes.length > IMAGE_MAX_BYTES) throw new ImageProviderError('invalid_output');
@@ -237,7 +321,8 @@ export class DrapeService {
     if (!picture && this.generators.length > 0) {
       // 2. Generator fallback (e.g. Cloudflare Flux): generate dressed model preserving uploaded profile model
       const modelDesc = await this.describeModel(userId, request.department);
-      const prompt = dressedAvatarPrompt(request.department, garments, 'front', modelDesc);
+      const slotDetails = await this.getSlotDetails(userId, outfitId, garments);
+      const prompt = dressedAvatarPrompt(request.department, garments, 'front', modelDesc, slotDetails);
       for (const generator of this.generators) {
         try {
           const gen = await this.within(this.timeouts.imageMs, (signal) => generator.generate(prompt, signal));
@@ -325,7 +410,8 @@ export class DrapeService {
     if (!picture && this.generators.length > 0) {
       const garments = (doc.garments as StoredGarment[]) ?? [];
       const modelDesc = await this.describeModel(userId, doc.department as AvatarDepartment);
-      const prompt = dressedAvatarPrompt(doc.department as AvatarDepartment, garments, view, modelDesc);
+      const slotDetails = await this.getSlotDetails(userId, doc.outfitId, garments);
+      const prompt = dressedAvatarPrompt(doc.department as AvatarDepartment, garments, view, modelDesc, slotDetails);
       for (const generator of this.generators) {
         try {
           const gen = await this.within(this.timeouts.imageMs, (signal) => generator.generate(prompt, signal));
@@ -354,6 +440,46 @@ export class DrapeService {
     ).lean<StoredDrape>();
     if (!updated) throw new AppError('NOT_FOUND');
     return toDrape(updated);
+  }
+
+  private async getSlotDetails(
+    userId: Types.ObjectId,
+    outfitId: Types.ObjectId,
+    garments: readonly StoredGarment[],
+  ): Promise<string[]> {
+    try {
+      const look = await this.models.Outfit.findOne(
+        { _id: outfitId, userId },
+        { slots: 1, request: 1 },
+      ).lean<{
+        slots?: Array<{ slotId: string; searchPhrase?: string; lookSpec?: Record<string, unknown> }>;
+        request?: { design?: { garmentType?: string } };
+      }>();
+      if (!look?.slots?.length) return garments.map(() => '');
+
+      let designFeatures = '';
+      if (look.request?.design?.garmentType) {
+        const selection = await this.models.UserDesignSelection.findOne({
+          userId,
+          garmentType: look.request.design.garmentType,
+        }).lean<{ selectedFeatures?: Record<string, string> }>();
+        if (selection?.selectedFeatures) {
+          designFeatures = Object.values(selection.selectedFeatures).join(' ');
+        }
+      }
+
+      const norm = (id: string) => id.replace(/[-_]/g, '').toLowerCase();
+      return garments.map((g) => {
+        const slot = look.slots?.find((s) => s.slotId === g.slotId || norm(s.slotId) === norm(g.slotId));
+        const searchPhrase = slot?.searchPhrase ?? '';
+        const silhouette = (slot?.lookSpec?.silhouette as string) ?? '';
+        const pattern = (slot?.lookSpec?.pattern as string) ?? '';
+        const category = (slot?.lookSpec?.category as string) ?? '';
+        return [searchPhrase, silhouette, pattern, category, designFeatures].filter(Boolean).join(' ');
+      });
+    } catch {
+      return garments.map(() => '');
+    }
   }
 
   async remove(userId: Types.ObjectId, id: string): Promise<void> {

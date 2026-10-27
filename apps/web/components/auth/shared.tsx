@@ -125,9 +125,10 @@ const GOOGLE_MESSAGES: Record<string, string> = {
   failed: 'Google sign-in did not complete. Please try again.',
 };
 
-export function GoogleMessage({ reason }: { reason?: string }) {
+export function GoogleMessage({ reason, detail }: { reason?: string; detail?: string }) {
   if (!reason) return null;
-  const message = GOOGLE_MESSAGES[reason] ?? GOOGLE_MESSAGES.failed;
+  const base = GOOGLE_MESSAGES[reason] ?? GOOGLE_MESSAGES.failed;
+  const message = detail ? `${base} [Reason: ${detail}]` : base;
   return <Alert tone={reason === 'cancelled' ? 'info' : 'error'}>{message}</Alert>;
 }
 

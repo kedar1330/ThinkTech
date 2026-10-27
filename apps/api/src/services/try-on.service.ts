@@ -155,8 +155,9 @@ export class TryOnService {
 
     const person = `data:${photo.contentType};base64,${bytes.toString('base64')}`;
     const first = garments[0]!;
+    const garmentImageUrl = await this.resolveGarmentImage(userId, outfitId, first.imageUrl);
     const queued = await this.call((signal) =>
-      renderer.submitTryOn({ person, garmentImageUrl: first.imageUrl, category: first.category }, signal),
+      renderer.submitTryOn({ person, garmentImageUrl, category: first.category }, signal),
     ).catch((err: unknown) => {
       const cause = err instanceof TryOnProviderError ? err.cause : 'provider_error';
       const status = err instanceof TryOnProviderError ? err.status : undefined;
@@ -451,8 +452,9 @@ export class TryOnService {
     const garments = job.garments as StoredGarment[];
     const next = garments[job.step + 1];
     if (next) {
+      const garmentImageUrl = await this.resolveGarmentImage(job.userId, job.outfitId, next.imageUrl);
       const queued = await this.call((signal) =>
-        renderer.submitTryOn({ person: url, garmentImageUrl: next.imageUrl, category: next.category }, signal),
+        renderer.submitTryOn({ person: url, garmentImageUrl, category: next.category }, signal),
       );
       return { step: job.step + 1, request: queued, resultUrl: url, stageStartedAt: this.now() };
     }
@@ -496,4 +498,21 @@ export class TryOnService {
       clearTimeout(timer);
     }
   }
+
+  private async resolveGarmentImage(userId: Types.ObjectId, outfitId: Types.ObjectId, url: string): Promise<string> {
+    if (!url.startsWith('/api/')) return url;
+    try {
+      const outfitImageDoc = await this.models.OutfitImage.findOne({ userId, outfitId })
+        .select('+image')
+        .lean<{ image?: { data?: unknown; contentType?: string } }>();
+      const imgData = bufferOf(outfitImageDoc?.image?.data);
+      if (imgData?.length && outfitImageDoc?.image?.contentType) {
+        return `data:${outfitImageDoc.image.contentType};base64,${imgData.toString('base64')}`;
+      }
+    } catch {
+      // Fall back to original url
+    }
+    return url;
+  }
 }
+

@@ -25,9 +25,10 @@ export async function GET(request: NextRequest) {
   store.delete(cookieName('oauth'));
 
   const params = request.nextUrl.searchParams;
-  const back = (reason: string, intent = saved?.intent ?? 'login') => {
+  const back = (reason: string, intent = saved?.intent ?? 'login', detail?: string) => {
     const url = new URL(intent === 'signup' ? '/register' : '/login', request.nextUrl.origin);
     url.searchParams.set('google', reason);
+    if (detail) url.searchParams.set('detail', detail);
     return NextResponse.redirect(url);
   };
 
@@ -36,23 +37,29 @@ export async function GET(request: NextRequest) {
       hasSaved: Boolean(saved),
       receivedState: params.get('state'),
     });
-    return back('failed');
+    return back('failed', undefined, !saved ? 'missing_cookie' : 'state_mismatch');
   }
   if (params.get('error')) {
     console.error('Google OAuth error returned from Google:', params.get('error'));
-    return back(params.get('error') === 'access_denied' ? 'cancelled' : 'failed');
+    return back(
+      params.get('error') === 'access_denied' ? 'cancelled' : 'failed',
+      undefined,
+      String(params.get('error')),
+    );
   }
   const code = params.get('code');
   if (!code) {
     console.error('Google OAuth missing authorization code');
-    return back('failed');
+    return back('failed', undefined, 'missing_code');
   }
 
+  let exchangeErr: string | null = null;
   const idToken = await exchangeCode(code, saved.verifier).catch((err) => {
+    exchangeErr = err instanceof Error ? err.message : String(err);
     console.error('Google exchangeCode error:', err);
     return null;
   });
-  if (!idToken) return back('failed');
+  if (!idToken) return back('failed', undefined, exchangeErr ? `exchange_${exchangeErr}` : 'exchange_failed');
 
   try {
     const result = await apiRequest<GoogleAuthResponse>('/v1/auth/google', {
@@ -71,6 +78,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(pathForStep(result.onboardingStep), request.nextUrl.origin));
   } catch (err) {
     console.error('Google /v1/auth/google error:', err);
-    return back(err instanceof ApiError ? (ERROR_PARAM[err.code] ?? 'failed') : 'failed');
+    const detail =
+      err instanceof ApiError
+        ? `${err.code}: ${err.message}`
+        : err instanceof Error
+          ? err.message
+          : 'api_error';
+    return back(err instanceof ApiError ? (ERROR_PARAM[err.code] ?? 'failed') : 'failed', saved.intent, detail);
   }
 }

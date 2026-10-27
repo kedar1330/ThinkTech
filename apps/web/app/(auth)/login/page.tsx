@@ -9,7 +9,14 @@ import { getCurrentUser, pathForStep } from '@/lib/auth/session';
 
 export const metadata: Metadata = { title: 'Log in' };
 
-type Params = { google?: string; expired?: string; loggedOut?: string; reset?: string; verified?: string };
+type Params = {
+  google?: string;
+  detail?: string;
+  expired?: string;
+  loggedOut?: string;
+  reset?: string;
+  verified?: string;
+};
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<Params> }) {
   const current = await getCurrentUser();
@@ -21,7 +28,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       {params.verified && <Alert tone="success">Your email is verified. Log in to continue.</Alert>}
       {params.loggedOut && <Alert tone="info">You have been logged out on this device.</Alert>}
       {params.expired && <Alert tone="info">Your session has ended. Please log in again.</Alert>}
-      <GoogleMessage reason={params.google} />
+      <GoogleMessage reason={params.google} detail={params.detail} />
       <LoginForm googleEnabled={googleConfigured()} />
     </AuthSplitLayout>
   );

@@ -247,6 +247,7 @@ export function falTryOnRenderer(
           mode: 'balanced',
           num_samples: 1,
           output_format: 'jpeg',
+          nsfw_filter: true,
         },
         signal,
       );
