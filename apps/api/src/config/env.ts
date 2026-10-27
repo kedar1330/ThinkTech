@@ -169,6 +169,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 function loadDotenvFiles(): Record<string, string> {
+  const result: Record<string, string> = {};
   const candidates = [
     path.resolve(process.cwd(), '.env'),
     path.resolve(process.cwd(), 'apps/api/.env'),
