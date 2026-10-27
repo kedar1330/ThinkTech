@@ -95,8 +95,9 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-const room = (start: { slotId?: string; item?: { store: ProductListing['store']; title: string; price: number } } = {}) =>
-  render(<FittingRoom look={look} department="women" bodyType={null} picks={[]} start={start} overview={READY} />);
+const room = (
+  start: { slotId?: string; item?: { store: ProductListing['store']; title: string; price: number } } = {},
+) => render(<FittingRoom look={look} department="women" bodyType={null} picks={[]} start={start} overview={READY} />);
 const wears = async () =>
   within(await screen.findByRole('list', { name: 'Mannequin wears' })).queryAllByRole('listitem');
 
@@ -111,7 +112,10 @@ describe('FittingRoom (D-137)', () => {
   it('opened from a look, wears the original look items first', async () => {
     room();
     expect(await screen.findByText('Worn on model')).toBeInTheDocument();
-    expect((await wears()).map((li) => li.textContent).sort()).toEqual(['Original Navy Kurta', 'Original Navy Trousers']);
+    expect((await wears()).map((li) => li.textContent).sort()).toEqual([
+      'Original Navy Kurta',
+      'Original Navy Trousers',
+    ]);
     expect(screen.getAllByText('Original Look')[0]).toBeInTheDocument();
   });
 

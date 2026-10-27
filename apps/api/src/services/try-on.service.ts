@@ -285,7 +285,7 @@ export class TryOnService {
           : undefined;
       const pick = picks.find((p) => p.slotId === slotId || norm(p.slotId) === norm(slotId));
       const isOriginal = item
-        ? (item.title?.startsWith('Original ') || item.price === 0)
+        ? item.title?.startsWith('Original ') || item.price === 0
         : !request.item && (!pick || pick.title?.startsWith('Original ') || pick.price === 0);
 
       const listing = item
@@ -300,7 +300,8 @@ export class TryOnService {
 
       if (isOriginal) {
         const lookSlot = look.slots.find((s) => s.slotId === slotId || norm(s.slotId) === norm(slotId));
-        const title = item?.title ?? (lookSlot ? `Original ${lookSlot.title ?? slotKind}` : 'Original Outfit');
+        const slotCategory = lookSlot?.lookSpec?.category ?? slotKind;
+        const title = item?.title ?? (slotCategory ? `Original ${slotCategory}` : 'Original Outfit');
         return {
           slotId,
           store: item?.store ?? 'meesho',

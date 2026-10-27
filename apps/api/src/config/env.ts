@@ -169,8 +169,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 function loadDotenvFiles(): Record<string, string> {
-  const result: Record<string, string> = {};
-  const candidates = [path.resolve(process.cwd(), '.env'), path.resolve(process.cwd(), 'apps/api/.env')];
+  const candidates = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(process.cwd(), 'apps/api/.env'),
+    '/etc/secrets/.env',
+    path.resolve(process.cwd(), '/etc/secrets/.env'),
+  ];
   for (const file of candidates) {
     try {
       if (fs.existsSync(file)) {

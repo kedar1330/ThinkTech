@@ -220,9 +220,7 @@ export function FittingRoom({
   const isOriginalWorn = (slotId: string) => {
     const norm = (id: string) => id.replace(/[-_]/g, '').toLowerCase();
     const item = outfit.find((w) => w.slotId === slotId || norm(w.slotId) === norm(slotId));
-    return Boolean(
-      item && (item.listing.price === 0 || item.listing.title.startsWith('Original ')),
-    );
+    return Boolean(item && (item.listing.price === 0 || item.listing.title.startsWith('Original ')));
   };
 
   function putOnOriginal(slot: Slot) {

@@ -140,7 +140,9 @@ export function ModelViews({
                   onClick={() => setSelected(view)}
                   className={cn(
                     'relative aspect-3/4 w-full overflow-hidden rounded-lg border-2 bg-[#2d2538]',
-                    selected === view ? 'border-primary ring-1 ring-primary/40' : 'border-transparent hover:border-plum/50',
+                    selected === view
+                      ? 'border-primary ring-1 ring-primary/40'
+                      : 'border-transparent hover:border-plum/50',
                   )}
                 >
                   {state === 'ready' || (view === 'front' && state === 'base') ? (

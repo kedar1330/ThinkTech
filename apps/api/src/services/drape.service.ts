@@ -78,13 +78,9 @@ export function dressedAvatarPrompt(
   view: DrapeView = 'front',
   modelDescription?: string,
 ): string {
-  const garmentsDesc =
-    garments.length > 0 ? garments.map((g) => g.title).join(', ') : 'a stylish Indian outfit';
+  const garmentsDesc = garments.length > 0 ? garments.map((g) => g.title).join(', ') : 'a stylish Indian outfit';
   const person = modelDescription ?? (department === 'women' ? 'a young Indian woman' : 'a young Indian man');
-  const turn =
-    view === 'front'
-      ? 'standing straight and facing the camera'
-      : VIEW_TURNS[view];
+  const turn = view === 'front' ? 'standing straight and facing the camera' : VIEW_TURNS[view];
   return [
     `Photorealistic full body studio portrait of ${person} ${turn},`,
     `wearing and dressed in ${garmentsDesc}.`,
@@ -244,9 +240,7 @@ export class DrapeService {
       const prompt = dressedAvatarPrompt(request.department, garments, 'front', modelDesc);
       for (const generator of this.generators) {
         try {
-          const gen = await this.within(this.timeouts.imageMs, (signal) =>
-            generator.generate(prompt, signal),
-          );
+          const gen = await this.within(this.timeouts.imageMs, (signal) => generator.generate(prompt, signal));
           const contentType = detectImageType(gen.bytes);
           if (contentType && gen.bytes.length <= IMAGE_MAX_BYTES) {
             picture = { bytes: gen.bytes, contentType, model: generator.model };
@@ -334,9 +328,7 @@ export class DrapeService {
       const prompt = dressedAvatarPrompt(doc.department as AvatarDepartment, garments, view, modelDesc);
       for (const generator of this.generators) {
         try {
-          const gen = await this.within(this.timeouts.imageMs, (signal) =>
-            generator.generate(prompt, signal),
-          );
+          const gen = await this.within(this.timeouts.imageMs, (signal) => generator.generate(prompt, signal));
           const contentType = detectImageType(gen.bytes);
           if (contentType && gen.bytes.length <= IMAGE_MAX_BYTES) {
             picture = { bytes: gen.bytes, contentType };

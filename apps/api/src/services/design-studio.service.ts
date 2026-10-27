@@ -159,23 +159,47 @@ function detectColorFromText(text: string): {
     return { colorId: 'blush', colorFamily: 'pink', colorHex: '#F4C2C2', colorName: 'Baby Pink', colorQuery: 'pink' };
   }
   if (/\b(rani\s*pink|fuchsia|magenta)\b/i.test(t)) {
-    return { colorId: 'fuchsia', colorFamily: 'pink', colorHex: '#C2185B', colorName: 'Rani Pink', colorQuery: 'rani pink' };
+    return {
+      colorId: 'fuchsia',
+      colorFamily: 'pink',
+      colorHex: '#C2185B',
+      colorName: 'Rani Pink',
+      colorQuery: 'rani pink',
+    };
   }
   if (/\b(rose|pink)\b/i.test(t)) {
-    return { colorId: 'rose_pink', colorFamily: 'pink', colorHex: '#E75480', colorName: 'Rose Pink', colorQuery: 'pink' };
+    return {
+      colorId: 'rose_pink',
+      colorFamily: 'pink',
+      colorHex: '#E75480',
+      colorName: 'Rose Pink',
+      colorQuery: 'pink',
+    };
   }
   if (/\bnavy\b/i.test(t)) {
     return { colorId: 'navy', colorFamily: 'blue', colorHex: '#1F2A44', colorName: 'Navy', colorQuery: 'navy' };
   }
   if (/\b(sky\s*blue|powder\s*blue|light\s*blue)\b/i.test(t)) {
-    return { colorId: 'sky_blue', colorFamily: 'blue', colorHex: '#87CEEB', colorName: 'Sky Blue', colorQuery: 'sky blue' };
+    return {
+      colorId: 'sky_blue',
+      colorFamily: 'blue',
+      colorHex: '#87CEEB',
+      colorName: 'Sky Blue',
+      colorQuery: 'sky blue',
+    };
   }
   if (
     /\b(medium\s*wash|light\s*wash|dark\s*wash|denim\s*blue|indigo|denim)\b/i.test(t) &&
     !/\bwhite\s*denim\b/i.test(t) &&
     !/\bblack\s*denim\b/i.test(t)
   ) {
-    return { colorId: 'denim_blue', colorFamily: 'blue', colorHex: '#3B5B8C', colorName: 'Denim Blue', colorQuery: 'denim' };
+    return {
+      colorId: 'denim_blue',
+      colorFamily: 'blue',
+      colorHex: '#3B5B8C',
+      colorName: 'Denim Blue',
+      colorQuery: 'denim',
+    };
   }
   if (/\b(blue|ocean)\b/i.test(t)) {
     return { colorId: 'sky_blue', colorFamily: 'blue', colorHex: '#87CEEB', colorName: 'Blue', colorQuery: 'blue' };
@@ -202,16 +226,34 @@ function detectColorFromText(text: string): {
     return { colorId: 'emerald', colorFamily: 'green', colorHex: '#046A38', colorName: 'Emerald', colorQuery: 'green' };
   }
   if (/\bmustard\b/i.test(t)) {
-    return { colorId: 'mustard', colorFamily: 'yellow', colorHex: '#D4A017', colorName: 'Mustard', colorQuery: 'mustard' };
+    return {
+      colorId: 'mustard',
+      colorFamily: 'yellow',
+      colorHex: '#D4A017',
+      colorName: 'Mustard',
+      colorQuery: 'mustard',
+    };
   }
   if (/\b(yellow|haldi|lemon)\b/i.test(t)) {
-    return { colorId: 'pastel_yellow', colorFamily: 'yellow', colorHex: '#F5E28C', colorName: 'Pastel Yellow', colorQuery: 'yellow' };
+    return {
+      colorId: 'pastel_yellow',
+      colorFamily: 'yellow',
+      colorHex: '#F5E28C',
+      colorName: 'Pastel Yellow',
+      colorQuery: 'yellow',
+    };
   }
   if (/\bgold\b/i.test(t)) {
     return { colorId: 'gold', colorFamily: 'metallic', colorHex: '#C9A227', colorName: 'Gold', colorQuery: 'gold' };
   }
   if (/\b(lavender|lilac)\b/i.test(t)) {
-    return { colorId: 'lavender', colorFamily: 'purple', colorHex: '#C7B8E0', colorName: 'Lavender', colorQuery: 'lavender' };
+    return {
+      colorId: 'lavender',
+      colorFamily: 'purple',
+      colorHex: '#C7B8E0',
+      colorName: 'Lavender',
+      colorQuery: 'lavender',
+    };
   }
   if (/\b(plum|purple|violet)\b/i.test(t)) {
     return { colorId: 'plum', colorFamily: 'purple', colorHex: '#6E2C5E', colorName: 'Plum', colorQuery: 'plum' };
@@ -223,7 +265,13 @@ function detectColorFromText(text: string): {
     return { colorId: 'orange', colorFamily: 'orange', colorHex: '#E87722', colorName: 'Orange', colorQuery: 'orange' };
   }
   if (/\b(grey|gray|silver)\b/i.test(t)) {
-    return { colorId: 'light_grey', colorFamily: 'neutral', colorHex: '#C9C9C9', colorName: 'Grey', colorQuery: 'grey' };
+    return {
+      colorId: 'light_grey',
+      colorFamily: 'neutral',
+      colorHex: '#C9C9C9',
+      colorName: 'Grey',
+      colorQuery: 'grey',
+    };
   }
   if (/\b(beige|tan|brown|khaki|chocolate)\b/i.test(t)) {
     return { colorId: 'beige', colorFamily: 'brown', colorHex: '#D4C4A8', colorName: 'Beige', colorQuery: 'beige' };
@@ -234,12 +282,13 @@ function detectColorFromText(text: string): {
 function extractTargetContext(text: string, targetType: 'top' | 'bottom'): string {
   if (/on top/i.test(text) && /below/i.test(text)) {
     const parts = text.split(/below,?/i);
-    return targetType === 'top' ? parts[0]! : (parts[1] || '');
+    return targetType === 'top' ? parts[0]! : parts[1] || '';
   }
 
   const chunks = text.split(/[.;\n]|(?:\bwith\b|\band\b)/i);
   const topRegex = /\b(shirt|top|t-shirt|tshirt|tee|blouse|kurti|kurta|tunic|crop\s*top|camisole|tank|polo)\b/i;
-  const bottomRegex = /\b(jeans?|denim\s*pants?|pants?|trousers?|skirt|palazzo|shorts?|churidar|salwar|dhoti|leggings?)\b/i;
+  const bottomRegex =
+    /\b(jeans?|denim\s*pants?|pants?|trousers?|skirt|palazzo|shorts?|churidar|salwar|dhoti|leggings?)\b/i;
   const targetRegex = targetType === 'top' ? topRegex : bottomRegex;
 
   const relevant: string[] = [];
@@ -415,8 +464,13 @@ export class DesignStudioService {
     const isOnePiece =
       /dress|saree|sari|lehenga|anarkali|jumpsuit|gown|maxi|robe|romper/i.test(garmentName) &&
       !/(?:two-piece|set|and|with)/i.test(garmentName);
-    const hasTop = /\b(shirt|top|t-shirt|tshirt|tee|blouse|kurti|kurta|tunic|crop\s*top|camisole|tank|polo)\b/i.test(fullText);
-    const hasBottom = /\b(jeans?|denim\s*pants?|pants?|trousers?|skirt|palazzo|shorts?|churidar|salwar|dhoti|leggings?)\b/i.test(fullText);
+    const hasTop = /\b(shirt|top|t-shirt|tshirt|tee|blouse|kurti|kurta|tunic|crop\s*top|camisole|tank|polo)\b/i.test(
+      fullText,
+    );
+    const hasBottom =
+      /\b(jeans?|denim\s*pants?|pants?|trousers?|skirt|palazzo|shorts?|churidar|salwar|dhoti|leggings?)\b/i.test(
+        fullText,
+      );
 
     let slots: LookSlot[];
 
@@ -436,21 +490,31 @@ export class DesignStudioService {
             ? 't_shirt'
             : 'shirt';
 
-      const bottomCategory: Category = /\b(jeans?|denim)\b/i.test(bottomCtx)
-        ? 'jeans'
-        : 'trousers';
+      const bottomCategory: Category = /\b(jeans?|denim)\b/i.test(bottomCtx) ? 'jeans' : 'trousers';
 
       const topFabric = (FABRIC_IDS as readonly string[]).find((f) => topCtx.toLowerCase().includes(f));
       const bottomFabric = (FABRIC_IDS as readonly string[]).find((f) => bottomCtx.toLowerCase().includes(f));
-      const silhouetteMatch = (SILHOUETTE_IDS as readonly string[]).find((s) => spec?.silhouette?.toLowerCase().includes(s));
+      const silhouetteMatch = (SILHOUETTE_IDS as readonly string[]).find((s) =>
+        spec?.silhouette?.toLowerCase().includes(s),
+      );
       const necklineMatch = (NECKLINE_IDS as readonly string[]).find((n) => spec?.neckline?.toLowerCase().includes(n));
-      const sleeveMatch = (SLEEVE_LENGTH_IDS as readonly string[]).find((s) => spec?.sleeves?.toLowerCase().includes(s));
-      const lengthMatch = (GARMENT_LENGTH_IDS as readonly string[]).find((l) => spec?.length?.toLowerCase().includes(l));
+      const sleeveMatch = (SLEEVE_LENGTH_IDS as readonly string[]).find((s) =>
+        spec?.sleeves?.toLowerCase().includes(s),
+      );
+      const lengthMatch = (GARMENT_LENGTH_IDS as readonly string[]).find((l) =>
+        spec?.length?.toLowerCase().includes(l),
+      );
 
-      const topSearchPhrase = `${topColor.colorQuery || ''} ${topFabric ? topFabric : ''} ${topCategory === 't_shirt' ? 't-shirt' : topCategory}`.replace(/\s+/g, ' ').trim();
-      const bottomSearchPhrase = bottomCategory === 'jeans'
-        ? (bottomColor.colorQuery === 'denim' ? 'blue denim jeans' : `${bottomColor.colorQuery || 'blue'} denim jeans`.trim())
-        : `${bottomColor.colorQuery || ''} ${bottomCategory}`.trim();
+      const topSearchPhrase =
+        `${topColor.colorQuery || ''} ${topFabric ? topFabric : ''} ${topCategory === 't_shirt' ? 't-shirt' : topCategory}`
+          .replace(/\s+/g, ' ')
+          .trim();
+      const bottomSearchPhrase =
+        bottomCategory === 'jeans'
+          ? bottomColor.colorQuery === 'denim'
+            ? 'blue denim jeans'
+            : `${bottomColor.colorQuery || 'blue'} denim jeans`.trim()
+          : `${bottomColor.colorQuery || ''} ${bottomCategory}`.trim();
 
       slots = [
         {
@@ -520,13 +584,19 @@ export class DesignStudioService {
       const colorName = detected.colorName;
       const colorQuery = detected.colorQuery;
 
-      const fabricMatch = (FABRIC_IDS as readonly string[]).find((f) => spec?.fabric?.primary?.toLowerCase().includes(f));
+      const fabricMatch = (FABRIC_IDS as readonly string[]).find((f) =>
+        spec?.fabric?.primary?.toLowerCase().includes(f),
+      );
       const silhouetteMatch = (SILHOUETTE_IDS as readonly string[]).find((s) =>
         spec?.silhouette?.toLowerCase().includes(s),
       );
       const necklineMatch = (NECKLINE_IDS as readonly string[]).find((n) => spec?.neckline?.toLowerCase().includes(n));
-      const sleeveMatch = (SLEEVE_LENGTH_IDS as readonly string[]).find((s) => spec?.sleeves?.toLowerCase().includes(s));
-      const lengthMatch = (GARMENT_LENGTH_IDS as readonly string[]).find((l) => spec?.length?.toLowerCase().includes(l));
+      const sleeveMatch = (SLEEVE_LENGTH_IDS as readonly string[]).find((s) =>
+        spec?.sleeves?.toLowerCase().includes(s),
+      );
+      const lengthMatch = (GARMENT_LENGTH_IDS as readonly string[]).find((l) =>
+        spec?.length?.toLowerCase().includes(l),
+      );
 
       const rawGarment = (spec?.garment || design.title || (isOnePiece ? 'dress' : 'shirt'))
         .toLowerCase()

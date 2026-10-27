@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
   };
 
   if (!saved || !statesMatch(saved.state, params.get('state'))) {
-    console.error('Google OAuth state mismatch or missing cookie:', { hasSaved: Boolean(saved), receivedState: params.get('state') });
+    console.error('Google OAuth state mismatch or missing cookie:', {
+      hasSaved: Boolean(saved),
+      receivedState: params.get('state'),
+    });
     return back('failed');
   }
   if (params.get('error')) {
