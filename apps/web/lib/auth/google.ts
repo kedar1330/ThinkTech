@@ -83,14 +83,16 @@ export function statesMatch(expected: string, received: string | null): boolean 
 }
 
 /** Exchanges the authorization code for Google's ID token (server to server, with the client secret). */
-export async function exchangeCode(code: string, verifier: string): Promise<string | null> {
+export async function exchangeCode(code: string, verifier: string): Promise<string> {
+  const clientId = (process.env.GOOGLE_CLIENT_ID ?? '').trim().replace(/^["']|["']$/g, '');
+  const clientSecret = (process.env.GOOGLE_CLIENT_SECRET ?? '').trim().replace(/^["']|["']$/g, '');
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code,
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      client_id: clientId,
+      client_secret: clientSecret,
       redirect_uri: redirectUri(),
       grant_type: 'authorization_code',
       code_verifier: verifier,
@@ -100,8 +102,19 @@ export async function exchangeCode(code: string, verifier: string): Promise<stri
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
     console.error('Google exchangeCode failed:', res.status, errText);
-    return null;
+    let reason = `google_${res.status}`;
+    try {
+      const parsed = JSON.parse(errText) as { error?: string; error_description?: string };
+      if (parsed.error) reason += `_${parsed.error}`;
+      if (parsed.error_description) reason += `_${parsed.error_description}`;
+    } catch {
+      if (errText) reason += `_${errText.slice(0, 50)}`;
+    }
+    throw new Error(reason.replace(/\s+/g, '_').slice(0, 80));
   }
   const json = (await res.json()) as { id_token?: unknown };
-  return typeof json.id_token === 'string' ? json.id_token : null;
+  if (typeof json.id_token !== 'string') {
+    throw new Error('missing_id_token_in_google_response');
+  }
+  return json.id_token;
 }
