@@ -62,7 +62,7 @@ function worn(slot: Slot, listing: ProductListing): WornItem {
 }
 
 /** Pre-dresses the mannequin in the look's designed items so it is never naked while store searches load. */
-function defaultOutfit(slots: readonly Slot[]): WornItem[] {
+function defaultOutfit(slots: readonly Slot[], lookId?: string): WornItem[] {
   let next: WornItem[] = [];
   for (const slot of slots) {
     next = wear(
@@ -72,7 +72,7 @@ function defaultOutfit(slots: readonly Slot[]): WornItem[] {
         title: originalSlotTitle(slot),
         price: 0,
         link: null,
-        imageUrl: null,
+        imageUrl: lookId ? `/api/outfits/${lookId}/image` : null,
       }),
     );
   }
@@ -98,6 +98,7 @@ function initialOutfit(
   slots: readonly Slot[],
   picks: readonly LookPick[],
   start: { slotId?: string; item?: TryOnItem },
+  lookId?: string,
 ): WornItem[] {
   const listingsOf = (slotId: string) => allListings(matches, slotId).filter((l) => l.imageUrl);
   const choose = (slot: Slot) => {
@@ -122,7 +123,7 @@ function initialOutfit(
       title: originalSlotTitle(slot),
       price: 0,
       link: null,
-      imageUrl: null,
+      imageUrl: lookId ? `/api/outfits/${lookId}/image` : null,
     };
     next = wear(next, worn(slot, listing));
   }
@@ -156,7 +157,7 @@ export function FittingRoom({
   const proportions = useMemo(() => proportionsFor(bodyType), [bodyType]);
 
   const [state, setState] = useState<State>({ kind: 'loading' });
-  const [outfit, setOutfit] = useState<WornItem[]>(() => defaultOutfit(slots));
+  const [outfit, setOutfit] = useState<WornItem[]>(() => defaultOutfit(slots, look.id));
   const [tab, setTab] = useState<string | null>(start.slotId ?? null);
   const [colours, setColours] = useState<Record<string, string>>({});
   const [realistic, setRealistic] = useState(false);
@@ -172,7 +173,7 @@ export function FittingRoom({
         if (cancelled) return;
         if (!parsed?.success) return setState({ kind: 'unavailable' });
         setState({ kind: 'ready', matches: parsed.data });
-        setOutfit(initialOutfit(parsed.data, slots, picks, start));
+        setOutfit(initialOutfit(parsed.data, slots, picks, start, look.id));
       } catch {
         if (!cancelled) setState({ kind: 'unavailable' });
       }
@@ -207,7 +208,7 @@ export function FittingRoom({
     outfit.some((w) => w.slotId === slotId && sameListing(w.listing, listing));
   const total = outfit.reduce((sum, w) => sum + w.listing.price, 0);
   const aiItems = layered(outfit)
-    .filter((w) => Boolean(w.listing.imageUrl && !w.listing.title.startsWith('Original ')))
+    .filter((w) => Boolean(w.listing.imageUrl || w.listing.title))
     .map((w) => ({
       slotId: w.slotId,
       store: w.listing.store,
@@ -220,7 +221,7 @@ export function FittingRoom({
     const norm = (id: string) => id.replace(/[-_]/g, '').toLowerCase();
     const item = outfit.find((w) => w.slotId === slotId || norm(w.slotId) === norm(slotId));
     return Boolean(
-      item && (!item.listing.imageUrl || item.listing.price === 0 || item.listing.title.startsWith('Original ')),
+      item && (item.listing.price === 0 || item.listing.title.startsWith('Original ')),
     );
   };
 
@@ -231,7 +232,7 @@ export function FittingRoom({
       title: originalSlotTitle(slot),
       price: 0,
       link: null,
-      imageUrl: null,
+      imageUrl: `/api/outfits/${look.id}/image`,
     };
     setOutfit((current) => wear(current, worn(slot, originalListing)));
   }

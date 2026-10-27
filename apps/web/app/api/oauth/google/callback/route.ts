@@ -31,12 +31,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(url);
   };
 
-  if (!saved || !statesMatch(saved.state, params.get('state'))) return back('failed');
-  if (params.get('error')) return back(params.get('error') === 'access_denied' ? 'cancelled' : 'failed');
+  if (!saved || !statesMatch(saved.state, params.get('state'))) {
+    console.error('Google OAuth state mismatch or missing cookie:', { hasSaved: Boolean(saved), receivedState: params.get('state') });
+    return back('failed');
+  }
+  if (params.get('error')) {
+    console.error('Google OAuth error returned from Google:', params.get('error'));
+    return back(params.get('error') === 'access_denied' ? 'cancelled' : 'failed');
+  }
   const code = params.get('code');
-  if (!code) return back('failed');
+  if (!code) {
+    console.error('Google OAuth missing authorization code');
+    return back('failed');
+  }
 
-  const idToken = await exchangeCode(code, saved.verifier).catch(() => null);
+  const idToken = await exchangeCode(code, saved.verifier).catch((err) => {
+    console.error('Google exchangeCode error:', err);
+    return null;
+  });
   if (!idToken) return back('failed');
 
   try {
@@ -55,6 +67,7 @@ export async function GET(request: NextRequest) {
     await setSession(result.accessToken, saved.remember);
     return NextResponse.redirect(new URL(pathForStep(result.onboardingStep), request.nextUrl.origin));
   } catch (err) {
+    console.error('Google /v1/auth/google error:', err);
     return back(err instanceof ApiError ? (ERROR_PARAM[err.code] ?? 'failed') : 'failed');
   }
 }

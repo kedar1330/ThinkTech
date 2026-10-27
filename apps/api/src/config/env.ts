@@ -140,6 +140,13 @@ const envSchema = z.object({
 
 const configSchema = envSchema.superRefine((env, ctx) => {
   if (env.OUTFIT_IMAGES_ENABLED) {
+    if (env.APP_ENV === 'staging') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OUTFIT_IMAGES_ENABLED'],
+        message: 'OUTFIT_IMAGES_ENABLED can be switched on only locally',
+      });
+    }
     const hasCloudflare =
       (env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN) ||
       (env.CLOUDFLARE_ACCOUNT_ID_2 && env.CLOUDFLARE_API_TOKEN_2);

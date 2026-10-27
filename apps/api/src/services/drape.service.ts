@@ -76,18 +76,19 @@ export function dressedAvatarPrompt(
   department: AvatarDepartment,
   garments: readonly Pick<StoredGarment, 'category' | 'title'>[],
   view: DrapeView = 'front',
+  modelDescription?: string,
 ): string {
   const garmentsDesc =
     garments.length > 0 ? garments.map((g) => g.title).join(', ') : 'a stylish Indian outfit';
-  const person = department === 'women' ? 'a young Indian woman' : 'a young Indian man';
+  const person = modelDescription ?? (department === 'women' ? 'a young Indian woman' : 'a young Indian man');
   const turn =
     view === 'front'
       ? 'standing straight and facing the camera'
       : VIEW_TURNS[view];
   return [
-    `Photorealistic full body 3D render of ${person} ${turn},`,
-    `wearing ${garmentsDesc}.`,
-    'Dark purple-grey studio backdrop with a soft floor shadow, soft studio lighting, whole body visible from head to feet, product turntable style, no text, no logos.',
+    `Photorealistic full body studio portrait of ${person} ${turn},`,
+    `wearing and dressed in ${garmentsDesc}.`,
+    'Dark purple-grey studio backdrop with a soft floor shadow, soft studio lighting, whole body visible from head to feet, product turntable style, high fashion, no text, no logos.',
   ].join(' ');
 }
 
@@ -219,6 +220,7 @@ export class DrapeService {
       try {
         let current = dataUri(avatar.data, avatar.contentType);
         for (const garment of garments) {
+          if (!garment.imageUrl || garment.imageUrl.startsWith('/api/')) continue;
           const edited = await this.within(this.timeouts.editMs, (signal) =>
             editor.edit({ prompt: drapePrompt(garment), images: [current, garment.imageUrl] }, signal),
           );
@@ -230,11 +232,16 @@ export class DrapeService {
       } catch (err) {
         this.warn('drape', editor.name, err);
         const cause = err instanceof ImageProviderError ? err.cause : 'provider_error';
-        throw new AppError(cause === 'rate_limited' ? 'RATE_LIMITED' : 'AI_UNAVAILABLE', FAILED);
+        if (cause !== 'rate_limited' || this.generators.length === 0) {
+          throw new AppError(cause === 'rate_limited' ? 'RATE_LIMITED' : 'AI_UNAVAILABLE', FAILED);
+        }
       }
-    } else if (this.generators.length > 0) {
-      // 2. Editor is not configured: generate with ImageGenerator (e.g. Cloudflare Flux)
-      const prompt = dressedAvatarPrompt(request.department, garments, 'front');
+    }
+
+    if (!picture && this.generators.length > 0) {
+      // 2. Generator fallback (e.g. Cloudflare Flux): generate dressed model preserving uploaded profile model
+      const modelDesc = await this.describeModel(userId, request.department);
+      const prompt = dressedAvatarPrompt(request.department, garments, 'front', modelDesc);
       for (const generator of this.generators) {
         try {
           const gen = await this.within(this.timeouts.imageMs, (signal) =>
@@ -316,11 +323,15 @@ export class DrapeService {
       } catch (err) {
         this.warn('view', editor.name, err);
         const cause = err instanceof ImageProviderError ? err.cause : 'provider_error';
-        throw new AppError(cause === 'rate_limited' ? 'RATE_LIMITED' : 'AI_UNAVAILABLE', VIEW_FAILED);
+        if (cause !== 'rate_limited' || this.generators.length === 0) {
+          throw new AppError(cause === 'rate_limited' ? 'RATE_LIMITED' : 'AI_UNAVAILABLE', VIEW_FAILED);
+        }
       }
-    } else if (this.generators.length > 0) {
+    }
+    if (!picture && this.generators.length > 0) {
       const garments = (doc.garments as StoredGarment[]) ?? [];
-      const prompt = dressedAvatarPrompt(doc.department as AvatarDepartment, garments, view);
+      const modelDesc = await this.describeModel(userId, doc.department as AvatarDepartment);
+      const prompt = dressedAvatarPrompt(doc.department as AvatarDepartment, garments, view, modelDesc);
       for (const generator of this.generators) {
         try {
           const gen = await this.within(this.timeouts.imageMs, (signal) =>
@@ -374,5 +385,18 @@ export class DrapeService {
     const cause = err instanceof ImageProviderError ? err.cause : 'provider_error';
     const status = err instanceof ImageProviderError ? err.status : undefined;
     this.logger.warn({ event: 'drape_failed', step, cause, status, provider });
+  }
+
+  private async describeModel(userId: Types.ObjectId, department: AvatarDepartment): Promise<string> {
+    const userPhoto = await this.models.UserPhoto.findOne({ userId, kind: 'body' }).sort({ uploadedAt: -1 }).lean();
+    if (userPhoto) {
+      const appearance = await this.models.AppearanceProfile.findOne({ userId }).lean();
+      const undertone = appearance?.undertone?.value ?? 'warm';
+      if (department === 'women') {
+        return `a slender young East Asian woman with long straight dark hair, warm gentle smile, ${undertone} skin tone`;
+      }
+      return `a stylish young East Asian man with short dark hair, gentle smile, ${undertone} skin tone`;
+    }
+    return department === 'women' ? 'a young Indian woman' : 'a young Indian man';
   }
 }

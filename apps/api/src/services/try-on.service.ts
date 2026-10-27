@@ -284,14 +284,35 @@ export class TryOnService {
           ? request.item
           : undefined;
       const pick = picks.find((p) => p.slotId === slotId || norm(p.slotId) === norm(slotId));
+      const isOriginal = item
+        ? (item.title?.startsWith('Original ') || item.price === 0)
+        : !request.item && (!pick || pick.title?.startsWith('Original ') || pick.price === 0);
+
       const listing = item
         ? listings.find((l) => l.store === item.store && l.title === item.title && l.price === item.price)
         : (listings.find(
             (l) => pick && l.store === pick.store && l.title === pick.title && l.price === pick.price && l.imageUrl,
           ) ?? listings.find((l) => l.imageUrl));
 
-      if (!listing?.imageUrl) return null;
-      return { ...listing, imageUrl: listing.imageUrl, slotId, category: layer.category };
+      if (listing?.imageUrl) {
+        return { ...listing, imageUrl: listing.imageUrl, slotId, category: layer.category };
+      }
+
+      if (isOriginal) {
+        const lookSlot = look.slots.find((s) => s.slotId === slotId || norm(s.slotId) === norm(slotId));
+        const title = item?.title ?? (lookSlot ? `Original ${lookSlot.title ?? slotKind}` : 'Original Outfit');
+        return {
+          slotId,
+          store: item?.store ?? 'meesho',
+          title,
+          price: item?.price ?? 0,
+          link: null,
+          imageUrl: `/api/outfits/${outfitId}/image`,
+          category: layer.category,
+        };
+      }
+
+      return null;
     };
 
     if (request.slotId) {
@@ -314,7 +335,7 @@ export class TryOnService {
       // The outfit put together on the 3D mannequin: exactly those items, each one the search returned.
       const garments: StoredGarment[] = [];
       for (const item of request.items) {
-        if (!item || item.title?.startsWith('Original ') || item.price === 0) continue;
+        if (!item) continue;
         const slotId = item.slotId;
         const slotKind = kindOf.get(slotId) ?? kindOf.get(norm(slotId));
         if (!slotKind || !LAYER_ORDER[slotKind]) {

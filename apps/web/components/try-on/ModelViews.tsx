@@ -51,18 +51,16 @@ export function ModelViews({
   const [result, setResult] = useState<{ key: string; dressed: Dressed } | null>(null);
   const [views, setViews] = useState<{ id: string; states: Partial<Record<DrapeView, ViewState>> } | null>(null);
 
-  const isOriginalOnly =
-    items.length === 0 ||
-    items.every((i) => !i.price || i.title.startsWith('Original ') || (i.store === 'meesho' && !i.price));
-  const dressing = !isOriginalOnly && result?.key !== key;
-  const dressed = !isOriginalOnly && result?.key === key ? result.dressed : null;
+  const shouldDrape = items.length > 0;
+  const dressing = shouldDrape && result?.key !== key;
+  const dressed = shouldDrape && result?.key === key ? result.dressed : null;
   const drapeId = dressed?.kind === 'dressed' ? dressed.id : null;
   const viewStates = drapeId && views?.id === drapeId ? views.states : {};
 
   // Dress the model whenever the outfit changes.
   useEffect(() => {
     const request = ++latest.current;
-    if (isOriginalOnly) return;
+    if (!shouldDrape) return;
     const timer = setTimeout(async () => {
       const res = await drapeAction({ outfitId, department, items: [...items] });
       if (request !== latest.current) return;
@@ -74,7 +72,7 @@ export function ModelViews({
     return () => clearTimeout(timer);
     // `key` stands for `items`, the department and the retry count.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, outfitId, isOriginalOnly]);
+  }, [key, outfitId, shouldDrape]);
 
   // Then draw the other angles from the dressed front, all at once.
   useEffect(() => {

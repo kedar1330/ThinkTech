@@ -489,7 +489,9 @@ export class AuthService {
     const byEmail = bySub ?? (await this.models.User.findOne({ email: identity.email }).lean());
 
     if (byEmail) {
-      if (input.intent === 'signup') throw new AppError('GOOGLE_ACCOUNT_EXISTS');
+      if (input.intent === 'signup' && byEmail.googleSub !== identity.sub) {
+        throw new AppError('GOOGLE_ACCOUNT_EXISTS');
+      }
       if (!byEmail.isActive) throw new AppError('UNAUTHENTICATED', 'Google sign-in could not be completed.');
 
       const lockedUntil = byEmail.loginSecurity?.lockedUntil;
@@ -499,6 +501,9 @@ export class AuthService {
       let user: UserWithId = byEmail;
       let linked = false;
       if (byEmail.googleSub !== identity.sub) {
+        if (byEmail.role === 'admin') {
+          throw new AppError('FORBIDDEN', 'Admin accounts cannot be linked to Google.');
+        }
         if (typeof byEmail.googleSub === 'string') {
           throw new AppError('FORBIDDEN', 'This StyleMe account is linked to a different Google account.');
         }
