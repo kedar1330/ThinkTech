@@ -74,8 +74,7 @@ export async function startServer(deps: StartServerDeps = {}) {
   const outfitImageProvider = outfitProviders.length > 0 ? compositeOutfitImageProvider(outfitProviders, log) : null;
   // Price ranges (#118): live whenever a Serper.dev key is set, and only locally until the founder approves
   // showing store prices (D-77); elsewhere the key is ignored and the tabs say prices are unavailable.
-  const shoppingProvider =
-    config.SERPER_API_KEY && config.APP_ENV === 'local' ? serperShoppingProvider(config.SERPER_API_KEY) : null;
+  const shoppingProvider = config.SERPER_API_KEY ? serperShoppingProvider(config.SERPER_API_KEY) : null;
   // Design Studio (D-134): live whenever a Gemini key is set, unless DESIGN_STUDIO_ENABLED=false. Each image service
   // joins the failover chain when its key is set (Cloudflare first, then Pollinations).
   const designAnalysisProvider =

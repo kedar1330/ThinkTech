@@ -151,9 +151,6 @@ const configSchema = envSchema.superRefine((env, ctx) => {
         message: 'required when OUTFIT_IMAGES_ENABLED=true unless Cloudflare is configured',
       });
     }
-    if (env.APP_ENV !== 'local') {
-      ctx.addIssue({ code: 'custom', path: ['OUTFIT_IMAGES_ENABLED'], message: 'allowed only with APP_ENV=local' });
-    }
   }
   if (!env.AI_WORDING_ENABLED) return;
   for (const name of ['GEMINI_API_KEY', 'GEMINI_MODEL'] as const) {
