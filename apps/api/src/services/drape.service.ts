@@ -25,7 +25,7 @@ import type { StoredGarment, TryOnService } from './try-on.service';
 // No consent is needed: no personal data is sent. Pictures, prompts and replies are never logged.
 
 /** Bumped when the prompts change; a stored model made with older prompts is drawn again. */
-export const DRAPE_PROMPT_VERSION = 'model-drape-v4';
+export const DRAPE_PROMPT_VERSION = 'model-drape-v5';
 const IMAGE_MAX_BYTES = 4 * 1024 * 1024;
 
 const UNAVAILABLE = 'The try-on model isn’t available right now.';
@@ -71,13 +71,13 @@ export function drapePrompt(garment: Pick<StoredGarment, 'category' | 'title'>):
 
   if (isSaree) {
     parts.push(
-      'Ethnic wear & blouse requirement: The saree must always be worn over a complete, matching, fully opaque tailored saree blouse (choli) that covers the chest, shoulders, and upper back with sleeves.',
-      'The blouse must NEVER be omitted, missing, or strapless. Do NOT show bare shoulders or a bare back.',
+      'Ethnic wear & saree requirement: The saree must be traditionally draped with crisp vertical front pleats at the waist and the pallu draped across the torso over the left shoulder, worn over a matching, fully opaque tailored saree blouse (choli) that neatly covers the chest and shoulders.',
+      'The blouse must NEVER be omitted, missing, or strapless.',
     );
   }
 
   parts.push(
-    'Ensure complete modesty and full garment coverage: The person must be fully and decently clothed. Strictly no bare torso, no exposed chest, no exposed back, no sheer transparency disclosing skin or undergarments, no nudity, and no inappropriate body disclosure.',
+    'Ensure complete modesty and full garment coverage: The person must be fully and decently clothed. Strictly no bare torso, no exposed chest, no sheer transparency disclosing skin or undergarments, no nudity, and no inappropriate body disclosure.',
     'Do not add any embroidery, golden work, or ethnic patterns unless clearly visible in the product photo.',
     'Keep the face, hair, skin, pose, shoes, framing, lighting and the dark studio backdrop exactly the same. Photorealistic. No text, no logos.',
   );
@@ -85,26 +85,46 @@ export function drapePrompt(garment: Pick<StoredGarment, 'category' | 'title'>):
   return parts.join(' ');
 }
 
-/** How to turn the dressed model for each view; the outfit must not change. */
-const VIEW_TURNS: Record<Exclude<DrapeView, 'front'>, string> = {
+/** How to turn and position the dressed model for each view; the outfit must not change. */
+export const VIEW_TURNS: Record<DrapeView, string> = {
+  front:
+    'standing in a direct front-facing pose, facing straight forward directly into the camera, square shoulders facing front, frontal camera view, face and chest directly facing the viewer, perfectly centered full body front portrait',
   three_quarter:
-    'turned about 45 degrees to her or his left, a three-quarter view showing the front and the right side',
-  side: 'turned 90 degrees to her or his left so we see the right side in profile',
-  back: 'turned around so we see the person from directly behind (back view)',
+    'standing at a graceful three-quarter perspective angle (turned 45 degrees to her or his left), showing both the front and side of the model and outfit',
+  side: 'standing in a true 90-degree profile side view (turned completely sideways to her or his left), showing the right side in profile from head to feet',
+  back: 'turned completely around with back directly facing the camera, rear view seen from straight behind, showing the full rear of the model and outfit',
 };
 
 export function viewPrompt(view: Exclude<DrapeView, 'front'>): string {
-  return [
+  const parts = [
     `Show the same person, wearing exactly the same outfit, ${VIEW_TURNS[view]}.`,
     'Same face, hair, skin, outfit colours, print, embroidery and length, same shoes, same dark studio backdrop, framing and lighting.',
-    'Maintain complete modesty and full bodily coverage from this angle: The outfit remains completely intact with all required components. For sarees and ethnic wear, the tailored blouse (choli) must cover the upper back, shoulders, and chest completely; the blouse must NEVER disappear, be removed, or omitted from this angle. Strictly no bare back, no bare shoulders, and no blouseless drape.',
+  ];
+
+  if (view === 'back') {
+    parts.push(
+      'Ensure complete modesty and full bodily coverage from behind: The outfit remains completely intact with all required components. For sarees and ethnic wear, the tailored blouse (choli) covers the upper and mid back completely; strictly no bare back, no backless cut, and no blouseless drape. The decorative saree pallu flows gracefully over the left shoulder down the back.',
+    );
+  } else {
+    parts.push(
+      'Ensure complete modesty and full bodily coverage from this angle: The outfit remains completely intact with all required components. For sarees and ethnic wear, the tailored blouse (choli) covers the chest, shoulders, and torso completely; strictly no bare torso, no exposed chest, no exposed back, and no blouseless drape.',
+    );
+  }
+
+  parts.push(
     'Faithfully maintain the garment’s exact silhouette, cut, volume, flare, tiers, and ruffles from this angle; do NOT flatten, narrow, or alter into a tight bodycon shape.',
-    'Strict modesty: fully clothed, fully opaque fabric, no bare torso, no exposed chest, no exposed back, no sheer transparency disclosing skin, no nudity, family-safe.',
-    'Full body from head to feet, photorealistic. No text, no logos.',
-  ].join(' ');
+    'Strict modesty: fully clothed, fully opaque fabric, no sheer transparency disclosing skin, no nudity, family-safe and retail-ready.',
+    'Full body from head to feet, photorealistic high fashion studio portrait. No text, no logos.',
+  );
+
+  return parts.join(' ');
 }
 
-function formatGarmentDesc(garment: Pick<StoredGarment, 'category' | 'title'>, extraSlotDetails?: string): string {
+function formatGarmentDesc(
+  garment: Pick<StoredGarment, 'category' | 'title'>,
+  view: DrapeView = 'front',
+  extraSlotDetails?: string,
+): string {
   const title = garment.title.trim();
   const context = `${title} ${extraSlotDetails ?? ''}`.toLowerCase();
 
@@ -116,11 +136,25 @@ function formatGarmentDesc(garment: Pick<StoredGarment, 'category' | 'title'>, e
   const isLehenga = /\blehenga\b/i.test(context);
 
   if (isSaree) {
-    return `${title} (traditional elegant draped saree worn with a matching tailored, fully opaque saree blouse with sleeves covering the shoulders, chest, and upper back; the blouse is fully visible and covers the back and shoulders completely from all angles, never blouseless, never bare back, never bare shoulders)`;
+    if (view === 'front') {
+      return `${title} (an authentic, traditionally draped Indian saree in fine fabric with neat borders, worn with a matching fitted tailored saree blouse/choli featuring a modest round neckline and short sleeves covering chest and shoulders; the saree features crisp vertical accordion pleats neatly tucked at the center front waist falling straight to the floor, and a decorative pallu draped diagonally across the torso from right waist up over the left shoulder; modest and dignified, fully opaque, no bare midriff, no exposed cleavage)`;
+    }
+    if (view === 'three_quarter') {
+      return `${title} (an authentic Indian saree seen from a three-quarter angle, showing the fitted tailored blouse with sleeves, the diagonal pallu pinned at the left shoulder, and the graceful pleated drape of the saree skirt; fully opaque, modest, fully covered)`;
+    }
+    if (view === 'side') {
+      return `${title} (an authentic Indian saree seen in profile side view, showing the sleek profile of the pleated saree skirt and the tailored blouse covering the upper torso; fully covered, elegant silhouette)`;
+    }
+    if (view === 'back') {
+      return `${title} (an authentic Indian saree seen from the back, worn with a matching tailored saree blouse that fully covers the back and shoulders completely with modest coverage; strictly no bare back, no backless cut, no blouseless drape; the decorative saree pallu flows gracefully over the left shoulder down the back)`;
+    }
   }
 
   if (isVoluminousGown) {
-    return `${title} (voluminous flared ballgown featuring its authentic structural silhouette with an expansive wide bell-shaped skirt flare, cascading multi-layered ruffled tiers, and puffed skirt with dramatic full volume extending outward from the waist; strictly NOT bodycon, NOT a tight pencil or sheath dress, but a wide voluminous flared tiered ballgown)`;
+    if (view === 'front') {
+      return `${title} (voluminous flared ballgown featuring its authentic structural silhouette with an expansive wide bell-shaped skirt flare, cascading multi-layered ruffled tiers, and puffed skirt with dramatic full volume extending outward from the waist; strictly NOT bodycon, NOT a tight pencil or sheath dress, but a wide voluminous flared tiered ballgown)`;
+    }
+    return `${title} (voluminous flared ballgown seen from this angle, maintaining its wide bell-shaped flare, puffed skirt fullness, and cascading ruffled tiers intact; strictly NOT bodycon, NOT pencil)`;
   }
 
   if (isAnarkali) {
@@ -128,7 +162,10 @@ function formatGarmentDesc(garment: Pick<StoredGarment, 'category' | 'title'>, e
   }
 
   if (isLehenga) {
-    return `${title} (traditional elegant lehenga with wide flared voluminous skirt and matching tailored choli blouse covering the chest, shoulders, and upper back)`;
+    if (view === 'back') {
+      return `${title} (traditional Indian lehenga seen from behind with wide voluminous flared skirt and matching tailored blouse fully covering the back and shoulders; strictly no bare back)`;
+    }
+    return `${title} (traditional Indian lehenga with a wide voluminous flared lehenga skirt and matching tailored choli blouse covering chest and shoulders; modest and fully covered)`;
   }
 
   if (/\b(kurti|kurta)\b/i.test(context)) {
@@ -147,15 +184,28 @@ export function dressedAvatarPrompt(
 ): string {
   const garmentsDesc =
     garments.length > 0
-      ? garments.map((g, i) => formatGarmentDesc(g, extraSlotDetails?.[i])).join(', ')
+      ? garments.map((g, i) => formatGarmentDesc(g, view, extraSlotDetails?.[i])).join(', ')
       : 'a stylish Indian outfit';
   const person = modelDescription ?? (department === 'women' ? 'a young Indian woman' : 'a young Indian man');
-  const turn = view === 'front' ? 'standing straight and facing the camera' : VIEW_TURNS[view];
+  const turn = VIEW_TURNS[view];
+
+  let modestyInstruction: string;
+  if (view === 'front') {
+    modestyInstruction =
+      'Ensure complete modesty and full bodily coverage: The model is fully, decently, and modestly clothed in completely opaque fabric. Strictly no bare torso, no exposed chest, no sheer transparency disclosing undergarments or skin, no nudity, and no inappropriate body disclosure. Family-safe and retail-ready.';
+  } else if (view === 'back') {
+    modestyInstruction =
+      'Ensure complete modesty and full bodily coverage from behind: The model is fully clothed in completely opaque fabric, the blouse and garment completely cover the back and shoulders, strictly no bare back, no backless cut, no sheer transparency, no nudity, family-safe and retail-ready.';
+  } else {
+    modestyInstruction =
+      'Ensure complete modesty and full bodily coverage from this angle: The model is fully, decently, and modestly clothed in completely opaque fabric. Strictly no bare torso, no exposed chest, no exposed back, no blouseless drape, no sheer transparency disclosing undergarments or skin, no nudity, and no inappropriate body disclosure. Family-safe and retail-ready.';
+  }
+
   return [
     `Photorealistic full body studio portrait of ${person} ${turn},`,
     `wearing and dressed in ${garmentsDesc}.`,
-    'Ensure complete modesty and full bodily coverage from this angle: The model is fully, decently, and modestly clothed in completely opaque fabric. Strictly no bare torso, no exposed chest, no exposed back, no blouseless drape, no sheer transparency disclosing undergarments or skin, no nudity, and no inappropriate body disclosure. Family-safe and retail-ready.',
-    'Dark purple-grey studio backdrop with a soft floor shadow, soft studio lighting, whole body visible from head to feet, product turntable style, high fashion, no text, no logos.',
+    modestyInstruction,
+    'Dark purple-grey studio backdrop with a soft floor shadow, soft studio lighting, whole body visible from head to feet, high fashion studio portrait, no text, no logos.',
   ].join(' ');
 }
 
