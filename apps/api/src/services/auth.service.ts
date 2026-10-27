@@ -491,8 +491,7 @@ export class AuthService {
     if (byEmail) {
       if (input.intent === 'signup') throw new AppError('GOOGLE_ACCOUNT_EXISTS');
       if (!byEmail.isActive) throw new AppError('UNAUTHENTICATED', 'Google sign-in could not be completed.');
-      // Admins log in only with their seeded email and password; never link Google to them (D-95).
-      if (byEmail.role === 'admin') throw new AppError('FORBIDDEN', 'Admin accounts log in with email and password.');
+
       const lockedUntil = byEmail.loginSecurity?.lockedUntil;
       if (lockedUntil && lockedUntil > new Date())
         throw new AppError('ACCOUNT_LOCKED', undefined, secondsUntil(lockedUntil));
