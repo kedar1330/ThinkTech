@@ -104,10 +104,7 @@ export function viewPrompt(view: Exclude<DrapeView, 'front'>): string {
   ].join(' ');
 }
 
-function formatGarmentDesc(
-  garment: Pick<StoredGarment, 'category' | 'title'>,
-  extraSlotDetails?: string,
-): string {
+function formatGarmentDesc(garment: Pick<StoredGarment, 'category' | 'title'>, extraSlotDetails?: string): string {
   const title = garment.title.trim();
   const context = `${title} ${extraSlotDetails ?? ''}`.toLowerCase();
 
@@ -448,10 +445,7 @@ export class DrapeService {
     garments: readonly StoredGarment[],
   ): Promise<string[]> {
     try {
-      const look = await this.models.Outfit.findOne(
-        { _id: outfitId, userId },
-        { slots: 1, request: 1 },
-      ).lean<{
+      const look = await this.models.Outfit.findOne({ _id: outfitId, userId }, { slots: 1, request: 1 }).lean<{
         slots?: Array<{ slotId: string; searchPhrase?: string; lookSpec?: Record<string, unknown> }>;
         request?: { design?: { garmentType?: string } };
       }>();

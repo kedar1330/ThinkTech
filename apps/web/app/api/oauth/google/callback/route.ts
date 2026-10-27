@@ -79,11 +79,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error('Google /v1/auth/google error:', err);
     const detail =
-      err instanceof ApiError
-        ? `${err.code}: ${err.message}`
-        : err instanceof Error
-          ? err.message
-          : 'api_error';
+      err instanceof ApiError ? `${err.code}: ${err.message}` : err instanceof Error ? err.message : 'api_error';
     return back(err instanceof ApiError ? (ERROR_PARAM[err.code] ?? 'failed') : 'failed', saved.intent, detail);
   }
 }
