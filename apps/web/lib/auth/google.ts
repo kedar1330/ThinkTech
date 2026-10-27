@@ -39,7 +39,8 @@ export function newOAuthState(
 }
 
 export function redirectUri(): string {
-  return `${process.env.AUTH_URL}/api/oauth/google/callback`;
+  const base = (process.env.AUTH_URL ?? '').replace(/\/+$/, '');
+  return `${base}/api/oauth/google/callback`;
 }
 
 export function authorizationUrl(s: OAuthState): string {
@@ -96,7 +97,11 @@ export async function exchangeCode(code: string, verifier: string): Promise<stri
     }),
     cache: 'no-store',
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    console.error('Google exchangeCode failed:', res.status, errText);
+    return null;
+  }
   const json = (await res.json()) as { id_token?: unknown };
   return typeof json.id_token === 'string' ? json.id_token : null;
 }
