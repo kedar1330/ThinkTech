@@ -7,13 +7,10 @@ export class ManualService {
 
   /**
    * Returns all manual steps ordered by sortOrder.
-   * If the manualSteps collection is unseeded, it initializes it with DEFAULT_MANUAL_STEPS.
+   * Ensures the manualSteps collection is synchronized with DEFAULT_MANUAL_STEPS.
    */
   async listSteps(): Promise<ManualStep[]> {
-    const count = await this.models.ManualStep.countDocuments();
-    if (count === 0) {
-      await this.seedDefaults();
-    }
+    await this.seedDefaults();
 
     const docs = await this.models.ManualStep.find().sort({ sortOrder: 1 }).lean();
     return docs.map((doc) => ({
@@ -36,11 +33,30 @@ export class ManualService {
   }
 
   /**
-   * Seeds default steps into the manualSteps collection.
+   * Seeds default steps into the manualSteps collection and keeps existing steps in sync.
    */
   async seedDefaults(): Promise<void> {
     for (const step of DEFAULT_MANUAL_STEPS) {
-      await this.models.ManualStep.updateOne({ slug: step.slug }, { $setOnInsert: step }, { upsert: true });
+      await this.models.ManualStep.updateOne(
+        { slug: step.slug },
+        {
+          $set: {
+            stepNumber: step.stepNumber,
+            title: step.title,
+            tagline: step.tagline,
+            description: step.description,
+            actionLabel: step.actionLabel,
+            actionHref: step.actionHref,
+            imageUrl: step.imageUrl,
+            imageAlt: step.imageAlt,
+            highlights: step.highlights,
+            category: step.category,
+            status: step.status,
+            sortOrder: step.sortOrder,
+          },
+        },
+        { upsert: true },
+      );
     }
   }
 }

@@ -121,8 +121,8 @@ export const DEFAULT_MANUAL_STEPS: ManualStep[] = [
     tagline: 'Photorealistic digital draping and body silhouette mapping',
     description:
       'See how different fabrics, hemlines, and silhouettes drape on your frame before making a purchase. Preview realistic drape dynamics and 3D silhouette alignment without stepping into a physical fitting room.',
-    actionLabel: 'Preview Try-On',
-    actionHref: '/features/virtual-try-on',
+    actionLabel: 'Explore Virtual Try-On',
+    actionHref: '/try-on',
     imageUrl: '/images/manual/step-5-virtual-try-on.jpg',
     imageAlt: 'High-tech interactive virtual fitting mirror showing 3D digital garment mapping and draping',
     highlights: [
@@ -131,7 +131,7 @@ export const DEFAULT_MANUAL_STEPS: ManualStep[] = [
       'Zero guesswork fit evaluation before tailoring or ordering',
     ],
     category: 'Innovation',
-    status: 'preview',
+    status: 'live',
     sortOrder: 5,
   },
   {
@@ -142,7 +142,7 @@ export const DEFAULT_MANUAL_STEPS: ManualStep[] = [
     description:
       'Bring your custom fashion visions to life. Choose luxury fabric swatches, mix-and-match necklines, customize sleeve lengths, and generate an exact tailor-ready specification sheet for custom boutique tailoring.',
     actionLabel: 'Explore Design Studio',
-    actionHref: '/features/design-studio',
+    actionHref: '/design-studio',
     imageUrl: '/images/manual/step-6-design-studio.jpg',
     imageAlt: 'Fashion designer sketchbook with watercolor illustration, fabric swatches and measuring tape',
     highlights: [
@@ -151,7 +151,7 @@ export const DEFAULT_MANUAL_STEPS: ManualStep[] = [
       'Exportable tailor specification sheets with exact measurement guidelines',
     ],
     category: 'Design',
-    status: 'preview',
+    status: 'live',
     sortOrder: 6,
   },
   {

@@ -37,10 +37,7 @@ describe('HowItWorksManual (Home Page Website Manual)', () => {
     await user.click(tab6);
 
     expect(screen.getByRole('heading', { level: 3, name: /6\. Bespoke Design Studio/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Explore Design Studio/i })).toHaveAttribute(
-      'href',
-      '/features/design-studio',
-    );
+    expect(screen.getByRole('link', { name: /Explore Design Studio/i })).toHaveAttribute('href', '/design-studio');
   });
 
   it('navigates next and previous steps with buttons', async () => {

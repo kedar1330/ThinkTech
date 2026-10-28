@@ -58,7 +58,7 @@ const PERSONAL = [
   },
 ];
 
-const UPCOMING = [
+const FEATURES_LIST = [
   {
     Icon: Sparkles,
     title: 'Outfit suggestions with reasons',
@@ -66,7 +66,7 @@ const UPCOMING = [
   },
   { Icon: Palette, title: 'My Colour Palette', body: 'Palettes shaped by your colour choices and optional signals.' },
   { Icon: ShoppingBag, title: 'Shop My Look', body: 'Save items you find and compare the total with your budget.' },
-  { Icon: Camera, title: 'Virtual Try-On', body: 'See how a look could come together before you buy.' },
+  { Icon: Camera, title: 'Virtual Try-On', body: 'See how a look comes together on your silhouette in 3D.' },
   { Icon: PencilRuler, title: 'Design Studio', body: 'Sketch and refine custom pieces for your tailor.' },
   { Icon: MessageCircle, title: 'Style Assistant', body: 'Ask styling questions in plain language.' },
 ];
@@ -86,7 +86,7 @@ const FAQ = [
   },
   {
     q: 'Does StyleMe sell clothes?',
-    a: 'No. StyleMe is a styling guide. Shop My Look will let you save items you find elsewhere and compare them with your budget — it is coming soon.',
+    a: 'No. StyleMe is a styling guide. Shop My Look lets you save items you find elsewhere and compare them with your budget.',
   },
   {
     q: 'How is my data protected?',
@@ -94,7 +94,7 @@ const FAQ = [
   },
   {
     q: 'Which features are available today?',
-    a: 'Account sign-up, your style profile and optional appearance signals. Outfit suggestions, palettes, try-on, design studio and the style assistant are marked "Coming soon".',
+    a: 'All features are live today: your style profile, outfit suggestions with reasons, colour palettes, outfit categories, Shop My Look budget tracking, Virtual Try-On, Bespoke Design Studio, and the AI Style Assistant.',
   },
 ];
 
@@ -113,10 +113,6 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       <section className="relative overflow-hidden mesh-ambient-warm py-6">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
           <div className="space-y-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-plum/30 bg-plum/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-plum">
-              <Sparkles className="size-3 text-plum animate-pulse-subtle" />
-              Personal styling for India
-            </div>
             <h1 className="font-display text-5xl leading-[1.05] text-primary sm:text-6xl tracking-tight">
               Discover the Style That Is <span className="italic text-accent">You</span>.
             </h1>
@@ -192,7 +188,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       </section>
 
       {/* Personalized styling */}
-      <section id="features" className="scroll-mt-20 py-20">
+      <section id="styling" className="scroll-mt-20 py-20">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 md:grid-cols-[1fr_1.2fr]">
           <div className="relative mx-auto aspect-[2/3] w-full max-w-md overflow-hidden rounded-[2rem] shadow-xl">
             <Image
@@ -221,7 +217,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             </ul>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <UserRound aria-hidden className="size-4 text-plum" />
-              Available today: style profile and optional appearance signals.
+              Available today: your complete style profile, colour analysis, and tailored recommendations.
             </div>
           </div>
         </div>
@@ -296,18 +292,24 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
           <SectionHeading
             eyebrow="Budget-based shopping"
             title="Style that respects your budget"
-            body="Set a budget per look in your style profile today. With Shop My Look you will save items you find in any store, with their prices, and see how the total compares with your budget."
+            body="Set a budget per look in your style profile today. With Shop My Look, save items you find across stores with their prices, and see how the total compares with your budget."
           />
-          <Badge>Shop My Look — coming soon</Badge>
+          <Badge className="border-emerald-600/40 bg-emerald-50 text-emerald-800 font-semibold">
+            Shop My Look — Live
+          </Badge>
         </div>
       </section>
 
-      {/* Upcoming features */}
-      <section className="bg-surface-muted py-24">
+      {/* Core styling features */}
+      <section id="features" className="scroll-mt-20 bg-surface-muted py-24">
         <div className="mx-auto max-w-6xl space-y-14 px-4 sm:px-6">
-          <SectionHeading eyebrow="Upcoming features" title="What we are building next" />
+          <SectionHeading
+            eyebrow="Platform Features"
+            title="Everything you need to style your best"
+            body="Every feature is live and crafted for you — from tone-matched colour palettes and personalized outfit ideas to 3D virtual fitting and tailor specs."
+          />
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {UPCOMING.map(({ Icon, title, body }) => (
+            {FEATURES_LIST.map(({ Icon, title, body }) => (
               <li
                 key={title}
                 className="group flex flex-col justify-between rounded-3xl border border-border/80 bg-surface p-7 shadow-xs transition-all duration-300 card-lift min-h-[250px] hover:border-plum/50"
@@ -317,14 +319,20 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                     <div className="flex size-12 items-center justify-center rounded-2xl bg-plum/10 text-plum transition-transform duration-300 group-hover:scale-110 shadow-xs">
                       <Icon aria-hidden className="size-6 text-plum" />
                     </div>
-                    <Badge className="border-border/80 bg-surface-muted/60 text-muted-foreground font-semibold">
-                      Coming soon
-                    </Badge>
+                    <Badge className="border-emerald-600/40 bg-emerald-50 text-emerald-800 font-semibold">Live</Badge>
                   </div>
                   <h3 className="font-display text-xl text-primary font-semibold group-hover:text-plum transition-colors">
                     {title}
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
+                </div>
+                <div className="pt-4 border-t border-border/50 mt-4">
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-plum hover:underline group-hover:translate-x-0.5 transition-transform"
+                  >
+                    Try it now <ArrowRight className="size-3" />
+                  </Link>
                 </div>
               </li>
             ))}

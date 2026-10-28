@@ -81,7 +81,7 @@ const QUICK_STUDIO_FEATURES = [
   {
     title: 'Design Studio',
     tag: 'Tailor Specs',
-    href: '/features/design-studio',
+    href: '/design-studio',
     Icon: Scissors,
     desc: 'Design bespoke silhouettes, select necklines, and export printable tailor sheets.',
     badge: 'Bespoke',

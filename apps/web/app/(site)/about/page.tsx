@@ -19,9 +19,9 @@ export default function AboutPage() {
       </p>
       <h2>Where we are</h2>
       <p>
-        StyleMe is in a closed beta. Today you can create an account, build your style profile and add optional
-        appearance signals. Outfit suggestions, colour palettes, Shop My Look, virtual try-on, the design studio and the
-        style assistant are on the way and are clearly marked &ldquo;Coming soon&rdquo;.
+        StyleMe is in an open beta. Today you can create an account, build your style profile, and explore our full
+        styling suite: outfit suggestions with reasons, colour palettes, outfit categories, Shop My Look budget
+        tracking, 3D virtual try-on, bespoke design studio, and conversational AI style assistant.
       </p>
       <h2>Image credits</h2>
       <p>Photography from Unsplash, used under the Unsplash License, and outfit photos supplied by the StyleMe team:</p>
